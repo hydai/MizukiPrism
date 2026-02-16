@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight } from 'lucide-react';
 import songsData from '@/data/songs.json';
 import streamerData from '@/data/streamer.json';
+import { usePlayer } from './contexts/PlayerContext';
 
 interface Performance {
   id: string;
@@ -47,6 +48,7 @@ export default function Home() {
   const [expandedSongs, setExpandedSongs] = useState<Set<string>>(new Set());
 
   const songs = songsData as Song[];
+  const { playTrack } = usePlayer();
 
   // Load view preference from sessionStorage
   useEffect(() => {
@@ -296,7 +298,7 @@ export default function Home() {
           </div>
 
           {/* Song List - Conditional Rendering based on View Mode */}
-          <div className="px-6 pb-20 mt-4">
+          <div className="px-6 pb-32 mt-4">
             {viewMode === 'timeline' ? (
               /* Timeline View */
               <>
@@ -324,6 +326,14 @@ export default function Home() {
                         <div className="w-8 flex justify-center text-slate-400 font-mono text-sm relative">
                           <span className="group-hover:opacity-0 transition-opacity text-slate-400">{index + 1}</span>
                           <button
+                            onClick={() => playTrack({
+                              id: song.performanceId,
+                              songId: song.id,
+                              title: song.title,
+                              originalArtist: song.originalArtist,
+                              videoId: song.videoId,
+                              timestamp: song.timestamp,
+                            })}
                             className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 text-pink-500 transition-all transform hover:scale-110"
                           >
                             <Play className="w-4 h-4 fill-current" />
@@ -438,7 +448,17 @@ export default function Home() {
                                 className="group/version flex items-center justify-between p-4 rounded-xl hover:bg-white/60 transition-all border border-transparent hover:border-white/50"
                               >
                                 <div className="flex items-center gap-4 flex-1 min-w-0">
-                                  <button className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 text-white flex items-center justify-center shadow-md opacity-0 group-hover/version:opacity-100 transition-all hover:scale-110 flex-shrink-0">
+                                  <button
+                                    onClick={() => playTrack({
+                                      id: perf.id,
+                                      songId: song.id,
+                                      title: song.title,
+                                      originalArtist: song.originalArtist,
+                                      videoId: perf.videoId,
+                                      timestamp: perf.timestamp,
+                                    })}
+                                    className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 text-white flex items-center justify-center shadow-md opacity-0 group-hover/version:opacity-100 transition-all hover:scale-110 flex-shrink-0"
+                                  >
                                     <Play className="w-4 h-4 fill-current ml-0.5" />
                                   </button>
                                   <div className="flex-1 min-w-0">
