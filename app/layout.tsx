@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import PlayerWrapper from "./components/PlayerWrapper";
 
 export const metadata: Metadata = {
   title: "MizukiPrism - Official Song Archive",
@@ -13,7 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-TW">
-      <body>{children}</body>
+      <body>
+        <PlayerWrapper>{children}</PlayerWrapper>
+      </body>
     </html>
   );
 }
