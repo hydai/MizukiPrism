@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import songsData from '@/data/songs.json';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
+import Toast from './components/Toast';
 
 interface Performance {
   id: string;
@@ -46,9 +47,17 @@ export default function Home() {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('timeline');
   const [expandedSongs, setExpandedSongs] = useState<Set<string>>(new Set());
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   const songs = songsData as Song[];
-  const { playTrack } = usePlayer();
+  const { playTrack, addToQueue } = usePlayer();
+
+  const handleAddToQueue = (track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number }) => {
+    addToQueue(track);
+    setToastMessage('已加入播放佇列');
+    setShowToast(true);
+  };
 
   // Load view preference from sessionStorage
   useEffect(() => {
@@ -121,7 +130,9 @@ export default function Home() {
   const gradientText = "bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500";
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-[#fff0f5] via-[#f0f8ff] to-[#e6e6fa] text-slate-600 font-sans selection:bg-pink-200 selection:text-pink-900 overflow-hidden">
+    <>
+      <Toast message={toastMessage} show={showToast} onHide={() => setShowToast(false)} />
+      <div className="flex h-screen bg-gradient-to-br from-[#fff0f5] via-[#f0f8ff] to-[#e6e6fa] text-slate-600 font-sans selection:bg-pink-200 selection:text-pink-900 overflow-hidden">
 
       {/* Sidebar */}
       <aside className="w-64 bg-white/60 backdrop-blur-xl border-r border-white/40 flex flex-col gap-2 p-3 flex-shrink-0 hidden md:flex shadow-sm z-20">
@@ -366,7 +377,22 @@ export default function Home() {
                         </div>
 
                         {/* Time / Actions */}
-                        <div className="flex items-center justify-end gap-4 text-sm text-slate-500 pr-2">
+                        <div className="flex items-center justify-end gap-2 text-sm text-slate-500 pr-2">
+                          <button
+                            onClick={() => handleAddToQueue({
+                              id: song.performanceId,
+                              songId: song.id,
+                              title: song.title,
+                              originalArtist: song.originalArtist,
+                              videoId: song.videoId,
+                              timestamp: song.timestamp,
+                            })}
+                            className="opacity-0 group-hover:opacity-100 hover:text-pink-500 transition-all transform hover:scale-110 bg-white p-1.5 rounded-full shadow-sm"
+                            title="加入佇列"
+                            data-testid="add-to-queue"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
                           <a
                             href={`https://www.youtube.com/watch?v=${song.videoId}&t=${song.timestamp}s`}
                             target="_blank"
@@ -477,7 +503,22 @@ export default function Home() {
                                     </p>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-3 ml-4">
+                                <div className="flex items-center gap-2 ml-4">
+                                  <button
+                                    onClick={() => handleAddToQueue({
+                                      id: perf.id,
+                                      songId: song.id,
+                                      title: song.title,
+                                      originalArtist: song.originalArtist,
+                                      videoId: perf.videoId,
+                                      timestamp: perf.timestamp,
+                                    })}
+                                    className="opacity-0 group-hover/version:opacity-100 hover:text-pink-500 transition-all transform hover:scale-110 bg-white p-2 rounded-full shadow-sm text-slate-500"
+                                    title="加入佇列"
+                                    data-testid="add-to-queue"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
                                   <a
                                     href={`https://www.youtube.com/watch?v=${perf.videoId}&t=${perf.timestamp}s`}
                                     target="_blank"
@@ -504,6 +545,7 @@ export default function Home() {
           </div>
         </div>
       </main>
-    </div>
+      </div>
+    </>
   );
 }
