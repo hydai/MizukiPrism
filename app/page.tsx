@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight } from 'lucide-react';
 import songsData from '@/data/songs.json';
 import streamerData from '@/data/streamer.json';
 
@@ -38,11 +38,40 @@ const formatTime = (seconds: number): string => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
+type ViewMode = 'timeline' | 'grouped';
+
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('timeline');
+  const [expandedSongs, setExpandedSongs] = useState<Set<string>>(new Set());
 
   const songs = songsData as Song[];
+
+  // Load view preference from sessionStorage
+  useEffect(() => {
+    const savedView = sessionStorage.getItem('mizukiprism-view-mode');
+    if (savedView === 'timeline' || savedView === 'grouped') {
+      setViewMode(savedView);
+    }
+  }, []);
+
+  // Save view preference to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem('mizukiprism-view-mode', viewMode);
+  }, [viewMode]);
+
+  const toggleSongExpansion = (songId: string) => {
+    setExpandedSongs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(songId)) {
+        newSet.delete(songId);
+      } else {
+        newSet.add(songId);
+      }
+      return newSet;
+    });
+  };
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -73,6 +102,18 @@ export default function Home() {
       const matchesTag = selectedTag ? song.tags.includes(selectedTag) : true;
       return matchesSearch && matchesTag;
     });
+  }, [songs, searchTerm, selectedTag]);
+
+  // Grouped songs for song-grouped view
+  const groupedSongs: Song[] = useMemo(() => {
+    return songs
+      .filter(song => {
+        const lowerTerm = searchTerm.toLowerCase();
+        const matchesSearch = `${song.title} ${song.originalArtist}`.toLowerCase().includes(lowerTerm);
+        const matchesTag = selectedTag ? song.tags.includes(selectedTag) : true;
+        return matchesSearch && matchesTag;
+      })
+      .sort((a, b) => a.title.localeCompare(b.title, 'zh-TW'));
   }, [songs, searchTerm, selectedTag]);
 
   const gradientText = "bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500";
@@ -211,6 +252,34 @@ export default function Home() {
               >
                 追蹤
               </a>
+
+              {/* View Mode Toggle */}
+              <div className="hidden md:flex items-center gap-2 ml-4 bg-white/60 rounded-full p-1 border border-slate-200/60">
+                <button
+                  data-testid="view-toggle-timeline"
+                  onClick={() => setViewMode('timeline')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                    viewMode === 'timeline'
+                      ? 'bg-gradient-to-r from-pink-400 to-blue-400 text-white shadow-md'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Clock className="w-4 h-4" />
+                  時間序列
+                </button>
+                <button
+                  data-testid="view-toggle-grouped"
+                  onClick={() => setViewMode('grouped')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                    viewMode === 'grouped'
+                      ? 'bg-gradient-to-r from-pink-400 to-blue-400 text-white shadow-md'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Disc3 className="w-4 h-4" />
+                  歌曲分組
+                </button>
+              </div>
             </div>
 
             {/* Mobile search */}
@@ -226,80 +295,192 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Song List - Timeline View */}
+          {/* Song List - Conditional Rendering based on View Mode */}
           <div className="px-6 pb-20 mt-4">
-            <div className="grid grid-cols-[auto_1fr_1fr_auto] md:grid-cols-[auto_2fr_2fr_1fr_auto] gap-4 px-4 py-3 border-b border-slate-200/60 text-slate-400 text-xs font-bold uppercase tracking-wider sticky top-[88px] z-10">
-              <div className="w-8 text-center">#</div>
-              <div>標題</div>
-              <div className="hidden md:block">出處直播</div>
-              <div className="hidden md:block">發布日期</div>
-              <div className="flex justify-end pr-4"><Clock className="w-4 h-4" /></div>
-            </div>
-
-            <div className="mt-2 space-y-1">
-              {flattenedSongs.length === 0 ? (
-                <div className="py-20 text-center text-slate-400">
-                  <p className="text-lg">目前尚無歌曲資料</p>
+            {viewMode === 'timeline' ? (
+              /* Timeline View */
+              <>
+                <div className="grid grid-cols-[auto_1fr_1fr_auto] md:grid-cols-[auto_2fr_2fr_1fr_auto] gap-4 px-4 py-3 border-b border-slate-200/60 text-slate-400 text-xs font-bold uppercase tracking-wider sticky top-[88px] z-10">
+                  <div className="w-8 text-center">#</div>
+                  <div>標題</div>
+                  <div className="hidden md:block">出處直播</div>
+                  <div className="hidden md:block">發布日期</div>
+                  <div className="flex justify-end pr-4"><Clock className="w-4 h-4" /></div>
                 </div>
-              ) : (
-                flattenedSongs.map((song, index) => (
-                  <div
-                    key={`${song.id}-${song.performanceId}`}
-                    data-testid="performance-row"
-                    className="group grid grid-cols-[auto_1fr_1fr_auto] md:grid-cols-[auto_2fr_2fr_1fr_auto] gap-4 px-4 py-3 rounded-xl hover:bg-white/60 items-center transition-all cursor-default border border-transparent hover:border-white/50 hover:shadow-sm"
-                  >
-                    {/* Index / Play button */}
-                    <div className="w-8 flex justify-center text-slate-400 font-mono text-sm relative">
-                      <span className="group-hover:opacity-0 transition-opacity text-slate-400">{index + 1}</span>
-                      <button
-                        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 text-pink-500 transition-all transform hover:scale-110"
-                      >
-                        <Play className="w-4 h-4 fill-current" />
-                      </button>
-                    </div>
 
-                    {/* Title & Artist */}
-                    <div className="min-w-0 pr-4">
-                      <div className="font-bold truncate text-base text-slate-800">
-                        {song.title}
+                <div className="mt-2 space-y-1">
+                  {flattenedSongs.length === 0 ? (
+                    <div className="py-20 text-center text-slate-400">
+                      <p className="text-lg">目前尚無歌曲資料</p>
+                    </div>
+                  ) : (
+                    flattenedSongs.map((song, index) => (
+                      <div
+                        key={`${song.id}-${song.performanceId}`}
+                        data-testid="performance-row"
+                        className="group grid grid-cols-[auto_1fr_1fr_auto] md:grid-cols-[auto_2fr_2fr_1fr_auto] gap-4 px-4 py-3 rounded-xl hover:bg-white/60 items-center transition-all cursor-default border border-transparent hover:border-white/50 hover:shadow-sm"
+                      >
+                        {/* Index / Play button */}
+                        <div className="w-8 flex justify-center text-slate-400 font-mono text-sm relative">
+                          <span className="group-hover:opacity-0 transition-opacity text-slate-400">{index + 1}</span>
+                          <button
+                            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 text-pink-500 transition-all transform hover:scale-110"
+                          >
+                            <Play className="w-4 h-4 fill-current" />
+                          </button>
+                        </div>
+
+                        {/* Title & Artist */}
+                        <div className="min-w-0 pr-4">
+                          <div className="font-bold truncate text-base text-slate-800">
+                            {song.title}
+                          </div>
+                          <div className="text-sm text-slate-500 truncate hover:underline hover:text-slate-800 cursor-pointer flex items-center gap-2 mt-0.5">
+                            {song.originalArtist}
+                            {song.note && (
+                              <span className="text-[10px] border border-blue-200 text-blue-500 px-1.5 py-0.5 rounded-full bg-blue-50 font-medium">
+                                {song.note}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Stream title (desktop) */}
+                        <div className="hidden md:flex items-center text-sm text-slate-500 hover:text-slate-800 transition-colors min-w-0">
+                          <span className="truncate">{song.streamTitle}</span>
+                        </div>
+
+                        {/* Date (desktop) */}
+                        <div className="hidden md:flex text-sm text-slate-500 min-w-0 font-mono">
+                          {song.date}
+                        </div>
+
+                        {/* Time / Actions */}
+                        <div className="flex items-center justify-end gap-4 text-sm text-slate-500 pr-2">
+                          <a
+                            href={`https://www.youtube.com/watch?v=${song.videoId}&t=${song.timestamp}s`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all transform hover:scale-110 bg-white p-1.5 rounded-full shadow-sm"
+                            title="在 YouTube 開啟"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                          <span className="font-mono min-w-[40px] text-right">{formatTime(song.timestamp)}</span>
+                        </div>
                       </div>
-                      <div className="text-sm text-slate-500 truncate hover:underline hover:text-slate-800 cursor-pointer flex items-center gap-2 mt-0.5">
-                        {song.originalArtist}
-                        {song.note && (
-                          <span className="text-[10px] border border-blue-200 text-blue-500 px-1.5 py-0.5 rounded-full bg-blue-50 font-medium">
-                            {song.note}
-                          </span>
+                    ))
+                  )}
+                </div>
+              </>
+            ) : (
+              /* Grouped View */
+              <div className="mt-2 space-y-3">
+                {groupedSongs.length === 0 ? (
+                  <div className="py-20 text-center text-slate-400">
+                    <p className="text-lg">目前尚無歌曲資料</p>
+                  </div>
+                ) : (
+                  groupedSongs.map((song) => {
+                    const isExpanded = expandedSongs.has(song.id);
+                    const sortedPerformances = [...song.performances].sort(
+                      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+                    );
+
+                    return (
+                      <div
+                        key={song.id}
+                        data-testid="song-card"
+                        className="bg-white/60 border border-white/50 rounded-2xl overflow-hidden hover:shadow-lg transition-all"
+                      >
+                        {/* Song Header - Clickable */}
+                        <button
+                          onClick={() => toggleSongExpansion(song.id)}
+                          className="w-full px-6 py-5 flex items-center justify-between hover:bg-white/40 transition-all group"
+                        >
+                          <div className="flex items-start gap-4 flex-1 text-left">
+                            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-pink-100 to-blue-100 flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
+                              <Disc3 className="w-8 h-8 text-slate-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-bold text-xl text-slate-800 truncate">
+                                {song.title}
+                              </h3>
+                              <p className="text-sm text-slate-500 mt-1 truncate">
+                                {song.originalArtist}
+                              </p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="text-xs font-bold text-pink-600 bg-pink-50 px-2 py-1 rounded-full border border-pink-100">
+                                  {song.performances.length} 個版本
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="ml-4 text-slate-400 group-hover:text-slate-600 transition-colors">
+                            {isExpanded ? (
+                              <ChevronDown className="w-6 h-6" />
+                            ) : (
+                              <ChevronRight className="w-6 h-6" />
+                            )}
+                          </div>
+                        </button>
+
+                        {/* Expanded Versions List */}
+                        {isExpanded && (
+                          <div
+                            data-testid="versions-list"
+                            className="border-t border-slate-200/60 bg-white/20 px-6 py-4 space-y-2"
+                          >
+                            {sortedPerformances.map((perf) => (
+                              <div
+                                key={perf.id}
+                                data-testid="version-row"
+                                className="group/version flex items-center justify-between p-4 rounded-xl hover:bg-white/60 transition-all border border-transparent hover:border-white/50"
+                              >
+                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                                  <button className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 text-white flex items-center justify-center shadow-md opacity-0 group-hover/version:opacity-100 transition-all hover:scale-110 flex-shrink-0">
+                                    <Play className="w-4 h-4 fill-current ml-0.5" />
+                                  </button>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-3">
+                                      <span className="font-mono text-sm text-slate-500">
+                                        {perf.date}
+                                      </span>
+                                      {perf.note && (
+                                        <span className="text-[10px] border border-blue-200 text-blue-500 px-1.5 py-0.5 rounded-full bg-blue-50 font-medium">
+                                          {perf.note}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-slate-600 truncate mt-1">
+                                      {perf.streamTitle}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3 ml-4">
+                                  <a
+                                    href={`https://www.youtube.com/watch?v=${perf.videoId}&t=${perf.timestamp}s`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="opacity-0 group-hover/version:opacity-100 hover:text-red-500 transition-all transform hover:scale-110 bg-white p-2 rounded-full shadow-sm text-slate-500"
+                                    title="在 YouTube 開啟"
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                  </a>
+                                  <span className="font-mono text-sm text-slate-500 min-w-[40px] text-right">
+                                    {formatTime(perf.timestamp)}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
-                    </div>
-
-                    {/* Stream title (desktop) */}
-                    <div className="hidden md:flex items-center text-sm text-slate-500 hover:text-slate-800 transition-colors min-w-0">
-                      <span className="truncate">{song.streamTitle}</span>
-                    </div>
-
-                    {/* Date (desktop) */}
-                    <div className="hidden md:flex text-sm text-slate-500 min-w-0 font-mono">
-                      {song.date}
-                    </div>
-
-                    {/* Time / Actions */}
-                    <div className="flex items-center justify-end gap-4 text-sm text-slate-500 pr-2">
-                      <a
-                        href={`https://www.youtube.com/watch?v=${song.videoId}&t=${song.timestamp}s`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all transform hover:scale-110 bg-white p-1.5 rounded-full shadow-sm"
-                        title="在 YouTube 開啟"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                      <span className="font-mono min-w-[40px] text-right">{formatTime(song.timestamp)}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
         </div>
       </main>
