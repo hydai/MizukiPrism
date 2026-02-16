@@ -25,6 +25,12 @@ interface PlayerContextType {
   next: () => void;
   showModal: boolean;
   setShowModal: (show: boolean) => void;
+  queue: Track[];
+  addToQueue: (track: Track) => void;
+  removeFromQueue: (index: number) => void;
+  reorderQueue: (fromIndex: number, toIndex: number) => void;
+  showQueue: boolean;
+  setShowQueue: (show: boolean) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -52,6 +58,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [duration, setDuration] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [playHistory, setPlayHistory] = useState<Track[]>([]);
+  const [queue, setQueue] = useState<Track[]>([]);
+  const [showQueue, setShowQueue] = useState(false);
 
   const playerRef = useRef<any>(null);
   const playerDivId = 'youtube-player';
@@ -121,10 +129,19 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
               // Check if reached end timestamp
               if (currentTrack.endTimestamp && current >= currentTrack.endTimestamp) {
-                playerRef.current.pauseVideo();
-                setIsPlaying(false);
-                if (timeUpdateIntervalRef.current) {
-                  clearInterval(timeUpdateIntervalRef.current);
+                // Auto-play next song in queue if available
+                if (queue.length > 0) {
+                  const nextTrack = queue[0];
+                  setQueue(prev => prev.slice(1));
+                  setPlayHistory(prev => [...prev, currentTrack]);
+                  setCurrentTrack(nextTrack);
+                  setCurrentTime(nextTrack.timestamp);
+                } else {
+                  playerRef.current.pauseVideo();
+                  setIsPlaying(false);
+                  if (timeUpdateIntervalRef.current) {
+                    clearInterval(timeUpdateIntervalRef.current);
+                  }
                 }
               }
             }
@@ -137,8 +154,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           } else if (event.data === 2) {
             setIsPlaying(false);
           } else if (event.data === 0) {
-            // Video ended
-            setIsPlaying(false);
+            // Video ended - auto-play next in queue
+            if (queue.length > 0) {
+              const nextTrack = queue[0];
+              setQueue(prev => prev.slice(1));
+              if (currentTrack) {
+                setPlayHistory(prev => [...prev, currentTrack]);
+              }
+              setCurrentTrack(nextTrack);
+              setCurrentTime(nextTrack.timestamp);
+            } else {
+              setIsPlaying(false);
+            }
           }
         },
       },
@@ -192,12 +219,39 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const next = () => {
-    // For now, just stop playback since we don't have queue yet
-    // This will be extended when queue is implemented
-    if (playerRef.current) {
-      playerRef.current.pauseVideo();
-      setIsPlaying(false);
+    // Play next song in queue if available
+    if (queue.length > 0) {
+      const nextTrack = queue[0];
+      setQueue(prev => prev.slice(1));
+      if (currentTrack) {
+        setPlayHistory(prev => [...prev, currentTrack]);
+      }
+      setCurrentTrack(nextTrack);
+      setCurrentTime(nextTrack.timestamp);
+    } else {
+      // No queue, stop playback
+      if (playerRef.current) {
+        playerRef.current.pauseVideo();
+        setIsPlaying(false);
+      }
     }
+  };
+
+  const addToQueue = (track: Track) => {
+    setQueue(prev => [...prev, track]);
+  };
+
+  const removeFromQueue = (index: number) => {
+    setQueue(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const reorderQueue = (fromIndex: number, toIndex: number) => {
+    setQueue(prev => {
+      const newQueue = [...prev];
+      const [removed] = newQueue.splice(fromIndex, 1);
+      newQueue.splice(toIndex, 0, removed);
+      return newQueue;
+    });
   };
 
   return (
@@ -215,6 +269,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         next,
         showModal,
         setShowModal,
+        queue,
+        addToQueue,
+        removeFromQueue,
+        reorderQueue,
+        showQueue,
+        setShowQueue,
       }}
     >
       {children}

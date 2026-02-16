@@ -1,6 +1,6 @@
 'use client';
 
-import { Play, Pause, SkipBack, SkipForward } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, ListMusic } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 
 export default function MiniPlayer() {
@@ -14,6 +14,8 @@ export default function MiniPlayer() {
     previous,
     next,
     setShowModal,
+    queue,
+    setShowQueue,
   } = usePlayer();
 
   if (!currentTrack) return null;
@@ -100,6 +102,23 @@ export default function MiniPlayer() {
             aria-label="Next"
           >
             <SkipForward className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowQueue(true);
+            }}
+            className="relative text-slate-600 hover:text-slate-800 transition-colors transform hover:scale-110 ml-2"
+            aria-label="Open queue"
+            data-testid="queue-button"
+          >
+            <ListMusic className="w-5 h-5" />
+            {queue.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-pink-400 to-blue-400 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {queue.length}
+              </span>
+            )}
           </button>
         </div>
 
