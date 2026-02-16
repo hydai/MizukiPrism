@@ -1,0 +1,106 @@
+[
+  {
+    "id": "song-1",
+    "title": "First Love",
+    "originalArtist": "宇多田光",
+    "tags": ["抒情", "J-POP", "經典"],
+    "performances": [
+      {
+        "id": "p1-1",
+        "date": "2023-10-15",
+        "streamTitle": "秋日歌回 🍂",
+        "videoId": "_Q5-4yMi-xg",
+        "timestamp": 120,
+        "note": "清唱版"
+      },
+      {
+        "id": "p1-2",
+        "date": "2024-01-20",
+        "streamTitle": "慶祝 50 萬訂閱!",
+        "videoId": "0pZ-W81c-dw",
+        "timestamp": 3450,
+        "note": "吉他伴奏"
+      }
+    ]
+  },
+  {
+    "id": "song-2",
+    "title": "Idol (アイドル)",
+    "originalArtist": "YOASOBI",
+    "tags": ["動漫歌", "快節奏", "高音"],
+    "performances": [
+      {
+        "id": "p2-1",
+        "date": "2023-05-01",
+        "streamTitle": "五月病退散!高歌猛進",
+        "videoId": "ZRtdQ81jPUQ",
+        "timestamp": 500,
+        "note": ""
+      },
+      {
+        "id": "p2-2",
+        "date": "2023-12-31",
+        "streamTitle": "跨年倒數歌回",
+        "videoId": "mZAiTdZ9r9E",
+        "timestamp": 7200,
+        "note": "跨年特別版"
+      },
+      {
+        "id": "p2-3",
+        "date": "2024-02-14",
+        "streamTitle": "情人節特輯",
+        "videoId": "PgBvV9ofjMA",
+        "timestamp": 100,
+        "note": ""
+      }
+    ]
+  },
+  {
+    "id": "song-3",
+    "title": "Betelgeuse (ベテルギウス)",
+    "originalArtist": "Yuuri (優里)",
+    "tags": ["抒情", "J-POP"],
+    "performances": [
+      {
+        "id": "p3-1",
+        "date": "2023-11-11",
+        "streamTitle": "雙十一光棍節陪你",
+        "videoId": "cbq9XW4t72E",
+        "timestamp": 2300,
+        "note": ""
+      }
+    ]
+  },
+  {
+    "id": "song-4",
+    "title": "KICK BACK",
+    "originalArtist": "Kenshi Yonezu",
+    "tags": ["搖滾", "動漫歌", "帥氣"],
+    "performances": [
+      {
+        "id": "p4-1",
+        "date": "2023-09-09",
+        "streamTitle": "深夜的暴走卡拉OK",
+        "videoId": "M2cckDmNLMI",
+        "timestamp": 450,
+        "note": "喉嚨極限挑戰"
+      }
+    ]
+  },
+  {
+    "id": "song-5",
+    "title": "Plastic Love",
+    "originalArtist": "Mariya Takeuchi",
+    "tags": ["City Pop", "經典", "復古"],
+    "performances": [
+      {
+        "id": "p5-1",
+        "date": "2023-08-20",
+        "streamTitle": "夏日晚風 City Pop Night",
+        "videoId": "9Gj47G2e1Jc",
+        "timestamp": 1200,
+        "note": ""
+      }
+    ]
+  }
+]
