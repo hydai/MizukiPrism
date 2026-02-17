@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, LogIn, LogOut, User, WifiOff, ChevronLeft, MoreHorizontal, House } from 'lucide-react';
+import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, LogIn, LogOut, User, WifiOff, ChevronLeft, MoreHorizontal, House } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
@@ -665,9 +665,124 @@ export default function Home() {
           {/* Home tab content wrapper: always visible on desktop, only on home tab on mobile */}
           <div className={mobileTab !== 'home' ? 'hidden lg:block' : ''}>
 
-          {/* Hero Section - Streamer Profile (~280px height) */}
+          {/* Mobile Hero Section (§3.4.9.3) — vertical layout, mobile only */}
           <header
-            className="relative flex items-center gap-8 overflow-hidden flex-shrink-0"
+            data-testid="mobile-hero"
+            className="lg:hidden flex flex-col items-center flex-shrink-0"
+            style={{
+              padding: '16px 24px 24px 24px',
+              borderBottom: '1px solid var(--border-glass)',
+              gap: '12px',
+            }}
+          >
+            {/* Avatar: 160×160 circle with gradient border and outer shadow */}
+            <div
+              className="flex-shrink-0"
+              style={{
+                width: '160px',
+                height: '160px',
+                borderRadius: '80px',
+                padding: '3px',
+                background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                boxShadow: '0 8px 32px rgba(244, 114, 182, 0.25)',
+              }}
+            >
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '80px',
+                  overflow: 'hidden',
+                }}
+              >
+                <img
+                  src={streamerData.avatarUrl}
+                  alt={streamerData.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    const target = e.currentTarget as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.style.background = 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))';
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Verified Badge: sparkles icon + "Verified Artist" */}
+            <div
+              className="flex items-center gap-1.5"
+              style={{
+                background: '#FDF2F8',
+                borderRadius: 'var(--radius-pill)',
+                padding: '4px 12px 4px 8px',
+                color: 'var(--accent-pink)',
+                fontSize: 'var(--font-size-xs)',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+              }}
+            >
+              <Sparkles style={{ width: '12px', height: '12px' }} />
+              Verified Artist
+            </div>
+
+            {/* Streamer Name: fontSize 36, fontWeight 900, letterSpacing -0.5 */}
+            <h1
+              style={{
+                fontSize: '36px',
+                fontWeight: 900,
+                letterSpacing: '-0.5px',
+                color: 'var(--text-primary)',
+                lineHeight: 1.1,
+                textAlign: 'center',
+                margin: 0,
+              }}
+            >
+              {streamerData.name}
+            </h1>
+
+            {/* Description: "Virtual Singer & Streamer · {songCount} Songs", fontSize 13, centered */}
+            <p
+              style={{
+                fontSize: '13px',
+                color: 'var(--text-secondary)',
+                textAlign: 'center',
+                lineHeight: 1.5,
+                margin: 0,
+              }}
+            >
+              Virtual Singer &amp; Streamer
+              {' '}
+              <span style={{ color: 'var(--text-tertiary)' }}>·</span>
+              {' '}
+              <span style={{ fontWeight: 600 }}>{songs.length} Songs</span>
+            </p>
+
+            {/* Stats row: followerCount Followers · Rank #rank (rank in accent-pink), centered */}
+            <p
+              style={{
+                fontSize: '13px',
+                color: 'var(--text-secondary)',
+                textAlign: 'center',
+                lineHeight: 1.5,
+                margin: 0,
+              }}
+            >
+              50萬+ Followers
+              {' '}
+              <span style={{ color: 'var(--text-tertiary)' }}>·</span>
+              {' '}
+              Rank{' '}
+              <span style={{ color: 'var(--accent-pink)', fontWeight: 700 }}>#12</span>
+            </p>
+          </header>
+
+          {/* Hero Section - Streamer Profile (~280px height) — desktop only */}
+          <header
+            className="relative hidden lg:flex items-center gap-8 overflow-hidden flex-shrink-0"
             style={{
               minHeight: '280px',
               padding: '40px 40px 0 40px',
@@ -854,9 +969,162 @@ export default function Home() {
             />
           </header>
 
-          {/* Action Bar */}
+          {/* Mobile Action Bar (§3.4.9.4) — horizontal layout, mobile only */}
           <div
-            className="sticky top-0 z-20 px-6 flex items-center gap-3 flex-wrap"
+            data-testid="mobile-action-bar"
+            className="lg:hidden flex items-center flex-shrink-0"
+            style={{
+              padding: '0 20px',
+              gap: '12px',
+              minHeight: '64px',
+              background: 'var(--bg-overlay)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              borderBottom: '1px solid var(--border-glass)',
+            }}
+          >
+            {/* Play button: 48×48 circle, gradient fill (pink→blue) */}
+            <button
+              data-testid="mobile-play-all-button"
+              className="flex items-center justify-center flex-shrink-0 transition-all hover:scale-105"
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                color: 'white',
+                boxShadow: '0 4px 16px rgba(244, 114, 182, 0.35)',
+              }}
+              title="播放全部"
+              onClick={() => {
+                const firstSong = viewMode === 'timeline' ? flattenedSongs[0] : (() => {
+                  const first = groupedSongs[0];
+                  if (!first || !first.performances.length) return null;
+                  const sorted = [...first.performances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                  return { ...first, performanceId: sorted[0].id, videoId: sorted[0].videoId, timestamp: sorted[0].timestamp };
+                })();
+                if (firstSong && !unavailableVideoIds.has(firstSong.videoId)) {
+                  playTrack({
+                    id: firstSong.performanceId,
+                    songId: firstSong.id,
+                    title: firstSong.title,
+                    originalArtist: firstSong.originalArtist,
+                    videoId: firstSong.videoId,
+                    timestamp: firstSong.timestamp,
+                  });
+                }
+              }}
+            >
+              <Play className="w-5 h-5 fill-current" style={{ marginLeft: '2px' }} />
+            </button>
+
+            {/* Shuffle button: gradient fill, cornerRadius radius-lg, padding 12/28 (visual placeholder) */}
+            <button
+              data-testid="mobile-shuffle-button"
+              className="flex items-center justify-center flex-shrink-0 transition-all hover:opacity-90"
+              style={{
+                background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                borderRadius: 'var(--radius-lg)',
+                padding: '12px 28px',
+                color: 'white',
+              }}
+              title="隨機播放"
+            >
+              <Shuffle className="w-4 h-4" />
+            </button>
+
+            {/* Flexible spacer */}
+            <div style={{ flex: 1 }} />
+
+            {/* Follow button: outline style */}
+            <a
+              href={streamerData.socialLinks.youtube}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="mobile-follow-button"
+              className="flex items-center justify-center flex-shrink-0 font-semibold transition-all hover:opacity-80"
+              style={{
+                border: '1px solid #E2E8F0',
+                borderRadius: '20px',
+                padding: '8px 24px',
+                color: 'var(--text-secondary)',
+                fontSize: 'var(--font-size-sm)',
+                background: 'transparent',
+              }}
+            >
+              追蹤
+            </a>
+          </div>
+
+          {/* Mobile Tag Scroll (§3.4.9.5) — horizontal scrolling row, mobile only */}
+          <div
+            data-testid="mobile-tag-scroll"
+            className="lg:hidden flex items-center flex-shrink-0"
+            style={{
+              padding: '12px 20px',
+              gap: '8px',
+              overflowX: 'auto',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              borderBottom: '1px solid var(--border-glass)',
+            }}
+          >
+            {/* All tags chip */}
+            <button
+              onClick={() => setSelectedTag(null)}
+              className="flex-shrink-0 font-medium transition-all"
+              style={{
+                height: '36px',
+                borderRadius: '12px',
+                padding: '0 16px',
+                fontSize: 'var(--font-size-sm)',
+                ...(selectedTag === null
+                  ? {
+                      background: '#FDF2F8',
+                      border: '1px solid #FBCFE8',
+                      color: 'var(--accent-pink)',
+                    }
+                  : {
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text-secondary)',
+                    }),
+              }}
+            >
+              全部
+            </button>
+            {allTags.map(tag => (
+              <button
+                key={tag}
+                onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
+                className="flex-shrink-0 font-medium transition-all"
+                style={{
+                  height: '36px',
+                  borderRadius: '12px',
+                  padding: '0 16px',
+                  fontSize: 'var(--font-size-sm)',
+                  whiteSpace: 'nowrap',
+                  ...(selectedTag === tag
+                    ? {
+                        background: '#FDF2F8',
+                        border: '1px solid #FBCFE8',
+                        color: 'var(--accent-pink)',
+                      }
+                    : {
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-secondary)',
+                      }),
+                }}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+
+          {/* Action Bar — desktop only */}
+          <div
+            className="hidden lg:flex sticky top-0 z-20 px-6 items-center gap-3 flex-wrap"
             style={{
               background: 'var(--bg-overlay)',
               backdropFilter: 'blur(12px)',
@@ -873,6 +1141,7 @@ export default function Home() {
 
               {/* PlayButton — 48×48 circular gradient play button */}
               <button
+                data-testid="desktop-play-all-button"
                 className="bg-gradient-to-r from-pink-400 to-blue-400 text-white flex items-center justify-center transition-all hover:scale-105 hover:brightness-110 flex-shrink-0"
                 style={{
                   width: '48px',

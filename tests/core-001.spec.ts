@@ -59,12 +59,12 @@ test.describe('CORE-001: Streamer Profile & Song Catalog (Timeline View)', () =>
   test('AC5: Action bar with Play All button and follow button is visible', async ({ page }) => {
     await page.goto(BASE_URL);
 
-    // Verify Play All button (the big round button with Play icon)
-    const playAllButton = page.locator('button:has-text(""), button').filter({ has: page.locator('svg.lucide-play') }).first();
+    // Verify Play All button (the big round button with Play icon) — desktop action bar
+    const playAllButton = page.getByTestId('desktop-play-all-button');
     await expect(playAllButton).toBeVisible();
 
-    // Verify Follow button in action bar
-    await expect(page.getByRole('link', { name: '追蹤' })).toBeVisible();
+    // Verify Follow button in action bar — on desktop the link is visible
+    await expect(page.getByRole('link', { name: '追蹤' }).first()).toBeVisible();
   });
 
   test('AC6: All performances displayed in timeline, sorted by date descending', async ({ page }) => {
