@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-TW">
-      <body>
+      <body className="font-sans">
         <PlayerWrapper>{children}</PlayerWrapper>
       </body>
     </html>
