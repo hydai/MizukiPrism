@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal } from 'lucide-react';
+import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, LogIn, LogOut, User, WifiOff } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
+import { useFanAuth } from './contexts/FanAuthContext';
 import Toast from './components/Toast';
 import PlaylistPanel from './components/PlaylistPanel';
 import CreatePlaylistDialog from './components/CreatePlaylistDialog';
@@ -70,7 +71,8 @@ export default function Home() {
   }, []);
 
   const { playTrack, addToQueue, apiLoadError, unavailableVideoIds, timestampWarning, clearTimestampWarning } = usePlayer();
-  const { playlists, storageError, clearStorageError } = usePlaylist();
+  const { playlists, storageError, clearStorageError, isOnline, conflictNotification, clearConflictNotification } = usePlaylist();
+  const { user, isLoggedIn, logout } = useFanAuth();
 
   const handleAddToQueue = (track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number }) => {
     addToQueue(track);
@@ -91,6 +93,15 @@ export default function Home() {
       clearStorageError();
     }
   }, [storageError, clearStorageError]);
+
+  // Show conflict notification toast
+  useEffect(() => {
+    if (conflictNotification) {
+      setToastMessage(conflictNotification);
+      setShowToast(true);
+      clearConflictNotification();
+    }
+  }, [conflictNotification, clearConflictNotification]);
 
   // Show timestamp warning toast
   useEffect(() => {
@@ -364,6 +375,42 @@ export default function Home() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Login/Logout */}
+        <div className="mt-2 px-1">
+          {isLoggedIn && user ? (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 px-4 py-2 text-sm text-slate-600">
+                <User className="w-4 h-4 text-pink-400 flex-shrink-0" />
+                <span className="truncate font-medium" data-testid="logged-in-username">{user.username}</span>
+                {!isOnline && (
+                  <WifiOff className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" title="離線模式" />
+                )}
+              </div>
+              <button
+                onClick={async () => {
+                  await logout();
+                  setToastMessage('已登出');
+                  setShowToast(true);
+                }}
+                className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-800 hover:bg-white/60 transition-all"
+                data-testid="logout-button"
+              >
+                <LogOut className="w-4 h-4" />
+                登出
+              </button>
+            </div>
+          ) : (
+            <a
+              href="/auth"
+              className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-800 hover:bg-white/60 transition-all"
+              data-testid="login-button"
+            >
+              <LogIn className="w-4 h-4" />
+              登入
+            </a>
+          )}
         </div>
 
         {/* Footer */}
