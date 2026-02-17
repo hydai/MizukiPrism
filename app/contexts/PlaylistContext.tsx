@@ -61,10 +61,25 @@ export const usePlaylist = () => {
 const STORAGE_KEY = 'mizukiprism_playlists';
 const PENDING_SYNC_KEY = 'mizukiprism_pending_sync';
 const STORAGE_QUOTA_ERROR = '本機儲存空間不足,請登入帳號以使用雲端儲存';
+const STORAGE_UNSUPPORTED_ERROR = '您的瀏覽器不支援本機儲存，播放清單功能無法使用';
+
+function isLocalStorageAvailable(): boolean {
+  try {
+    const testKey = '__mizukiprism_ls_test__';
+    localStorage.setItem(testKey, '1');
+    localStorage.removeItem(testKey);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode; isLoggedIn: boolean }) => {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [storageError, setStorageError] = useState<string | null>(null);
+  const [localStorageSupported] = useState(() =>
+    typeof window !== 'undefined' ? isLocalStorageAvailable() : true
+  );
   const [showMergeDialog, setShowMergeDialog] = useState(false);
   const [pendingMergeCloud, setPendingMergeCloud] = useState<Playlist[]>([]);
   const [pendingCloudSync, setPendingCloudSync] = useState(false);
@@ -359,6 +374,11 @@ export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode
   };
 
   const createPlaylist = (name: string): { success: boolean; error?: string } => {
+    if (!localStorageSupported) {
+      setStorageError(STORAGE_UNSUPPORTED_ERROR);
+      return { success: false, error: STORAGE_UNSUPPORTED_ERROR };
+    }
+
     const trimmedName = name.trim();
     if (!trimmedName) {
       return { success: false, error: '播放清單名稱不可為空' };
@@ -416,6 +436,11 @@ export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode
   };
 
   const addVersionToPlaylist = (playlistId: string, version: PlaylistVersion): { success: boolean; error?: string } => {
+    if (!localStorageSupported) {
+      setStorageError(STORAGE_UNSUPPORTED_ERROR);
+      return { success: false, error: STORAGE_UNSUPPORTED_ERROR };
+    }
+
     const playlist = playlists.find(p => p.id === playlistId);
 
     if (!playlist) {
