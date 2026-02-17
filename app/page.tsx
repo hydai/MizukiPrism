@@ -385,7 +385,7 @@ export default function Home() {
                 <User className="w-4 h-4 text-pink-400 flex-shrink-0" />
                 <span className="truncate font-medium" data-testid="logged-in-username">{user.username}</span>
                 {!isOnline && (
-                  <WifiOff className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" title="離線模式" />
+                  <WifiOff className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" aria-label="離線模式" />
                 )}
               </div>
               <button
