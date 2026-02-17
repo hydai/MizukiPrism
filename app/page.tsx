@@ -1,11 +1,15 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus } from 'lucide-react';
 import songsData from '@/data/songs.json';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
+import { usePlaylist } from './contexts/PlaylistContext';
 import Toast from './components/Toast';
+import PlaylistPanel from './components/PlaylistPanel';
+import CreatePlaylistDialog from './components/CreatePlaylistDialog';
+import AddToPlaylistDropdown from './components/AddToPlaylistDropdown';
 
 interface Performance {
   id: string;
@@ -49,15 +53,32 @@ export default function Home() {
   const [expandedSongs, setExpandedSongs] = useState<Set<string>>(new Set());
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [showPlaylistPanel, setShowPlaylistPanel] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const songs = songsData as Song[];
   const { playTrack, addToQueue } = usePlayer();
+  const { playlists, storageError, clearStorageError } = usePlaylist();
 
   const handleAddToQueue = (track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number }) => {
     addToQueue(track);
     setToastMessage('已加入播放佇列');
     setShowToast(true);
   };
+
+  const handleAddToPlaylistSuccess = () => {
+    setToastMessage('已加入播放清單');
+    setShowToast(true);
+  };
+
+  // Show storage error toast
+  useEffect(() => {
+    if (storageError) {
+      setToastMessage(storageError);
+      setShowToast(true);
+      clearStorageError();
+    }
+  }, [storageError, clearStorageError]);
 
   // Load view preference from sessionStorage
   useEffect(() => {
@@ -167,6 +188,38 @@ export default function Home() {
             />
           </div>
         </nav>
+
+        {/* My Playlists */}
+        <div className="mt-4">
+          <div className="px-4 py-2 flex items-center justify-between text-slate-400">
+            <span className="font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+              <ListMusic className="w-4 h-4" />
+              我的播放清單
+            </span>
+          </div>
+          <div className="mt-2 px-1">
+            <button
+              onClick={() => setShowCreateDialog(true)}
+              className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-800 hover:bg-white/60 transition-all"
+              data-testid="create-playlist-button"
+            >
+              <Plus className="w-4 h-4" />
+              建立新播放清單
+            </button>
+            {playlists.length > 0 && (
+              <button
+                onClick={() => setShowPlaylistPanel(true)}
+                className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-800 hover:bg-white/60 transition-all mt-1"
+                data-testid="view-playlists-button"
+              >
+                <span>查看播放清單</span>
+                <span className="text-xs text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">
+                  {playlists.length}
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Tags */}
         <div className="flex-1 flex flex-col min-h-0 mt-4">
@@ -393,6 +446,18 @@ export default function Home() {
                           >
                             <Plus className="w-4 h-4" />
                           </button>
+                          <div className="opacity-0 group-hover:opacity-100 transition-all bg-white p-1.5 rounded-full shadow-sm">
+                            <AddToPlaylistDropdown
+                              version={{
+                                performanceId: song.performanceId,
+                                songTitle: song.title,
+                                originalArtist: song.originalArtist,
+                                videoId: song.videoId,
+                                timestamp: song.timestamp,
+                              }}
+                              onSuccess={handleAddToPlaylistSuccess}
+                            />
+                          </div>
                           <a
                             href={`https://www.youtube.com/watch?v=${song.videoId}&t=${song.timestamp}s`}
                             target="_blank"
@@ -519,6 +584,18 @@ export default function Home() {
                                   >
                                     <Plus className="w-4 h-4" />
                                   </button>
+                                  <div className="opacity-0 group-hover/version:opacity-100 transition-all bg-white p-2 rounded-full shadow-sm text-slate-500">
+                                    <AddToPlaylistDropdown
+                                      version={{
+                                        performanceId: perf.id,
+                                        songTitle: song.title,
+                                        originalArtist: song.originalArtist,
+                                        videoId: perf.videoId,
+                                        timestamp: perf.timestamp,
+                                      }}
+                                      onSuccess={handleAddToPlaylistSuccess}
+                                    />
+                                  </div>
                                   <a
                                     href={`https://www.youtube.com/watch?v=${perf.videoId}&t=${perf.timestamp}s`}
                                     target="_blank"
@@ -546,6 +623,21 @@ export default function Home() {
         </div>
       </main>
       </div>
+
+      {/* Playlist UI */}
+      <PlaylistPanel
+        show={showPlaylistPanel}
+        onClose={() => setShowPlaylistPanel(false)}
+        songsData={songs}
+      />
+      <CreatePlaylistDialog
+        show={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onSuccess={() => {
+          setToastMessage('播放清單已建立');
+          setShowToast(true);
+        }}
+      />
     </>
   );
 }
