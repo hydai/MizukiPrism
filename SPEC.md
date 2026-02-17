@@ -260,7 +260,7 @@ MizukiPrism 讓 Mizuki 的粉絲能快速瀏覽、搜尋並播放她在歌回直
 
 | 區域 | 內容 | 說明 |
 |------|------|------|
-| Logo 區 | 品牌圖示（disc-3）+ "MizukiPlay" 文字 | 頂部品牌識別（"MizukiPlay" 為使用者介面品牌名稱，"MizukiPrism" 為專案代號） |
+| Logo 區 | 品牌圖示（disc-3）+ "MizukiPrism" 文字 | 頂部品牌識別 |
 | 搜尋框 | SearchBox 元件 | 關鍵字搜尋輸入 |
 | DISCOVER 區段 | SectionHeader + 導航項目（Home 預設為啟用狀態） | 主要導航，使用 NavItem/Active 與 NavItem/Default 元件 |
 | YOUR LIBRARY 區段 | SectionHeader + Liked Songs、Recently Played、使用者播放清單 | 個人化清單導航 |
