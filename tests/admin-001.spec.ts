@@ -452,4 +452,58 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.waitForSelector('[data-testid="performance-row"]', { timeout: 5000 });
     await expect(page.getByText('First Love（修改版）').first()).toBeVisible();
   });
+
+  test('AC13: Edit song metadata - duplicate name+artist rejected with error message', async ({ page }) => {
+    // Login
+    await page.goto('http://localhost:3000/admin/login');
+    await page.getByTestId('username-input').fill('curator');
+    await page.getByTestId('password-input').fill('mizuki-admin');
+    await page.getByTestId('login-button').click();
+    await page.waitForURL('http://localhost:3000/admin');
+
+    // Go to songs tab
+    await page.getByTestId('songs-tab').click();
+    await page.waitForTimeout(500);
+
+    // Click edit for song-1 (First Love / 宇多田光)
+    await page.getByTestId('edit-song-button-song-1').click();
+
+    // Edit song form should appear
+    const editForm = page.getByTestId('edit-song-form');
+    await expect(editForm).toBeVisible();
+
+    // Change title and artist to match song-2 (Idol / YOASOBI)
+    const titleInput = page.getByTestId('edit-song-title-input');
+    await titleInput.fill('Idol (アイドル)');
+    const artistInput = page.getByTestId('edit-song-artist-input');
+    await artistInput.fill('YOASOBI');
+
+    // Attempt to save
+    await page.getByTestId('edit-song-save-button').click();
+    await page.waitForTimeout(1000);
+
+    // Error message should appear
+    await expect(editForm.getByText('已存在相同歌名與原唱者的歌曲')).toBeVisible();
+
+    // Song-1 data should be unchanged
+    const songs = await page.evaluate(() =>
+      fetch('/api/songs').then(r => r.json())
+    );
+    const song1 = songs.find((s: { id: string }) => s.id === 'song-1');
+    expect(song1.title).toBe('First Love');
+    expect(song1.originalArtist).toBe('宇多田光');
+
+    // Now fix the title to be unique and verify save succeeds
+    await titleInput.fill('First Love - 唯一版');
+    await artistInput.fill('宇多田光');
+    await page.getByTestId('edit-song-save-button').click();
+    await page.waitForTimeout(1000);
+
+    // Form should close (error gone) and data should be updated
+    const updatedSongs = await page.evaluate(() =>
+      fetch('/api/songs').then(r => r.json())
+    );
+    const updatedSong1 = updatedSongs.find((s: { id: string }) => s.id === 'song-1');
+    expect(updatedSong1.title).toBe('First Love - 唯一版');
+  });
 });
