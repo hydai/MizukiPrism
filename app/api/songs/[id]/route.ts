@@ -36,6 +36,24 @@ export async function PUT(
       return NextResponse.json({ error: 'Song not found' }, { status: 404 });
     }
 
+    // Compute effective title and artist (use new values if provided, fall back to existing)
+    const effectiveTitle = title !== undefined ? title : songs[index].title;
+    const effectiveArtist = originalArtist !== undefined ? originalArtist : songs[index].originalArtist;
+
+    // Check if another song already has the same title+artist combination
+    const duplicate = songs.find(
+      s => s.id !== id &&
+        s.title.toLowerCase() === effectiveTitle.toLowerCase() &&
+        s.originalArtist.toLowerCase() === effectiveArtist.toLowerCase()
+    );
+
+    if (duplicate) {
+      return NextResponse.json(
+        { error: '已存在相同歌名與原唱者的歌曲' },
+        { status: 409 }
+      );
+    }
+
     // Update only provided fields
     if (title !== undefined) songs[index].title = title;
     if (originalArtist !== undefined) songs[index].originalArtist = originalArtist;
