@@ -69,7 +69,7 @@ export default function Home() {
       .catch(() => setSongs([]));
   }, []);
 
-  const { playTrack, addToQueue } = usePlayer();
+  const { playTrack, addToQueue, apiLoadError, unavailableVideoIds, timestampWarning, clearTimestampWarning } = usePlayer();
   const { playlists, storageError, clearStorageError } = usePlaylist();
 
   const handleAddToQueue = (track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number }) => {
@@ -91,6 +91,15 @@ export default function Home() {
       clearStorageError();
     }
   }, [storageError, clearStorageError]);
+
+  // Show timestamp warning toast
+  useEffect(() => {
+    if (timestampWarning) {
+      setToastMessage(timestampWarning);
+      setShowToast(true);
+      clearTimestampWarning();
+    }
+  }, [timestampWarning, clearTimestampWarning]);
 
   // Load view preference from sessionStorage
   useEffect(() => {
@@ -191,6 +200,15 @@ export default function Home() {
   return (
     <>
       <Toast message={toastMessage} show={showToast} onHide={() => setShowToast(false)} />
+      {/* API Load Error Banner */}
+      {apiLoadError && (
+        <div
+          data-testid="api-load-error"
+          className="fixed top-0 left-0 right-0 z-[300] bg-red-500 text-white px-6 py-3 flex items-center justify-center gap-3 shadow-lg"
+        >
+          <span className="font-bold text-sm">{apiLoadError}</span>
+        </div>
+      )}
       <div className="flex h-screen bg-gradient-to-br from-[#fff0f5] via-[#f0f8ff] to-[#e6e6fa] text-slate-600 font-sans selection:bg-pink-200 selection:text-pink-900 overflow-hidden">
 
       {/* Sidebar */}
@@ -498,15 +516,25 @@ export default function Home() {
                         <div className="w-8 flex justify-center text-slate-400 font-mono text-sm relative">
                           <span className="group-hover:opacity-0 transition-opacity text-slate-400">{index + 1}</span>
                           <button
-                            onClick={() => playTrack({
-                              id: song.performanceId,
-                              songId: song.id,
-                              title: song.title,
-                              originalArtist: song.originalArtist,
-                              videoId: song.videoId,
-                              timestamp: song.timestamp,
-                            })}
-                            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 text-pink-500 transition-all transform hover:scale-110"
+                            onClick={() => {
+                              if (!unavailableVideoIds.has(song.videoId)) {
+                                playTrack({
+                                  id: song.performanceId,
+                                  songId: song.id,
+                                  title: song.title,
+                                  originalArtist: song.originalArtist,
+                                  videoId: song.videoId,
+                                  timestamp: song.timestamp,
+                                });
+                              }
+                            }}
+                            disabled={unavailableVideoIds.has(song.videoId)}
+                            data-testid="play-button"
+                            className={`absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all ${
+                              unavailableVideoIds.has(song.videoId)
+                                ? 'text-slate-300 cursor-not-allowed'
+                                : 'text-pink-500 transform hover:scale-110'
+                            }`}
                           >
                             <Play className="w-4 h-4 fill-current" />
                           </button>
@@ -657,15 +685,25 @@ export default function Home() {
                               >
                                 <div className="flex items-center gap-4 flex-1 min-w-0">
                                   <button
-                                    onClick={() => playTrack({
-                                      id: perf.id,
-                                      songId: song.id,
-                                      title: song.title,
-                                      originalArtist: song.originalArtist,
-                                      videoId: perf.videoId,
-                                      timestamp: perf.timestamp,
-                                    })}
-                                    className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 text-white flex items-center justify-center shadow-md opacity-0 group-hover/version:opacity-100 transition-all hover:scale-110 flex-shrink-0"
+                                    onClick={() => {
+                                      if (!unavailableVideoIds.has(perf.videoId)) {
+                                        playTrack({
+                                          id: perf.id,
+                                          songId: song.id,
+                                          title: song.title,
+                                          originalArtist: song.originalArtist,
+                                          videoId: perf.videoId,
+                                          timestamp: perf.timestamp,
+                                        });
+                                      }
+                                    }}
+                                    disabled={unavailableVideoIds.has(perf.videoId)}
+                                    data-testid="play-button"
+                                    className={`w-10 h-10 rounded-full text-white flex items-center justify-center shadow-md opacity-0 group-hover/version:opacity-100 transition-all flex-shrink-0 ${
+                                      unavailableVideoIds.has(perf.videoId)
+                                        ? 'bg-slate-300 cursor-not-allowed'
+                                        : 'bg-gradient-to-r from-pink-400 to-blue-400 hover:scale-110'
+                                    }`}
                                   >
                                     <Play className="w-4 h-4 fill-current ml-0.5" />
                                   </button>

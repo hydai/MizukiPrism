@@ -15,6 +15,18 @@ export default function QueuePanel() {
     setMounted(true);
   }, []);
 
+  // Keyboard navigation: Escape to close queue panel
+  useEffect(() => {
+    if (!showQueue) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowQueue(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showQueue, setShowQueue]);
+
   if (!mounted || !showQueue) return null;
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
