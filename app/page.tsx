@@ -85,7 +85,7 @@ export default function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const { currentTrack, playTrack, addToQueue, apiLoadError, unavailableVideoIds, timestampWarning, clearTimestampWarning } = usePlayer();
+  const { currentTrack, playTrack, addToQueue, apiLoadError, unavailableVideoIds, timestampWarning, clearTimestampWarning, skipNotification, clearSkipNotification } = usePlayer();
   const { playlists, storageError, clearStorageError, isOnline, conflictNotification, clearConflictNotification } = usePlaylist();
   const { user, isLoggedIn, logout } = useFanAuth();
 
@@ -126,6 +126,15 @@ export default function Home() {
       clearTimestampWarning();
     }
   }, [timestampWarning, clearTimestampWarning]);
+
+  // Show skip notification toast (deleted version skipped or playlist ended)
+  useEffect(() => {
+    if (skipNotification) {
+      setToastMessage(skipNotification);
+      setShowToast(true);
+      clearSkipNotification();
+    }
+  }, [skipNotification, clearSkipNotification]);
 
   // Load view preference from sessionStorage
   useEffect(() => {
@@ -252,7 +261,7 @@ export default function Home() {
             className="font-bold text-xl tracking-tight bg-clip-text text-transparent"
             style={{ backgroundImage: 'linear-gradient(135deg, var(--accent-pink), var(--accent-blue))' }}
           >
-            MizukiPrism
+            MizukiPlay
           </span>
         </div>
 
@@ -640,7 +649,7 @@ export default function Home() {
                   className="font-bold text-xl tracking-tight bg-clip-text text-transparent"
                   style={{ backgroundImage: 'linear-gradient(135deg, var(--accent-pink), var(--accent-blue))' }}
                 >
-                  MizukiPrism
+                  MizukiPlay
                 </span>
               </div>
               <button
