@@ -228,7 +228,7 @@ MizukiPrism 讓 Mizuki 的粉絲能快速瀏覽、搜尋並播放她在歌回直
 
 設計層規範，涵蓋頁面佈局、元件庫、設計代幣與響應式行為。
 
-> **設計參照**：視覺設計的權威來源為 Pencil 設計檔 `~/Library/CloudStorage/Dropbox/PencilDesign/MizukiPrism`（畫框 "Spotify - Mizuki Music", 1440×900）。以下各小節描述該設計檔中的佈局決策與元件結構。
+> **設計參照**：視覺設計的權威來源為 Pencil 設計檔 `~/Library/CloudStorage/Dropbox/PencilDesign/MizukiPrism`。桌面版為畫框 "Spotify - Mizuki Music"（1440×900），行動裝置版為畫框 "Spotify Mobile - Mizuki"（390×844）。以下各小節描述該設計檔中的佈局決策與元件結構。
 
 #### 3.4.1 整體佈局架構（Overall Layout）
 
@@ -426,10 +426,18 @@ MizukiPrism 讓 Mizuki 的粉絲能快速瀏覽、搜尋並播放她在歌回直
 
 #### 3.4.7 響應式行為（Responsive Behavior）
 
-| 斷點 | 側邊欄 | 歌曲列表欄位 | 搜尋 | Now Playing Bar |
-|------|--------|-------------|------|-----------------|
-| 桌面（≥1024px） | 顯示（260px） | 全部欄位 | 側邊欄搜尋框 | 完整三欄 |
-| 行動裝置（<1024px） | 隱藏 | 僅標題 + 時長 | 操作列搜尋框 | 精簡模式 |
+| 元素 | 桌面（≥1024px） | 行動裝置（<1024px） |
+|------|----------------|---------------------|
+| 導航 | 側邊欄（260px） | 底部導航列（BottomNav, 64px） |
+| 搜尋 | 側邊欄搜尋框 | 底部導航 Search 分頁 |
+| 頂部 | — | TopBar（返回、標題、更多） |
+| Hero 區 | 水平排列（頭像左、資訊右） | 垂直排列（頭像上、資訊下，置中） |
+| Action Bar | 水平排列，含標籤篩選 | 單獨列 + 標籤橫向捲動列 |
+| 歌曲列表 | 全欄位（#、標題、出處直播、日期、時長） | 精簡欄位（#、標題+原唱者、時長） |
+| Now Playing | 底部三欄列（80px） | MiniPlayer + BottomNav 堆疊 |
+| 播放清單 | 側邊欄 YOUR LIBRARY 區段 | 底部導航 Library 分頁 |
+
+> 行動裝置佈局的完整設計規範見 §3.4.9。
 
 #### 3.4.8 視覺主題（Visual Theme）
 
@@ -439,6 +447,124 @@ MizukiPrism 讓 Mizuki 的粉絲能快速瀏覽、搜尋並播放她在歌回直
 - **表面層**：半透明白色毛玻璃效果（`bg-surface-frosted`、`bg-surface-glass`），搭配 `border-glass` 玻璃邊框
 - **強調漸層**：粉→藍（`accent-pink-light` → `accent-blue-light`），用於 PlayButton、NavItem/Active、GradientButton、進度條等元件
 - **陰影**：關鍵元素（直播主頭像）使用淡外陰影增加層次感
+
+#### 3.4.9 行動裝置佈局（Mobile Layout）
+
+以下規範描述行動裝置斷點（<1024px）下的佈局，以 390×844 參考畫框設計。此為桌面佈局的響應式變體，不引入新功能行為。
+
+##### 3.4.9.1 整體結構（Overall Mobile Layout）
+
+```
+┌──────────────────────────┐
+│       TopBar (56px)      │
+├──────────────────────────┤
+│                          │
+│   ScrollArea (fill)      │
+│   ├ MobileHero           │
+│   ├ MobileActionBar      │
+│   ├ MobileTagScroll      │
+│   └ MobileSongList       │
+│                          │
+├──────────────────────────┤
+│   MiniPlayer             │
+├──────────────────────────┤
+│   BottomNav (64px)       │
+└──────────────────────────┘
+```
+
+- **根框架**：垂直排列，漸層背景（同桌面版）
+- **ScrollArea**：垂直排列，溢出裁切，填滿 TopBar 與底部堆疊之間的剩餘高度
+- **底部堆疊**：MiniPlayer + BottomNav 固定於底部
+
+##### 3.4.9.2 TopBar（56px）
+
+水平排列，垂直置中，padding 0/20。
+
+| 位置 | 內容 | 規格 |
+|------|------|------|
+| 左 | 返回按鈕（chevron-left 圖示） | 24px |
+| 中 | "Artist" 標籤 | fontSize 14, fontWeight 600, `text-secondary` |
+| 右 | 更多按鈕（ellipsis 圖示） | 24px |
+
+##### 3.4.9.3 MobileHero
+
+垂直排列，padding 16/24/24/24，所有內容水平置中。
+
+| 元素 | 規格 |
+|------|------|
+| 頭像 | 160×160，cornerRadius 80（圓形），漸層邊框（粉→藍，3px），外陰影 |
+| 認證徽章 | sparkles 圖示 + "Verified Artist" 文字（`accent-pink` 文字色，`#FDF2F8` 背景） |
+| 名稱 | fontSize 36, fontWeight 900, letterSpacing -0.5 |
+| 描述 | "Virtual Singer & Streamer · {songCount} Songs"（fontSize 13，置中） |
+| 統計列 | "{followerCount} Followers · Rank #{rank}"（rank 使用 `accent-pink` 色） |
+
+##### 3.4.9.4 MobileActionBar
+
+水平排列，padding 0/20，gap 12。
+
+| 元素 | 規格 |
+|------|------|
+| 播放按鈕 | 48×48 圓形，漸層填充（粉→藍） |
+| Shuffle 按鈕 | 漸層填充，cornerRadius `radius-lg`，padding 12/28（視覺預留位置，無新功能） |
+| 彈性空白 | fill |
+| Follow 按鈕 | 外框樣式，border `#E2E8F0`，cornerRadius 20，padding 8/24 |
+
+##### 3.4.9.5 MobileTagScroll
+
+水平捲動列，padding 12/20，gap 8。
+
+| 狀態 | 規格 |
+|------|------|
+| 標籤通用 | height 36，cornerRadius 12，padding 0/16 |
+| 已選取（Active） | fill `#FDF2F8`，stroke `#FBCFE8`（1px） |
+| 未選取（Default） | 無填充，無邊框 |
+
+##### 3.4.9.6 MobileSongList
+
+垂直排列，gap 2，padding 0/8。
+
+**每列規格**：cornerRadius 12，padding 12/16，gap 16，滿寬。播放中列以 `#FCE7F320`（淡粉色調）填充。
+
+| 元素 | 規格 |
+|------|------|
+| 序號 | width 32，fontSize 14；播放中列使用 `accent-pink` 色 |
+| 標題區塊 | 垂直排列，gap 2，填滿剩餘空間 |
+| — 歌名 | fontSize 15，fontWeight 600；播放中列使用 `accent-pink-dark` |
+| — 原唱者 | fontSize 13，`text-secondary` |
+| 出處直播欄 | **行動裝置隱藏**（enabled: false） |
+| 日期欄 | **行動裝置隱藏**（enabled: false） |
+| 時長 | width 60，靠右對齊，fontSize 13 |
+
+##### 3.4.9.7 MiniPlayer（行動裝置）
+
+堆疊於 BottomNav 上方，滿寬。
+
+- **外觀**：上方圓角（cornerRadius 16/16/0/0），毛玻璃填充，上方與側邊邊框
+- **進度條**：height 3，`#E2E8F0` 背景，漸層填充（粉→藍），上方圓角
+
+**內容列**（padding 10/16，gap 12）：
+
+| 元素 | 規格 |
+|------|------|
+| 封面縮圖 | 40×40，cornerRadius 8 |
+| 歌曲資訊 | 垂直排列，gap 2，填滿剩餘空間：歌名（fontSize 13，fontWeight 600）+ 原唱者（fontSize 11） |
+| 愛心圖示 | 20px，`accent-pink`（視覺預留位置，無新功能） |
+| 播放/暫停圖示 | 24px，`text-primary` |
+
+##### 3.4.9.8 BottomNav
+
+高度 64px，padding 8/0/16/0，毛玻璃填充，頂部邊框。四個項目均分排列（space_around）。
+
+| 項目 | 圖示 | 說明 |
+|------|------|------|
+| Home | house | 啟用狀態：`accent-pink` 色，fontWeight 700 |
+| Search | search | — |
+| Library | list-music | — |
+| Profile | 漸層橢圓頭像 | — |
+
+- 每項：圖示 22px + 標籤 fontSize 10，gap 4，垂直堆疊
+- 未啟用項目：`text-tertiary`，fontWeight 500
+- **備註**：底部導航提供與桌面側邊欄相同的導航功能；具體路由為實作細節
 
 ### 3.5 Assumptions & Constraints
 
