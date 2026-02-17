@@ -90,7 +90,7 @@ test.describe('AUTH-001: User Account & Cloud Playlist Sync', () => {
     // Verify UI shows playlist
     await page.click('[data-testid="view-playlists-button"]');
     await page.waitForTimeout(300);
-    await expect(page.locator('text=本機清單')).toBeVisible();
+    await expect(page.locator('[data-testid="playlist-panel"]').getByText('本機清單')).toBeVisible();
 
     await page.screenshot({ path: '.screenshots/auth-001-ac1-local-only.png' });
   });
@@ -233,8 +233,9 @@ test.describe('AUTH-001: User Account & Cloud Playlist Sync', () => {
     // Both playlists should exist
     await page.click('[data-testid="view-playlists-button"]');
     await page.waitForTimeout(300);
-    await expect(page.locator('text=雲端清單')).toBeVisible();
-    await expect(page.locator('text=本機清單')).toBeVisible();
+    const mergePanel = page.locator('[data-testid="playlist-panel"]');
+    await expect(mergePanel.getByText('雲端清單')).toBeVisible();
+    await expect(mergePanel.getByText('本機清單')).toBeVisible();
 
     // Verify no duplicates
     const playlistCards = page.locator('[data-testid^="playlist-card-"]');
@@ -493,7 +494,7 @@ test.describe('AUTH-001: User Account & Cloud Playlist Sync', () => {
     // After re-login, playlist should be available (from localStorage snapshot which matches cloud)
     await page.click('[data-testid="view-playlists-button"]');
     await page.waitForTimeout(300);
-    await expect(page.locator('text=登出前清單')).toBeVisible();
+    await expect(page.locator('[data-testid="playlist-panel"]').getByText('登出前清單')).toBeVisible();
 
     await page.screenshot({ path: '.screenshots/auth-001-ac10-logout.png' });
   });

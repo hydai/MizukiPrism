@@ -30,8 +30,9 @@ test.describe('PLAY-003: Playlist Management with Local Storage', () => {
     await page.click('[data-testid="view-playlists-button"]');
     await page.waitForTimeout(300);
 
-    await expect(page.locator('[data-testid="playlist-panel"]')).toBeVisible();
-    await expect(page.locator('text=我的最愛')).toBeVisible();
+    const panel = page.locator('[data-testid="playlist-panel"]');
+    await expect(panel).toBeVisible();
+    await expect(panel.getByText('我的最愛')).toBeVisible();
 
     // Take screenshot
     await page.screenshot({ path: '.screenshots/play-003-ac1-create-playlist.png' });
@@ -86,7 +87,7 @@ test.describe('PLAY-003: Playlist Management with Local Storage', () => {
     await page.waitForTimeout(300);
 
     // Click on the playlist to view versions
-    await page.click('text=測試清單');
+    await page.locator('[data-testid="playlist-panel"]').getByText('測試清單').click();
     await page.waitForTimeout(300);
 
     // Verify version appears in the list
@@ -145,7 +146,7 @@ test.describe('PLAY-003: Playlist Management with Local Storage', () => {
     // Open playlist panel
     await page.click('[data-testid="view-playlists-button"]');
     await page.waitForTimeout(300);
-    await page.click('text=排序測試');
+    await page.locator('[data-testid="playlist-panel"]').getByText('排序測試').click();
     await page.waitForTimeout(300);
 
     // Get initial order
@@ -190,7 +191,7 @@ test.describe('PLAY-003: Playlist Management with Local Storage', () => {
     // Open playlist panel
     await page.click('[data-testid="view-playlists-button"]');
     await page.waitForTimeout(300);
-    await page.click('text=移除測試');
+    await page.locator('[data-testid="playlist-panel"]').getByText('移除測試').click();
     await page.waitForTimeout(300);
 
     // Verify we have 2 items
@@ -234,7 +235,7 @@ test.describe('PLAY-003: Playlist Management with Local Storage', () => {
     await page.waitForTimeout(300);
 
     // Verify name updated
-    await expect(page.locator('text=新名稱')).toBeVisible();
+    await expect(page.locator('[data-testid="playlist-panel"]').getByText('新名稱')).toBeVisible();
 
     // Try to rename to empty (should be blocked)
     const updatedCard = page.locator('[data-testid^="playlist-card-"]').first();
@@ -255,7 +256,7 @@ test.describe('PLAY-003: Playlist Management with Local Storage', () => {
     await page.waitForTimeout(200);
 
     // Name should remain as "新名稱"
-    await expect(page.locator('text=新名稱')).toBeVisible();
+    await expect(page.locator('[data-testid="playlist-panel"]').getByText('新名稱')).toBeVisible();
 
     // Take screenshot
     await page.screenshot({ path: '.screenshots/play-003-ac7-rename.png' });
@@ -279,7 +280,7 @@ test.describe('PLAY-003: Playlist Management with Local Storage', () => {
     // Open playlist panel
     await page.click('[data-testid="view-playlists-button"]');
     await page.waitForTimeout(300);
-    await page.click('text=播放測試');
+    await page.locator('[data-testid="playlist-panel"]').getByText('播放測試').click();
     await page.waitForTimeout(300);
 
     // Click play all button
@@ -324,8 +325,9 @@ test.describe('PLAY-003: Playlist Management with Local Storage', () => {
     await page.waitForTimeout(300);
 
     // Playlist should be removed
-    await expect(page.locator('text=要刪除的清單')).not.toBeVisible();
-    await expect(page.locator('text=尚無播放清單')).toBeVisible();
+    const panelAfterDelete = page.locator('[data-testid="playlist-panel"]');
+    await expect(panelAfterDelete.getByText('要刪除的清單')).not.toBeVisible();
+    await expect(panelAfterDelete.getByText('尚無播放清單')).toBeVisible();
 
     // Take screenshot
     await page.screenshot({ path: '.screenshots/play-003-ac9-delete-playlist.png' });
@@ -353,10 +355,11 @@ test.describe('PLAY-003: Playlist Management with Local Storage', () => {
     await page.waitForTimeout(300);
 
     // Verify playlist still exists
-    await expect(page.locator('text=持久化測試')).toBeVisible();
+    const panelPersist = page.locator('[data-testid="playlist-panel"]');
+    await expect(panelPersist.getByText('持久化測試')).toBeVisible();
 
     // Open playlist to verify version persists
-    await page.click('text=持久化測試');
+    await panelPersist.getByText('持久化測試').click();
     await page.waitForTimeout(300);
 
     const versionItems = page.locator('[data-testid="playlist-version-item"]');
@@ -403,7 +406,7 @@ test.describe('PLAY-003: Playlist Management with Local Storage', () => {
     // Open playlist panel
     await page.click('[data-testid="view-playlists-button"]');
     await page.waitForTimeout(300);
-    await page.click('text=刪除版本測試');
+    await page.locator('[data-testid="playlist-panel"]').getByText('刪除版本測試').click();
     await page.waitForTimeout(300);
 
     // Verify the deleted version is marked
