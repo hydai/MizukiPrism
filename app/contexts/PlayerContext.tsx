@@ -10,6 +10,7 @@ export interface Track {
   videoId: string;
   timestamp: number;
   endTimestamp?: number;
+  deleted?: boolean;
 }
 
 interface PlayerContextType {
@@ -21,6 +22,8 @@ interface PlayerContextType {
   unavailableVideoIds: Set<string>;
   timestampWarning: string | null;
   clearTimestampWarning: () => void;
+  skipNotification: string | null;
+  clearSkipNotification: () => void;
   currentTime: number;
   duration: number;
   playTrack: (track: Track) => void;
@@ -63,6 +66,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [apiLoadError, setApiLoadError] = useState<string | null>(null);
   const [unavailableVideoIds, setUnavailableVideoIds] = useState<Set<string>>(new Set());
   const [timestampWarning, setTimestampWarning] = useState<string | null>(null);
+  const [skipNotification, setSkipNotification] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showModal, setShowModal] = useState(false);
@@ -74,8 +78,56 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const playerDivId = 'youtube-player';
   const timeUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const apiLoadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Refs to always have fresh values in async callbacks
+  const queueRef = useRef<Track[]>([]);
+  const currentTrackRef = useRef<Track | null>(null);
 
   const clearTimestampWarning = () => setTimestampWarning(null);
+  const clearSkipNotification = () => setSkipNotification(null);
+
+  // Keep refs in sync with state
+  useEffect(() => { queueRef.current = queue; }, [queue]);
+  useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
+
+  // Advance to next non-deleted track in queue, skipping deleted ones.
+  // Returns true if a non-deleted track was found and set as current, false if all remaining are deleted or queue is empty.
+  const advanceSkippingDeleted = (currentQ: Track[], fromTrack: Track | null): boolean => {
+    // Find first non-deleted track
+    let skippedAny = false;
+    let remainingQueue = currentQ;
+    while (remainingQueue.length > 0 && remainingQueue[0].deleted) {
+      skippedAny = true;
+      remainingQueue = remainingQueue.slice(1);
+    }
+
+    if (remainingQueue.length === 0) {
+      // All remaining tracks are deleted (or queue was empty)
+      if (skippedAny) {
+        // We skipped some deleted tracks but found nothing playable
+        setSkipNotification('播放完畢');
+      }
+      setQueue([]);
+      setIsPlaying(false);
+      if (playerRef.current) {
+        playerRef.current.pauseVideo();
+      }
+      return false;
+    }
+
+    // Found a non-deleted track
+    const nextTrack = remainingQueue[0];
+    const newQueue = remainingQueue.slice(1);
+    setQueue(newQueue);
+    if (fromTrack) {
+      setPlayHistory(prev => [...prev, fromTrack]);
+    }
+    if (skippedAny) {
+      setSkipNotification('已跳過無法播放的版本');
+    }
+    setCurrentTrack(nextTrack);
+    setCurrentTime(nextTrack.timestamp);
+    return true;
+  };
 
   // Load YouTube IFrame API
   useEffect(() => {
@@ -176,13 +228,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
               // Check if reached end timestamp
               if (currentTrack.endTimestamp && current >= currentTrack.endTimestamp) {
-                // Auto-play next song in queue if available
-                if (queue.length > 0) {
-                  const nextTrack = queue[0];
-                  setQueue(prev => prev.slice(1));
-                  setPlayHistory(prev => [...prev, currentTrack]);
-                  setCurrentTrack(nextTrack);
-                  setCurrentTime(nextTrack.timestamp);
+                // Auto-play next song in queue if available, skipping deleted versions
+                const freshQueue = queueRef.current;
+                if (freshQueue.length > 0) {
+                  advanceSkippingDeleted(freshQueue, currentTrackRef.current);
                 } else {
                   playerRef.current.pauseVideo();
                   setIsPlaying(false);
@@ -201,15 +250,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           } else if (event.data === 2) {
             setIsPlaying(false);
           } else if (event.data === 0) {
-            // Video ended - auto-play next in queue
-            if (queue.length > 0) {
-              const nextTrack = queue[0];
-              setQueue(prev => prev.slice(1));
-              if (currentTrack) {
-                setPlayHistory(prev => [...prev, currentTrack]);
-              }
-              setCurrentTrack(nextTrack);
-              setCurrentTime(nextTrack.timestamp);
+            // Video ended - auto-play next in queue, skipping deleted versions
+            const freshQueue = queueRef.current;
+            if (freshQueue.length > 0) {
+              advanceSkippingDeleted(freshQueue, currentTrackRef.current);
             } else {
               setIsPlaying(false);
             }
@@ -280,15 +324,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const next = () => {
-    // Play next song in queue if available
+    // Play next song in queue if available, skipping deleted versions
     if (queue.length > 0) {
-      const nextTrack = queue[0];
-      setQueue(prev => prev.slice(1));
-      if (currentTrack) {
-        setPlayHistory(prev => [...prev, currentTrack]);
-      }
-      setCurrentTrack(nextTrack);
-      setCurrentTime(nextTrack.timestamp);
+      advanceSkippingDeleted(queue, currentTrack);
     } else {
       // No queue, stop playback
       if (playerRef.current) {
@@ -326,6 +364,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         unavailableVideoIds,
         timestampWarning,
         clearTimestampWarning,
+        skipNotification,
+        clearSkipNotification,
         currentTime,
         duration,
         playTrack,

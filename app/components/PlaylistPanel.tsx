@@ -92,13 +92,22 @@ export default function PlaylistPanel({ show, onClose, songsData }: PlaylistPane
       videoId: v.videoId,
       timestamp: v.timestamp,
       endTimestamp: v.endTimestamp,
+      deleted: !checkVersionExists(v.performanceId),
     }));
 
-    // Play first track
-    playTrack(tracks[0]);
+    // Find the first non-deleted track to play
+    const firstPlayable = tracks.find(t => !t.deleted);
+    if (!firstPlayable) {
+      // All tracks are deleted — nothing to play
+      return;
+    }
 
-    // Add rest to queue
-    tracks.slice(1).forEach(track => addToQueue(track));
+    // Play first playable track
+    playTrack(firstPlayable);
+
+    // Add all tracks after the first playable one to queue (including deleted ones so skip logic can handle them)
+    const firstPlayableIndex = tracks.indexOf(firstPlayable);
+    tracks.slice(firstPlayableIndex + 1).forEach(track => addToQueue(track));
   };
 
   const handleRename = (playlistId: string) => {
