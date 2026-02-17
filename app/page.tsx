@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal } from 'lucide-react';
-import songsData from '@/data/songs.json';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
@@ -13,10 +12,12 @@ import AddToPlaylistDropdown from './components/AddToPlaylistDropdown';
 
 interface Performance {
   id: string;
+  streamId?: string;
   date: string;
   streamTitle: string;
   videoId: string;
   timestamp: number;
+  endTimestamp?: number | null;
   note: string;
 }
 
@@ -58,8 +59,16 @@ export default function Home() {
   const [toastMessage, setToastMessage] = useState('');
   const [showPlaylistPanel, setShowPlaylistPanel] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [songs, setSongs] = useState<Song[]>([]);
 
-  const songs = songsData as Song[];
+  // Fetch songs from API
+  useEffect(() => {
+    fetch('/api/songs')
+      .then(res => res.json())
+      .then(data => setSongs(data))
+      .catch(() => setSongs([]));
+  }, []);
+
   const { playTrack, addToQueue } = usePlayer();
   const { playlists, storageError, clearStorageError } = usePlaylist();
 

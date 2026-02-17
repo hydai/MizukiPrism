@@ -70,6 +70,9 @@ test.describe('CORE-001: Streamer Profile & Song Catalog (Timeline View)', () =>
   test('AC6: All performances displayed in timeline, sorted by date descending', async ({ page }) => {
     await page.goto(BASE_URL);
 
+    // Wait for data to load from API
+    await page.waitForSelector('[data-testid="performance-row"]', { timeout: 10000 });
+
     // Get all date cells (they should be in descending order)
     const dates = await page.locator('div.font-mono').filter({ hasText: /^\d{4}-\d{2}-\d{2}$/ }).allTextContents();
 

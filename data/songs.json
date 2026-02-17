@@ -7,18 +7,22 @@
     "performances": [
       {
         "id": "p1-1",
+        "streamId": "stream-1",
         "date": "2023-10-15",
         "streamTitle": "秋日歌回 🍂",
         "videoId": "_Q5-4yMi-xg",
         "timestamp": 120,
+        "endTimestamp": null,
         "note": "清唱版"
       },
       {
         "id": "p1-2",
+        "streamId": "stream-2",
         "date": "2024-01-20",
         "streamTitle": "慶祝 50 萬訂閱!",
         "videoId": "0pZ-W81c-dw",
         "timestamp": 3450,
+        "endTimestamp": null,
         "note": "吉他伴奏"
       }
     ]
@@ -31,26 +35,32 @@
     "performances": [
       {
         "id": "p2-1",
+        "streamId": "stream-3",
         "date": "2023-05-01",
         "streamTitle": "五月病退散!高歌猛進",
         "videoId": "ZRtdQ81jPUQ",
         "timestamp": 500,
+        "endTimestamp": null,
         "note": ""
       },
       {
         "id": "p2-2",
+        "streamId": "stream-4",
         "date": "2023-12-31",
         "streamTitle": "跨年倒數歌回",
         "videoId": "mZAiTdZ9r9E",
         "timestamp": 7200,
+        "endTimestamp": null,
         "note": "跨年特別版"
       },
       {
         "id": "p2-3",
+        "streamId": "stream-5",
         "date": "2024-02-14",
         "streamTitle": "情人節特輯",
         "videoId": "PgBvV9ofjMA",
         "timestamp": 100,
+        "endTimestamp": null,
         "note": ""
       }
     ]
@@ -63,10 +73,12 @@
     "performances": [
       {
         "id": "p3-1",
+        "streamId": "stream-6",
         "date": "2023-11-11",
         "streamTitle": "雙十一光棍節陪你",
         "videoId": "cbq9XW4t72E",
         "timestamp": 2300,
+        "endTimestamp": null,
         "note": ""
       }
     ]
@@ -79,10 +91,12 @@
     "performances": [
       {
         "id": "p4-1",
+        "streamId": "stream-7",
         "date": "2023-09-09",
         "streamTitle": "深夜的暴走卡拉OK",
         "videoId": "M2cckDmNLMI",
         "timestamp": 450,
+        "endTimestamp": null,
         "note": "喉嚨極限挑戰"
       }
     ]
@@ -95,10 +109,12 @@
     "performances": [
       {
         "id": "p5-1",
+        "streamId": "stream-8",
         "date": "2023-08-20",
         "streamTitle": "夏日晚風 City Pop Night",
         "videoId": "9Gj47G2e1Jc",
         "timestamp": 1200,
+        "endTimestamp": null,
         "note": ""
       }
     ]
