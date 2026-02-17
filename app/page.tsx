@@ -62,13 +62,27 @@ export default function Home() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [songs, setSongs] = useState<Song[]>([]);
+  const [loadError, setLoadError] = useState(false);
 
-  // Fetch songs from API
-  useEffect(() => {
+  // Fetch songs from API — extracted so the retry button can call it again
+  const fetchSongs = () => {
     fetch('/api/songs')
-      .then(res => res.json())
-      .then(data => setSongs(data))
-      .catch(() => setSongs([]));
+      .then(res => {
+        if (!res.ok) throw new Error('API error');
+        return res.json();
+      })
+      .then(data => {
+        setSongs(data);
+        setLoadError(false);
+      })
+      .catch(() => {
+        setLoadError(true);
+      });
+  };
+
+  useEffect(() => {
+    fetchSongs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const { currentTrack, playTrack, addToQueue, apiLoadError, unavailableVideoIds, timestampWarning, clearTimestampWarning } = usePlayer();
@@ -1156,7 +1170,41 @@ export default function Home() {
 
           {/* Song List - Conditional Rendering based on View Mode */}
           <div className="px-4 pb-32 mt-2">
-            {viewMode === 'timeline' ? (
+            {loadError ? (
+              /* Song API Load Error State */
+              <div
+                data-testid="song-load-error"
+                className="flex flex-col items-center justify-center py-32 gap-6"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <div
+                  className="flex items-center justify-center w-16 h-16 rounded-full"
+                  style={{ background: 'var(--bg-accent-pink-muted)' }}
+                >
+                  <WifiOff className="w-8 h-8" style={{ color: 'var(--accent-pink)' }} />
+                </div>
+                <p
+                  className="text-center font-medium max-w-sm"
+                  style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-base)', lineHeight: 1.6 }}
+                >
+                  無法載入歌曲資料，請檢查網路連線後重新整理頁面
+                </p>
+                <button
+                  data-testid="retry-button"
+                  onClick={fetchSongs}
+                  className="font-semibold transition-all hover:opacity-90"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                    borderRadius: 'var(--radius-pill)',
+                    fontSize: 'var(--font-size-sm)',
+                    padding: 'var(--space-3) var(--space-6)',
+                    color: 'var(--text-on-accent)',
+                  }}
+                >
+                  重新整理
+                </button>
+              </div>
+            ) : viewMode === 'timeline' ? (
               /* Timeline View */
               <>
                 {/* SongTableHeader */}
@@ -1200,19 +1248,25 @@ export default function Home() {
 
                 <div className="mt-1 space-y-0.5">
                   {flattenedSongs.length === 0 ? (
-                    <div className="py-20 text-center" data-testid="empty-state" style={{ color: 'var(--text-tertiary)' }}>
-                      <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>找不到符合條件的歌曲</p>
-                      {hasActiveFilters && (
-                        <button
-                          onClick={clearAllFilters}
-                          className="mt-3 text-sm font-medium underline underline-offset-2 transition-colors"
-                          style={{ color: 'var(--accent-pink)' }}
-                          data-testid="clear-filters-empty"
-                        >
-                          清除所有篩選條件
-                        </button>
-                      )}
-                    </div>
+                    songs.length === 0 && !hasActiveFilters ? (
+                      <div className="py-20 text-center" data-testid="empty-catalog" style={{ color: 'var(--text-tertiary)' }}>
+                        <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>目前尚無歌曲資料</p>
+                      </div>
+                    ) : (
+                      <div className="py-20 text-center" data-testid="empty-state" style={{ color: 'var(--text-tertiary)' }}>
+                        <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>找不到符合條件的歌曲</p>
+                        {hasActiveFilters && (
+                          <button
+                            onClick={clearAllFilters}
+                            className="mt-3 text-sm font-medium underline underline-offset-2 transition-colors"
+                            style={{ color: 'var(--accent-pink)' }}
+                            data-testid="clear-filters-empty"
+                          >
+                            清除所有篩選條件
+                          </button>
+                        )}
+                      </div>
+                    )
                   ) : (
                     flattenedSongs.map((song, index) => {
                       const isCurrentlyPlaying = currentTrack?.id === song.performanceId;
@@ -1453,19 +1507,25 @@ export default function Home() {
               /* Grouped View */
               <div className="mt-2 space-y-3">
                 {groupedSongs.length === 0 ? (
-                  <div className="py-20 text-center" data-testid="empty-state" style={{ color: 'var(--text-tertiary)' }}>
-                    <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>找不到符合條件的歌曲</p>
-                    {hasActiveFilters && (
-                      <button
-                        onClick={clearAllFilters}
-                        className="mt-3 text-sm font-medium underline underline-offset-2 transition-colors"
-                        style={{ color: 'var(--accent-pink)' }}
-                        data-testid="clear-filters-empty"
-                      >
-                        清除所有篩選條件
-                      </button>
-                    )}
-                  </div>
+                  songs.length === 0 && !hasActiveFilters ? (
+                    <div className="py-20 text-center" data-testid="empty-catalog" style={{ color: 'var(--text-tertiary)' }}>
+                      <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>目前尚無歌曲資料</p>
+                    </div>
+                  ) : (
+                    <div className="py-20 text-center" data-testid="empty-state" style={{ color: 'var(--text-tertiary)' }}>
+                      <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>找不到符合條件的歌曲</p>
+                      {hasActiveFilters && (
+                        <button
+                          onClick={clearAllFilters}
+                          className="mt-3 text-sm font-medium underline underline-offset-2 transition-colors"
+                          style={{ color: 'var(--accent-pink)' }}
+                          data-testid="clear-filters-empty"
+                        >
+                          清除所有篩選條件
+                        </button>
+                      )}
+                    </div>
+                  )
                 ) : (
                   groupedSongs.map((song) => {
                     const isExpanded = expandedSongs.has(song.id);
