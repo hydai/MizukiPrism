@@ -70,7 +70,7 @@ export default function Home() {
       .catch(() => setSongs([]));
   }, []);
 
-  const { playTrack, addToQueue, apiLoadError, unavailableVideoIds, timestampWarning, clearTimestampWarning } = usePlayer();
+  const { currentTrack, playTrack, addToQueue, apiLoadError, unavailableVideoIds, timestampWarning, clearTimestampWarning } = usePlayer();
   const { playlists, storageError, clearStorageError, isOnline, conflictNotification, clearConflictNotification } = usePlaylist();
   const { user, isLoggedIn, logout } = useFanAuth();
 
@@ -1010,26 +1010,58 @@ export default function Home() {
           </div>
 
           {/* Song List - Conditional Rendering based on View Mode */}
-          <div className="px-6 pb-32 mt-4">
+          <div className="px-4 pb-32 mt-2">
             {viewMode === 'timeline' ? (
               /* Timeline View */
               <>
-                <div className="grid grid-cols-[auto_1fr_1fr_auto] md:grid-cols-[auto_2fr_2fr_1fr_auto] gap-4 px-4 py-3 border-b border-slate-200/60 text-slate-400 text-xs font-bold uppercase tracking-wider sticky top-[88px] z-10">
-                  <div className="w-8 text-center">#</div>
-                  <div>標題</div>
-                  <div className="hidden md:block">出處直播</div>
-                  <div className="hidden md:block">發布日期</div>
-                  <div className="flex justify-end pr-4"><Clock className="w-4 h-4" /></div>
+                {/* SongTableHeader */}
+                <div
+                  className="grid grid-cols-[32px_1fr_auto] md:grid-cols-[32px_2fr_2fr_100px_60px] gap-0 px-3 py-2 sticky top-[88px] z-10"
+                  style={{
+                    borderBottom: '1px solid var(--border-table)',
+                  }}
+                >
+                  <div
+                    className="flex items-center justify-center text-center font-bold uppercase tracking-wider"
+                    style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}
+                  >
+                    #
+                  </div>
+                  <div
+                    className="flex items-center font-bold uppercase tracking-wider pl-3"
+                    style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}
+                  >
+                    標題
+                  </div>
+                  <div
+                    className="hidden md:flex items-center font-bold uppercase tracking-wider pl-3"
+                    style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}
+                  >
+                    出處直播
+                  </div>
+                  <div
+                    className="hidden md:flex items-center font-bold uppercase tracking-wider pl-3"
+                    style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}
+                  >
+                    發布日期
+                  </div>
+                  <div
+                    className="flex items-center justify-center"
+                    style={{ color: 'var(--text-tertiary)' }}
+                  >
+                    <Clock style={{ width: 'var(--icon-sm)', height: 'var(--icon-sm)' }} />
+                  </div>
                 </div>
 
-                <div className="mt-2 space-y-1">
+                <div className="mt-1 space-y-0.5">
                   {flattenedSongs.length === 0 ? (
-                    <div className="py-20 text-center text-slate-400" data-testid="empty-state">
-                      <p className="text-lg font-medium text-slate-500">找不到符合條件的歌曲</p>
+                    <div className="py-20 text-center" data-testid="empty-state" style={{ color: 'var(--text-tertiary)' }}>
+                      <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>找不到符合條件的歌曲</p>
                       {hasActiveFilters && (
                         <button
                           onClick={clearAllFilters}
-                          className="mt-3 text-sm text-pink-500 hover:text-pink-700 font-medium underline underline-offset-2 transition-colors"
+                          className="mt-3 text-sm font-medium underline underline-offset-2 transition-colors"
+                          style={{ color: 'var(--accent-pink)' }}
                           data-testid="clear-filters-empty"
                         >
                           清除所有篩選條件
@@ -1037,107 +1069,210 @@ export default function Home() {
                       )}
                     </div>
                   ) : (
-                    flattenedSongs.map((song, index) => (
-                      <div
-                        key={`${song.id}-${song.performanceId}`}
-                        data-testid="performance-row"
-                        className="group grid grid-cols-[auto_1fr_1fr_auto] md:grid-cols-[auto_2fr_2fr_1fr_auto] gap-4 px-4 py-3 rounded-xl hover:bg-white/60 items-center transition-all cursor-default border border-transparent hover:border-white/50 hover:shadow-sm"
-                      >
-                        {/* Index / Play button */}
-                        <div className="w-8 flex justify-center text-slate-400 font-mono text-sm relative">
-                          <span className="group-hover:opacity-0 transition-opacity text-slate-400">{index + 1}</span>
-                          <button
-                            onClick={() => {
-                              if (!unavailableVideoIds.has(song.videoId)) {
-                                playTrack({
-                                  id: song.performanceId,
-                                  songId: song.id,
-                                  title: song.title,
-                                  originalArtist: song.originalArtist,
-                                  videoId: song.videoId,
-                                  timestamp: song.timestamp,
-                                });
-                              }
-                            }}
-                            disabled={unavailableVideoIds.has(song.videoId)}
-                            data-testid="play-button"
-                            className={`absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all ${
-                              unavailableVideoIds.has(song.videoId)
-                                ? 'text-slate-300 cursor-not-allowed'
-                                : 'text-pink-500 transform hover:scale-110'
-                            }`}
+                    flattenedSongs.map((song, index) => {
+                      const isCurrentlyPlaying = currentTrack?.id === song.performanceId;
+                      return (
+                        <div
+                          key={`${song.id}-${song.performanceId}`}
+                          data-testid="performance-row"
+                          className="group grid grid-cols-[32px_1fr_auto] md:grid-cols-[32px_2fr_2fr_100px_60px] gap-0 items-center transition-all cursor-default"
+                          style={{
+                            borderRadius: 'var(--radius-lg)',
+                            padding: 'var(--space-3) var(--space-4)',
+                            background: isCurrentlyPlaying
+                              ? 'var(--bg-accent-pink-muted)'
+                              : undefined,
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isCurrentlyPlaying) {
+                              (e.currentTarget as HTMLElement).style.background = 'var(--bg-accent-pink)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isCurrentlyPlaying) {
+                              (e.currentTarget as HTMLElement).style.background = '';
+                            }
+                          }}
+                        >
+                          {/* # column: row number / play button */}
+                          <div
+                            className="flex items-center justify-center relative"
+                            style={{ width: '32px', height: '32px' }}
                           >
-                            <Play className="w-4 h-4 fill-current" />
-                          </button>
-                        </div>
-
-                        {/* Title & Artist */}
-                        <div className="min-w-0 pr-4">
-                          <div className="font-bold truncate text-base text-slate-800">
-                            {song.title}
+                            <span
+                              className="group-hover:opacity-0 transition-opacity font-mono text-sm select-none"
+                              style={{ color: 'var(--text-tertiary)' }}
+                            >
+                              {index + 1}
+                            </span>
+                            <button
+                              onClick={() => {
+                                if (!unavailableVideoIds.has(song.videoId)) {
+                                  playTrack({
+                                    id: song.performanceId,
+                                    songId: song.id,
+                                    title: song.title,
+                                    originalArtist: song.originalArtist,
+                                    videoId: song.videoId,
+                                    timestamp: song.timestamp,
+                                  });
+                                }
+                              }}
+                              disabled={unavailableVideoIds.has(song.videoId)}
+                              data-testid="play-button"
+                              className={`absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all ${
+                                unavailableVideoIds.has(song.videoId)
+                                  ? 'cursor-not-allowed'
+                                  : 'transform hover:scale-110'
+                              }`}
+                              style={{
+                                color: unavailableVideoIds.has(song.videoId)
+                                  ? 'var(--text-muted)'
+                                  : 'var(--accent-pink)',
+                              }}
+                            >
+                              <Play className="w-4 h-4 fill-current" />
+                            </button>
                           </div>
-                          <div className="text-sm text-slate-500 truncate hover:underline hover:text-slate-800 cursor-pointer flex items-center gap-2 mt-0.5">
-                            {song.originalArtist}
-                            {song.note && (
-                              <span className="text-[10px] border border-blue-200 text-blue-500 px-1.5 py-0.5 rounded-full bg-blue-50 font-medium">
-                                {song.note}
-                              </span>
-                            )}
+
+                          {/* Title column: song title + artist + NoteBadge */}
+                          <div className="min-w-0 pl-3">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div
+                                className="font-bold truncate"
+                                style={{
+                                  color: 'var(--text-primary)',
+                                  fontSize: 'var(--font-size-md)',
+                                }}
+                              >
+                                {song.title}
+                              </div>
+                              {song.note && (
+                                <span
+                                  className="inline-flex items-center border border-blue-200 text-blue-500 bg-blue-50 font-medium flex-shrink-0"
+                                  style={{
+                                    background: 'var(--bg-accent-blue-muted)',
+                                    color: 'var(--accent-blue)',
+                                    borderRadius: 'var(--radius-pill)',
+                                    fontSize: 'var(--font-size-xs)',
+                                    padding: 'var(--space-1) var(--space-3)',
+                                  }}
+                                >
+                                  {song.note}
+                                </span>
+                              )}
+                            </div>
+                            <div
+                              className="truncate mt-0.5"
+                              style={{
+                                color: 'var(--text-secondary)',
+                                fontSize: 'var(--font-size-sm)',
+                              }}
+                            >
+                              {song.originalArtist}
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Stream title (desktop) */}
-                        <div className="hidden md:flex items-center text-sm text-slate-500 hover:text-slate-800 transition-colors min-w-0">
-                          <span className="truncate">{song.streamTitle}</span>
-                        </div>
-
-                        {/* Date (desktop) */}
-                        <div className="hidden md:flex text-sm text-slate-500 min-w-0 font-mono">
-                          {song.date}
-                        </div>
-
-                        {/* Time / Actions */}
-                        <div className="flex items-center justify-end gap-2 text-sm text-slate-500 pr-2">
-                          <button
-                            onClick={() => handleAddToQueue({
-                              id: song.performanceId,
-                              songId: song.id,
-                              title: song.title,
-                              originalArtist: song.originalArtist,
-                              videoId: song.videoId,
-                              timestamp: song.timestamp,
-                            })}
-                            className="opacity-0 group-hover:opacity-100 hover:text-pink-500 transition-all transform hover:scale-110 bg-white p-1.5 rounded-full shadow-sm"
-                            title="加入佇列"
-                            data-testid="add-to-queue"
+                          {/* Stream title column (desktop only) */}
+                          <div
+                            className="hidden md:flex items-center min-w-0 pl-3"
+                            style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}
                           >
-                            <Plus className="w-4 h-4" />
-                          </button>
-                          <div className="opacity-0 group-hover:opacity-100 transition-all bg-white p-1.5 rounded-full shadow-sm">
-                            <AddToPlaylistDropdown
-                              version={{
-                                performanceId: song.performanceId,
-                                songTitle: song.title,
+                            <span className="truncate">{song.streamTitle}</span>
+                          </div>
+
+                          {/* Date column (desktop only) */}
+                          <div
+                            className="hidden md:flex items-center pl-3 font-mono"
+                            style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}
+                          >
+                            {song.date}
+                          </div>
+
+                          {/* Duration / Actions column */}
+                          <div
+                            className="flex items-center justify-end gap-1.5"
+                            style={{ color: 'var(--text-secondary)' }}
+                          >
+                            <button
+                              onClick={() => handleAddToQueue({
+                                id: song.performanceId,
+                                songId: song.id,
+                                title: song.title,
                                 originalArtist: song.originalArtist,
                                 videoId: song.videoId,
                                 timestamp: song.timestamp,
+                              })}
+                              className="opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
+                              style={{
+                                background: 'var(--bg-surface)',
+                                padding: 'var(--space-2)',
+                                borderRadius: 'var(--radius-circle)',
+                                boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                                color: 'var(--text-secondary)',
                               }}
-                              onSuccess={handleAddToPlaylistSuccess}
-                            />
+                              title="加入佇列"
+                              data-testid="add-to-queue"
+                              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--accent-pink)'; }}
+                              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                            <div
+                              className="opacity-0 group-hover:opacity-100 transition-all"
+                              style={{
+                                background: 'var(--bg-surface)',
+                                padding: 'var(--space-2)',
+                                borderRadius: 'var(--radius-circle)',
+                                boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                                color: 'var(--text-secondary)',
+                              }}
+                            >
+                              <AddToPlaylistDropdown
+                                version={{
+                                  performanceId: song.performanceId,
+                                  songTitle: song.title,
+                                  originalArtist: song.originalArtist,
+                                  videoId: song.videoId,
+                                  timestamp: song.timestamp,
+                                }}
+                                onSuccess={handleAddToPlaylistSuccess}
+                              />
+                            </div>
+                            <a
+                              href={`https://www.youtube.com/watch?v=${song.videoId}&t=${song.timestamp}s`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
+                              style={{
+                                background: 'var(--bg-surface)',
+                                padding: 'var(--space-2)',
+                                borderRadius: 'var(--radius-circle)',
+                                boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                                color: 'var(--text-secondary)',
+                                display: 'flex',
+                                alignItems: 'center',
+                              }}
+                              title="在 YouTube 開啟"
+                              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#FF0000'; }}
+                              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                            <span
+                              className="font-mono text-right"
+                              style={{
+                                minWidth: '40px',
+                                fontSize: 'var(--font-size-sm)',
+                                color: 'var(--text-secondary)',
+                              }}
+                            >
+                              {formatTime(song.timestamp)}
+                            </span>
                           </div>
-                          <a
-                            href={`https://www.youtube.com/watch?v=${song.videoId}&t=${song.timestamp}s`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all transform hover:scale-110 bg-white p-1.5 rounded-full shadow-sm"
-                            title="在 YouTube 開啟"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                          <span className="font-mono min-w-[40px] text-right">{formatTime(song.timestamp)}</span>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </>
@@ -1145,12 +1280,13 @@ export default function Home() {
               /* Grouped View */
               <div className="mt-2 space-y-3">
                 {groupedSongs.length === 0 ? (
-                  <div className="py-20 text-center text-slate-400" data-testid="empty-state">
-                    <p className="text-lg font-medium text-slate-500">找不到符合條件的歌曲</p>
+                  <div className="py-20 text-center" data-testid="empty-state" style={{ color: 'var(--text-tertiary)' }}>
+                    <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>找不到符合條件的歌曲</p>
                     {hasActiveFilters && (
                       <button
                         onClick={clearAllFilters}
-                        className="mt-3 text-sm text-pink-500 hover:text-pink-700 font-medium underline underline-offset-2 transition-colors"
+                        className="mt-3 text-sm font-medium underline underline-offset-2 transition-colors"
+                        style={{ color: 'var(--accent-pink)' }}
                         data-testid="clear-filters-empty"
                       >
                         清除所有篩選條件
@@ -1168,36 +1304,80 @@ export default function Home() {
                       <div
                         key={song.id}
                         data-testid="song-card"
-                        className="bg-white/60 border border-white/50 rounded-2xl overflow-hidden hover:shadow-lg transition-all"
+                        className="overflow-hidden transition-all"
+                        style={{
+                          background: 'var(--bg-surface-glass)',
+                          border: '1px solid var(--border-glass)',
+                          borderRadius: 'var(--radius-xl)',
+                          backdropFilter: 'blur(8px)',
+                          WebkitBackdropFilter: 'blur(8px)',
+                        }}
                       >
                         {/* Song Header - Clickable */}
                         <button
                           onClick={() => toggleSongExpansion(song.id)}
-                          className="w-full px-6 py-5 flex items-center justify-between hover:bg-white/40 transition-all group"
+                          className="w-full flex items-center justify-between transition-all group"
+                          style={{
+                            padding: 'var(--space-5) var(--space-6)',
+                          }}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLElement).style.background = 'var(--bg-accent-pink)';
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLElement).style.background = '';
+                          }}
                         >
                           <div className="flex items-start gap-4 flex-1 text-left">
-                            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-pink-100 to-blue-100 flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
-                              <Disc3 className="w-8 h-8 text-slate-600" />
+                            <div
+                              className="flex items-center justify-center flex-shrink-0"
+                              style={{
+                                width: '64px',
+                                height: '64px',
+                                borderRadius: 'var(--radius-lg)',
+                                background: 'linear-gradient(135deg, var(--bg-accent-pink-muted), var(--bg-accent-blue-muted))',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                              }}
+                            >
+                              <Disc3 className="w-8 h-8" style={{ color: 'var(--text-secondary)' }} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-xl text-slate-800 truncate">
+                              <h3
+                                className="font-bold truncate"
+                                style={{ fontSize: 'var(--font-size-lg)', color: 'var(--text-primary)', lineHeight: 1.3 }}
+                              >
                                 {song.title}
                               </h3>
-                              <p className="text-sm text-slate-500 mt-1 truncate">
+                              <p
+                                className="truncate mt-1"
+                                style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}
+                              >
                                 {song.originalArtist}
                               </p>
                               <div className="flex items-center gap-2 mt-2">
-                                <span className="text-xs font-bold text-pink-600 bg-pink-50 px-2 py-1 rounded-full border border-pink-100">
+                                <span
+                                  className="font-bold"
+                                  style={{
+                                    fontSize: 'var(--font-size-xs)',
+                                    color: 'var(--accent-pink)',
+                                    background: 'var(--bg-accent-pink-muted)',
+                                    padding: 'var(--space-1) var(--space-3)',
+                                    borderRadius: 'var(--radius-pill)',
+                                    border: '1px solid var(--border-accent-pink)',
+                                  }}
+                                >
                                   {song.performances.length} 個版本
                                 </span>
                               </div>
                             </div>
                           </div>
-                          <div className="ml-4 text-slate-400 group-hover:text-slate-600 transition-colors">
+                          <div
+                            className="ml-4 transition-colors"
+                            style={{ color: 'var(--text-tertiary)' }}
+                          >
                             {isExpanded ? (
-                              <ChevronDown className="w-6 h-6" />
+                              <ChevronDown className="w-5 h-5" />
                             ) : (
-                              <ChevronRight className="w-6 h-6" />
+                              <ChevronRight className="w-5 h-5" />
                             )}
                           </div>
                         </button>
@@ -1206,15 +1386,33 @@ export default function Home() {
                         {isExpanded && (
                           <div
                             data-testid="versions-list"
-                            className="border-t border-slate-200/60 bg-white/20 px-6 py-4 space-y-2"
+                            className="space-y-0.5 px-3 pb-3"
+                            style={{
+                              borderTop: '1px solid var(--border-table)',
+                              paddingTop: 'var(--space-3)',
+                            }}
                           >
                             {sortedPerformances.map((perf) => (
                               <div
                                 key={perf.id}
                                 data-testid="version-row"
-                                className="group/version flex items-center justify-between p-4 rounded-xl hover:bg-white/60 transition-all border border-transparent hover:border-white/50"
+                                className="group/version grid grid-cols-[32px_1fr_auto] md:grid-cols-[32px_1fr_140px_60px] gap-0 items-center transition-all"
+                                style={{
+                                  borderRadius: 'var(--radius-lg)',
+                                  padding: 'var(--space-3) var(--space-4)',
+                                }}
+                                onMouseEnter={(e) => {
+                                  (e.currentTarget as HTMLElement).style.background = 'var(--bg-accent-pink)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  (e.currentTarget as HTMLElement).style.background = '';
+                                }}
                               >
-                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                                {/* Play button column */}
+                                <div
+                                  className="flex items-center justify-center"
+                                  style={{ width: '32px', height: '32px' }}
+                                >
                                   <button
                                     onClick={() => {
                                       if (!unavailableVideoIds.has(perf.videoId)) {
@@ -1230,31 +1428,66 @@ export default function Home() {
                                     }}
                                     disabled={unavailableVideoIds.has(perf.videoId)}
                                     data-testid="play-button"
-                                    className={`w-10 h-10 rounded-full text-white flex items-center justify-center shadow-md opacity-0 group-hover/version:opacity-100 transition-all flex-shrink-0 ${
+                                    className={`w-8 h-8 rounded-full text-white flex items-center justify-center opacity-0 group-hover/version:opacity-100 transition-all flex-shrink-0 ${
                                       unavailableVideoIds.has(perf.videoId)
-                                        ? 'bg-slate-300 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-pink-400 to-blue-400 hover:scale-110'
+                                        ? 'cursor-not-allowed'
+                                        : 'hover:scale-110'
                                     }`}
+                                    style={{
+                                      background: unavailableVideoIds.has(perf.videoId)
+                                        ? 'var(--text-muted)'
+                                        : 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                                      boxShadow: '0 2px 8px rgba(244, 114, 182, 0.3)',
+                                    }}
                                   >
-                                    <Play className="w-4 h-4 fill-current ml-0.5" />
+                                    <Play className="w-3.5 h-3.5 fill-current" style={{ marginLeft: '1px' }} />
                                   </button>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-3">
-                                      <span className="font-mono text-sm text-slate-500">
-                                        {perf.date}
-                                      </span>
-                                      {perf.note && (
-                                        <span className="text-[10px] border border-blue-200 text-blue-500 px-1.5 py-0.5 rounded-full bg-blue-50 font-medium">
-                                          {perf.note}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <p className="text-sm text-slate-600 truncate mt-1">
-                                      {perf.streamTitle}
-                                    </p>
-                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2 ml-4">
+
+                                {/* Date + Note + Stream title */}
+                                <div className="min-w-0 pl-3">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span
+                                      className="font-mono text-sm"
+                                      style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}
+                                    >
+                                      {perf.date}
+                                    </span>
+                                    {perf.note && (
+                                      <span
+                                        className="inline-flex items-center border border-blue-200 text-blue-500 bg-blue-50 font-medium"
+                                        style={{
+                                          background: 'var(--bg-accent-blue-muted)',
+                                          color: 'var(--accent-blue)',
+                                          borderRadius: 'var(--radius-pill)',
+                                          fontSize: 'var(--font-size-xs)',
+                                          padding: 'var(--space-1) var(--space-3)',
+                                        }}
+                                      >
+                                        {perf.note}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p
+                                    className="truncate mt-0.5"
+                                    style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}
+                                  >
+                                    {perf.streamTitle}
+                                  </p>
+                                </div>
+
+                                {/* Date column desktop (extra info hidden on mobile) */}
+                                <div
+                                  className="hidden md:flex items-center min-w-0 pl-3"
+                                  style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}
+                                >
+                                </div>
+
+                                {/* Actions + Duration */}
+                                <div
+                                  className="flex items-center justify-end gap-1.5"
+                                  style={{ color: 'var(--text-secondary)' }}
+                                >
                                   <button
                                     onClick={() => handleAddToQueue({
                                       id: perf.id,
@@ -1264,13 +1497,31 @@ export default function Home() {
                                       videoId: perf.videoId,
                                       timestamp: perf.timestamp,
                                     })}
-                                    className="opacity-0 group-hover/version:opacity-100 hover:text-pink-500 transition-all transform hover:scale-110 bg-white p-2 rounded-full shadow-sm text-slate-500"
+                                    className="opacity-0 group-hover/version:opacity-100 transition-all transform hover:scale-110"
+                                    style={{
+                                      background: 'var(--bg-surface)',
+                                      padding: 'var(--space-2)',
+                                      borderRadius: 'var(--radius-circle)',
+                                      boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                                      color: 'var(--text-secondary)',
+                                    }}
                                     title="加入佇列"
                                     data-testid="add-to-queue"
+                                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--accent-pink)'; }}
+                                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
                                   >
                                     <Plus className="w-4 h-4" />
                                   </button>
-                                  <div className="opacity-0 group-hover/version:opacity-100 transition-all bg-white p-2 rounded-full shadow-sm text-slate-500">
+                                  <div
+                                    className="opacity-0 group-hover/version:opacity-100 transition-all"
+                                    style={{
+                                      background: 'var(--bg-surface)',
+                                      padding: 'var(--space-2)',
+                                      borderRadius: 'var(--radius-circle)',
+                                      boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                                      color: 'var(--text-secondary)',
+                                    }}
+                                  >
                                     <AddToPlaylistDropdown
                                       version={{
                                         performanceId: perf.id,
@@ -1286,12 +1537,30 @@ export default function Home() {
                                     href={`https://www.youtube.com/watch?v=${perf.videoId}&t=${perf.timestamp}s`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="opacity-0 group-hover/version:opacity-100 hover:text-red-500 transition-all transform hover:scale-110 bg-white p-2 rounded-full shadow-sm text-slate-500"
+                                    className="opacity-0 group-hover/version:opacity-100 transition-all transform hover:scale-110"
+                                    style={{
+                                      background: 'var(--bg-surface)',
+                                      padding: 'var(--space-2)',
+                                      borderRadius: 'var(--radius-circle)',
+                                      boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                                      color: 'var(--text-secondary)',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                    }}
                                     title="在 YouTube 開啟"
+                                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#FF0000'; }}
+                                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
                                   >
                                     <ExternalLink className="w-4 h-4" />
                                   </a>
-                                  <span className="font-mono text-sm text-slate-500 min-w-[40px] text-right">
+                                  <span
+                                    className="font-mono text-right"
+                                    style={{
+                                      minWidth: '40px',
+                                      fontSize: 'var(--font-size-sm)',
+                                      color: 'var(--text-secondary)',
+                                    }}
+                                  >
                                     {formatTime(perf.timestamp)}
                                   </span>
                                 </div>
