@@ -31,6 +31,11 @@ export async function POST(request: Request) {
 
     const streams = readStreams();
 
+    const duplicate = streams.find(s => s.videoId === videoId);
+    if (duplicate) {
+      return NextResponse.json({ error: '此 YouTube URL 已存在於直播場次中' }, { status: 400 });
+    }
+
     const newStream: Stream = {
       id: generateId('stream'),
       title,

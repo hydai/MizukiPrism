@@ -25,6 +25,10 @@ export async function PUT(
       if (!videoId) {
         return NextResponse.json({ error: '請輸入有效的 YouTube URL' }, { status: 400 });
       }
+      const duplicate = streams.find(s => s.videoId === videoId && s.id !== id);
+      if (duplicate) {
+        return NextResponse.json({ error: '此 YouTube URL 已存在於直播場次中' }, { status: 400 });
+      }
       streams[index].youtubeUrl = youtubeUrl;
       streams[index].videoId = videoId;
     }
