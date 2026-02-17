@@ -791,59 +791,220 @@ export default function Home() {
           </header>
 
           {/* Action Bar */}
-          <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md px-8 py-4 flex items-center justify-between border-b border-white/50 shadow-sm" style={{ background: 'var(--bg-overlay)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderTop: '1px solid var(--border-glass)', borderBottom: '1px solid var(--border-glass)' }}>
-            <div className="flex items-center gap-4">
-              {/* Play All Button */}
-              <button className="w-14 h-14 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 text-white flex items-center justify-center shadow-lg shadow-pink-500/30 transform hover:scale-105 transition-all hover:brightness-110">
-                <Play className="w-7 h-7 fill-current ml-1" />
+          <div
+            className="sticky top-0 z-20 px-6 flex items-center gap-3 flex-wrap"
+            style={{
+              background: 'var(--bg-overlay)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              borderTop: '1px solid var(--border-glass)',
+              borderBottom: '1px solid var(--border-glass)',
+              minHeight: '64px',
+              paddingTop: '10px',
+              paddingBottom: '10px',
+            }}
+          >
+            {/* Left side: Play Controls */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {/* PlayButton — 48×48 circular gradient play button */}
+              <button
+                className="bg-gradient-to-r from-pink-400 to-blue-400 text-white flex items-center justify-center transition-all hover:scale-105 hover:brightness-110 flex-shrink-0"
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: 'var(--radius-circle)',
+                  background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                  boxShadow: '0 4px 16px rgba(244, 114, 182, 0.35)',
+                }}
+                title="播放全部"
+                onClick={() => {
+                  const firstSong = viewMode === 'timeline' ? flattenedSongs[0] : (() => {
+                    const first = groupedSongs[0];
+                    if (!first || !first.performances.length) return null;
+                    const sorted = [...first.performances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                    return { ...first, performanceId: sorted[0].id, videoId: sorted[0].videoId, timestamp: sorted[0].timestamp };
+                  })();
+                  if (firstSong && !unavailableVideoIds.has(firstSong.videoId)) {
+                    playTrack({
+                      id: firstSong.performanceId,
+                      songId: firstSong.id,
+                      title: firstSong.title,
+                      originalArtist: firstSong.originalArtist,
+                      videoId: firstSong.videoId,
+                      timestamp: firstSong.timestamp,
+                    });
+                  }
+                }}
+              >
+                <Play className="w-5 h-5 fill-current" style={{ marginLeft: '2px' }} />
               </button>
+
+              {/* GradientButton — "播放全部" pill */}
+              <button
+                className="font-semibold text-white flex items-center gap-1.5 transition-all hover:opacity-90 flex-shrink-0"
+                style={{
+                  background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                  borderRadius: 'var(--radius-pill)',
+                  fontSize: 'var(--font-size-sm)',
+                  padding: 'var(--space-3) var(--space-5)',
+                  color: 'var(--text-on-accent)',
+                }}
+                onClick={() => {
+                  const firstSong = viewMode === 'timeline' ? flattenedSongs[0] : (() => {
+                    const first = groupedSongs[0];
+                    if (!first || !first.performances.length) return null;
+                    const sorted = [...first.performances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                    return { ...first, performanceId: sorted[0].id, videoId: sorted[0].videoId, timestamp: sorted[0].timestamp };
+                  })();
+                  if (firstSong && !unavailableVideoIds.has(firstSong.videoId)) {
+                    playTrack({
+                      id: firstSong.performanceId,
+                      songId: firstSong.id,
+                      title: firstSong.title,
+                      originalArtist: firstSong.originalArtist,
+                      videoId: firstSong.videoId,
+                      timestamp: firstSong.timestamp,
+                    });
+                  }
+                }}
+              >
+                播放全部
+              </button>
+
+              {/* OutlineButton — "追蹤" follow link (secondary action) */}
               <a
                 href={streamerData.socialLinks.youtube}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-slate-500 hover:text-slate-800 border-2 border-slate-200 hover:border-slate-800 rounded-full px-6 py-2 text-sm font-bold transition-all uppercase tracking-wide"
+                className="font-semibold flex items-center gap-1.5 transition-all hover:opacity-80 flex-shrink-0"
+                style={{
+                  background: 'transparent',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: 'var(--radius-pill)',
+                  fontSize: 'var(--font-size-sm)',
+                  padding: 'var(--space-3) var(--space-5)',
+                  color: 'var(--text-secondary)',
+                }}
               >
                 追蹤
               </a>
 
-              {/* View Mode Toggle */}
-              <div className="hidden md:flex items-center gap-2 ml-4 bg-white/60 rounded-full p-1 border border-slate-200/60">
+              {/* View Mode Toggle — restyled to match design language */}
+              <div
+                className="hidden md:flex items-center gap-1 flex-shrink-0"
+                style={{
+                  background: 'var(--bg-surface-muted)',
+                  borderRadius: 'var(--radius-pill)',
+                  padding: '3px',
+                  border: '1px solid var(--border-glass)',
+                }}
+              >
                 <button
                   data-testid="view-toggle-timeline"
                   onClick={() => setViewMode('timeline')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                  className={`flex items-center gap-1.5 font-semibold transition-all ${
                     viewMode === 'timeline'
                       ? 'bg-gradient-to-r from-pink-400 to-blue-400 text-white shadow-md'
-                      : 'text-slate-500 hover:text-slate-800'
+                      : ''
                   }`}
+                  style={{
+                    borderRadius: 'var(--radius-pill)',
+                    fontSize: 'var(--font-size-sm)',
+                    padding: 'var(--space-2) var(--space-4)',
+                    color: viewMode === 'timeline' ? 'var(--text-on-accent)' : 'var(--text-secondary)',
+                  }}
                 >
-                  <Clock className="w-4 h-4" />
+                  <Clock className="w-3.5 h-3.5" />
                   時間序列
                 </button>
                 <button
                   data-testid="view-toggle-grouped"
                   onClick={() => setViewMode('grouped')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                  className={`flex items-center gap-1.5 font-semibold transition-all ${
                     viewMode === 'grouped'
                       ? 'bg-gradient-to-r from-pink-400 to-blue-400 text-white shadow-md'
-                      : 'text-slate-500 hover:text-slate-800'
+                      : ''
                   }`}
+                  style={{
+                    borderRadius: 'var(--radius-pill)',
+                    fontSize: 'var(--font-size-sm)',
+                    padding: 'var(--space-2) var(--space-4)',
+                    color: viewMode === 'grouped' ? 'var(--text-on-accent)' : 'var(--text-secondary)',
+                  }}
                 >
-                  <Disc3 className="w-4 h-4" />
+                  <Disc3 className="w-3.5 h-3.5" />
                   歌曲分組
                 </button>
               </div>
             </div>
 
-            {/* Mobile search */}
-            <div className="md:hidden relative">
-              <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+            {/* Flexible spacer */}
+            <div className="flex-1 hidden md:block" />
+
+            {/* Right side: Tag Filter Chips */}
+            <div className="hidden md:flex items-center gap-1.5 flex-wrap">
+              {/* "全部" chip */}
+              <button
+                onClick={() => setSelectedTag(null)}
+                className="font-medium transition-all"
+                style={{
+                  borderRadius: 'var(--radius-pill)',
+                  fontSize: 'var(--font-size-sm)',
+                  padding: 'var(--space-2) var(--space-4)',
+                  ...(selectedTag === null
+                    ? {
+                        background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                        color: 'var(--text-on-accent)',
+                      }
+                    : {
+                        background: 'var(--bg-surface-muted)',
+                        color: 'var(--text-secondary)',
+                      }),
+                }}
+              >
+                全部
+              </button>
+              {allTags.map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
+                  className="font-medium transition-all"
+                  style={{
+                    borderRadius: 'var(--radius-pill)',
+                    fontSize: 'var(--font-size-sm)',
+                    padding: 'var(--space-2) var(--space-4)',
+                    ...(selectedTag === tag
+                      ? {
+                          background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                          color: 'var(--text-on-accent)',
+                        }
+                      : {
+                          background: 'var(--bg-surface-muted)',
+                          color: 'var(--text-secondary)',
+                        }),
+                  }}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+
+            {/* Mobile search — must stay md:hidden with placeholder="搜尋..." */}
+            <div className="md:hidden relative ml-auto">
+              <Search className="w-4 h-4 absolute left-3 top-2.5" style={{ color: 'var(--text-tertiary)' }} />
               <input
                 type="text"
                 placeholder="搜尋..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-white border border-slate-200 rounded-full py-2 pl-9 pr-4 text-sm text-slate-700 w-36 focus:w-52 transition-all outline-none shadow-sm"
+                className="py-2 pl-9 pr-4 text-sm outline-none transition-all w-36 focus:w-48"
+                style={{
+                  background: 'var(--bg-surface-glass)',
+                  border: '1px solid var(--border-glass)',
+                  borderRadius: 'var(--radius-pill)',
+                  color: 'var(--text-primary)',
+                  backdropFilter: 'blur(8px)',
+                }}
               />
             </div>
           </div>
