@@ -238,23 +238,219 @@ MizukiPrism 讓 Mizuki 的粉絲能快速瀏覽、搜尋並播放她在歌回直
 
 ### 3.4 Presenter
 
-設計層規範，涵蓋頁面佈局與響應式行為。
+設計層規範，涵蓋頁面佈局、元件庫、設計代幣與響應式行為。
 
-#### 3.4.1 頁面佈局
+> **設計參照**：視覺設計的權威來源為 Pencil 設計檔 `~/Library/CloudStorage/Dropbox/PencilDesign/MizukiPrism`（畫框 "Spotify - Mizuki Music", 1440×900）。以下各小節描述該設計檔中的佈局決策與元件結構。
 
-- **側邊欄**（左側）：Logo、首頁按鈕、搜尋輸入框、標籤分類列表、底部署名
-- **主內容區**：直播主資訊區 → 操作列（播放全部按鈕、追蹤按鈕、檢視模式切換、手機版搜尋）→ 歌曲列表
-- **迷你播放器**：固定於頁面底部，播放啟動後持續顯示
+#### 3.4.1 整體佈局架構（Overall Layout）
 
-#### 3.4.2 響應式行為
+根節點為垂直堆疊，佔滿整個視窗：
 
-- 手機尺寸下側邊欄隱藏
-- 直播標題與日期欄位在小螢幕下隱藏
-- 手機版搜尋框顯示於操作列中
+```
+┌──────────────────────────────────────────────┐
+│ ┌──────────┐ ┌─────────────────────────────┐ │
+│ │          │ │                             │ │
+│ │ Sidebar  │ │       MainContent           │ │
+│ │ (260px)  │ │   (fill, glass card)        │ │
+│ │          │ │                             │ │
+│ └──────────┘ └─────────────────────────────┘ │
+│                  BodyRow (horizontal)         │
+├──────────────────────────────────────────────┤
+│            NowPlayingBar (80px)              │
+└──────────────────────────────────────────────┘
+```
 
-#### 3.4.3 視覺主題
+- **BodyRow**（水平排列）：Sidebar（固定 260px）+ MainContent（填滿剩餘空間，圓角毛玻璃卡片，圓角 `radius-3xl`）
+- **NowPlayingBar**：固定 80px 高度，黏著於頁面底部
 
-視覺風格以粉藍漸層與毛玻璃效果為參考方向，具體色值與間距為實作細節，不在此規範。
+#### 3.4.2 側邊欄（Sidebar）
+
+寬度 260px，垂直排列，填充 `bg-surface-frosted`，右側邊框 `border-glass`。
+
+| 區域 | 內容 | 說明 |
+|------|------|------|
+| Logo 區 | 品牌圖示（disc-3）+ "MizukiPlay" 文字 | 頂部品牌識別 |
+| 搜尋框 | SearchBox 元件 | 關鍵字搜尋輸入 |
+| DISCOVER 區段 | SectionHeader + 導航項目（Home 預設為啟用狀態） | 主要導航，使用 NavItem/Active 與 NavItem/Default 元件 |
+| YOUR LIBRARY 區段 | SectionHeader + Liked Songs、Recently Played、使用者播放清單 | 個人化清單導航 |
+| 使用者頁尾 | 頭像（漸層橢圓）+ 使用者名稱 + 狀態標籤 | 底部使用者資訊，漸層邊框與毛玻璃背景 |
+
+#### 3.4.3 主內容區（Main Content）
+
+填充 `bg-surface-glass`，圓角 `radius-3xl`，邊框 `border-glass`，內容溢出裁切。垂直堆疊三個子區域：
+
+**1. Hero Section（高度 280px）**
+
+- 左側：直播主頭像（180×180，圓角 `radius-xl`，外陰影，邊框 `border-glass`）
+- 右側（垂直堆疊）：
+  - VerifiedBadge 元件
+  - 直播主名稱（字級 `font-size-3xl` 附近，字重 900）
+  - 描述文字（歌曲數量、聽眾數等統計）
+  - 統計列：Followers 數字 + Rank 排名
+- 底部漸層遮罩（白色漸透明），底部邊框 `border-glass`
+
+**2. Action Bar**
+
+水平排列，填充 `bg-overlay`，上下邊框 `border-glass`：
+
+- PlayButton 元件（圓形漸層播放按鈕）
+- GradientButton 元件（「播放全部」）
+- OutlineButton 元件（次要動作按鈕）
+- 彈性空白區
+- 標籤篩選列：TagItem/Active（已選取）與 TagItem/Default（未選取）元件組成
+
+**3. Song Table**
+
+垂直排列，填滿剩餘高度：
+
+- **表頭列**（SongTableHeader 元件）：
+
+| 欄位 | 寬度 | 內容 |
+|------|------|------|
+| # | 32px | 序號 |
+| 標題 | fill | 歌名 + 原唱者（附 NoteBadge 元件標註演出備註） |
+| 出處直播 | fill | 直播標題 |
+| 日期 | 100px | 演出日期 |
+| 時長 | 60px | 時鐘圖示（表頭）/ 時間文字（資料列） |
+
+- **資料列**（SongRow 元件）：每列圓角 `radius-lg`，hover/播放中列以淡粉色背景標示
+
+#### 3.4.4 正在播放列（Now Playing Bar）
+
+高度 80px，水平排列三欄，填充 `bg-surface-frosted`，頂部邊框 `border-glass`：
+
+| 欄位 | 寬度 | 內容 |
+|------|------|------|
+| 左欄 | 280px | 專輯封面縮圖（48×48，圓角 `radius-sm`）+ 歌名 + 原唱者 + 愛心圖示 |
+| 中欄 | fill | 傳輸控制列（shuffle、上一首、播放/暫停、下一首、repeat）+ 進度條（漸層填充 + 拖曳圓點）+ 時間標籤 |
+| 右欄 | 200px | 佇列圖示 + 裝置圖示 + 音量滑桿 |
+
+- 傳輸控制使用 PlayButton 元件（縮小版 40×40）
+- 進度條使用粉→藍漸層填充，圓點帶有 `accent-pink-light` 邊框
+
+#### 3.4.5 元件庫（Component Library）
+
+設計中定義 15 個可重用元件：
+
+| 元件 | 用途 | 使用位置 |
+|------|------|----------|
+| NavItem/Active | 高亮側邊欄連結（漸層背景） | 側邊欄當前頁面 |
+| NavItem/Default | 一般側邊欄連結 | 側邊欄其他頁面 |
+| SearchBox | 關鍵字搜尋輸入框 | 側邊欄 |
+| TagItem/Active | 已選取的篩選標籤 | Action Bar |
+| TagItem/Default | 未選取的篩選標籤 | Action Bar |
+| NoteBadge | 演出備註標示（如「Playing」） | 歌曲列表資料列 |
+| SongRow | 單首歌曲資料列 | 歌曲列表 |
+| SocialButton | 外部連結按鈕 | Hero Section |
+| PlayButton | 圓形播放觸發按鈕（漸層背景） | Action Bar、Now Playing Bar |
+| OutlineButton | 次要動作按鈕（外框樣式） | Action Bar |
+| VerifiedBadge | 直播主認證標籤 | Hero Section |
+| SongTableHeader | 歌曲列表欄位標頭 | 歌曲列表 |
+| SectionHeader | 側邊欄區段標題 | 側邊欄 |
+| GradientButton | 主要動作按鈕（漸層背景） | Action Bar |
+| GlassCard | 毛玻璃容器卡片 | 通用容器 |
+
+#### 3.4.6 設計代幣（Design Tokens）
+
+**色彩（Colors）**
+
+| 類別 | Token 名稱 | 值 |
+|------|-----------|-----|
+| 強調色 | `accent-pink` | #EC4899 |
+| 強調色 | `accent-pink-dark` | #DB2777 |
+| 強調色 | `accent-pink-light` | #F472B6 |
+| 強調色 | `accent-blue` | #3B82F6 |
+| 強調色 | `accent-blue-light` | #60A5FA |
+| 強調色 | `accent-purple` | #A855F7 |
+| 頁面背景 | `bg-page-start` | #FFF0F5 |
+| 頁面背景 | `bg-page-mid` | #F0F8FF |
+| 頁面背景 | `bg-page-end` | #E6E6FA |
+| 表面 | `bg-surface` | #FFFFFF |
+| 表面 | `bg-surface-frosted` | #FFFFFF99 |
+| 表面 | `bg-surface-glass` | #FFFFFF66 |
+| 表面 | `bg-surface-muted` | #FFFFFF80 |
+| 覆蓋層 | `bg-overlay` | #FFFFFFCC |
+| 強調背景 | `bg-accent-pink` | #FDF2F8 |
+| 強調背景 | `bg-accent-pink-muted` | #FCE7F3 |
+| 強調背景 | `bg-accent-blue` | #EFF6FF |
+| 強調背景 | `bg-accent-blue-muted` | #DBEAFE |
+| 文字 | `text-primary` | #1E293B |
+| 文字 | `text-secondary` | #64748B |
+| 文字 | `text-tertiary` | #94A3B8 |
+| 文字 | `text-muted` | #CBD5E1 |
+| 文字 | `text-on-accent` | #FFFFFF |
+| 邊框 | `border-default` | #E2E8F0 |
+| 邊框 | `border-glass` | #FFFFFF66 |
+| 邊框 | `border-table` | #E2E8F040 |
+| 邊框 | `border-accent-pink` | #FBCFE8 |
+| 邊框 | `border-accent-blue` | #BFDBFE |
+
+**字型（Typography）**
+
+| Token | 值 |
+|-------|-----|
+| `font-primary` | DM Sans |
+| `font-size-xs` | 10px |
+| `font-size-sm` | 11px |
+| `font-size-base` | 13px |
+| `font-size-md` | 14px |
+| `font-size-lg` | 15px |
+| `font-size-xl` | 20px |
+| `font-size-2xl` | 32px |
+| `font-size-3xl` | 48px |
+| `font-size-display` | 64px |
+
+**間距（Spacing）**
+
+| Token | 值 |
+|-------|-----|
+| `space-1` | 2px |
+| `space-2` | 4px |
+| `space-3` | 8px |
+| `space-4` | 12px |
+| `space-5` | 16px |
+| `space-6` | 24px |
+| `space-7` | 32px |
+| `space-8` | 40px |
+
+**圓角（Border Radii）**
+
+| Token | 值 |
+|-------|-----|
+| `radius-xs` | 6px |
+| `radius-sm` | 8px |
+| `radius-md` | 10px |
+| `radius-lg` | 12px |
+| `radius-xl` | 16px |
+| `radius-2xl` | 20px |
+| `radius-3xl` | 24px |
+| `radius-pill` | 28px |
+| `radius-circle` | 9999px |
+
+**圖示尺寸（Icon Sizes）**
+
+| Token | 值 |
+|-------|-----|
+| `icon-sm` | 14px |
+| `icon-md` | 16px |
+| `icon-lg` | 20px |
+| `icon-xl` | 28px |
+
+#### 3.4.7 響應式行為（Responsive Behavior）
+
+| 斷點 | 側邊欄 | 歌曲列表欄位 | 搜尋 | Now Playing Bar |
+|------|--------|-------------|------|-----------------|
+| 桌面（≥1024px） | 顯示（260px） | 全部欄位 | 側邊欄搜尋框 | 完整三欄 |
+| 行動裝置（<1024px） | 隱藏 | 僅標題 + 時長 | 操作列搜尋框 | 精簡模式 |
+
+#### 3.4.8 視覺主題（Visual Theme）
+
+整體視覺採用 Glassmorphism（毛玻璃風格）：
+
+- **頁面背景**：對角線漸層（粉 `bg-page-start` → 藍 `bg-page-mid` → 薰衣草 `bg-page-end`），角度 135°
+- **表面層**：半透明白色毛玻璃效果（`bg-surface-frosted`、`bg-surface-glass`），搭配 `border-glass` 玻璃邊框
+- **強調漸層**：粉→藍（`accent-pink-light` → `accent-blue-light`），用於 PlayButton、NavItem/Active、GradientButton、進度條等元件
+- **陰影**：關鍵元素（直播主頭像）使用淡外陰影增加層次感
 
 ## 4. Refinement
 
