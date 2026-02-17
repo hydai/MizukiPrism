@@ -131,7 +131,7 @@ test.describe('CORE-001: Streamer Profile & Song Catalog (Timeline View)', () =>
     await searchInput.fill('NONEXISTENTSONG12345');
 
     // Verify empty state message
-    await expect(page.getByText('目前尚無歌曲資料')).toBeVisible();
+    await expect(page.getByText('找不到符合條件的歌曲')).toBeVisible();
   });
 
   test('AC10: UI language is Traditional Chinese throughout', async ({ page }) => {

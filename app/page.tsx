@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus } from 'lucide-react';
+import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal } from 'lucide-react';
 import songsData from '@/data/songs.json';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
@@ -49,6 +49,9 @@ type ViewMode = 'timeline' | 'grouped';
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('timeline');
   const [expandedSongs, setExpandedSongs] = useState<Set<string>>(new Set());
   const [showToast, setShowToast] = useState(false);
@@ -111,6 +114,22 @@ export default function Home() {
     return Array.from(tags).sort();
   }, [songs]);
 
+  const allArtists = useMemo(() => {
+    const artists = new Set<string>();
+    songs.forEach(song => artists.add(song.originalArtist));
+    return Array.from(artists).sort((a, b) => a.localeCompare(b, 'zh-TW'));
+  }, [songs]);
+
+  const hasActiveFilters = searchTerm !== '' || selectedTag !== null || selectedArtist !== null || dateFrom !== '' || dateTo !== '';
+
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setSelectedTag(null);
+    setSelectedArtist(null);
+    setDateFrom('');
+    setDateTo('');
+  };
+
   const flattenedSongs: FlattenedSong[] = useMemo(() => {
     let result: FlattenedSong[] = [];
     songs.forEach(song => {
@@ -132,9 +151,12 @@ export default function Home() {
       const lowerTerm = searchTerm.toLowerCase();
       const matchesSearch = song.searchString.includes(lowerTerm);
       const matchesTag = selectedTag ? song.tags.includes(selectedTag) : true;
-      return matchesSearch && matchesTag;
+      const matchesArtist = selectedArtist ? song.originalArtist === selectedArtist : true;
+      const matchesDateFrom = dateFrom ? song.date >= dateFrom : true;
+      const matchesDateTo = dateTo ? song.date <= dateTo : true;
+      return matchesSearch && matchesTag && matchesArtist && matchesDateFrom && matchesDateTo;
     });
-  }, [songs, searchTerm, selectedTag]);
+  }, [songs, searchTerm, selectedTag, selectedArtist, dateFrom, dateTo]);
 
   // Grouped songs for song-grouped view
   const groupedSongs: Song[] = useMemo(() => {
@@ -143,10 +165,17 @@ export default function Home() {
         const lowerTerm = searchTerm.toLowerCase();
         const matchesSearch = `${song.title} ${song.originalArtist}`.toLowerCase().includes(lowerTerm);
         const matchesTag = selectedTag ? song.tags.includes(selectedTag) : true;
-        return matchesSearch && matchesTag;
+        const matchesArtist = selectedArtist ? song.originalArtist === selectedArtist : true;
+        // For grouped view, filter by date range: show song if any performance is within range
+        const matchesDate = (dateFrom || dateTo) ? song.performances.some(perf => {
+          const matchesDateFrom = dateFrom ? perf.date >= dateFrom : true;
+          const matchesDateTo = dateTo ? perf.date <= dateTo : true;
+          return matchesDateFrom && matchesDateTo;
+        }) : true;
+        return matchesSearch && matchesTag && matchesArtist && matchesDate;
       })
       .sort((a, b) => a.title.localeCompare(b.title, 'zh-TW'));
-  }, [songs, searchTerm, selectedTag]);
+  }, [songs, searchTerm, selectedTag, selectedArtist, dateFrom, dateTo]);
 
   const gradientText = "bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500";
 
@@ -168,8 +197,8 @@ export default function Home() {
         {/* Navigation */}
         <nav className="space-y-1">
           <button
-            onClick={() => {setSearchTerm(''); setSelectedTag(null);}}
-            className={`w-full flex items-center gap-4 px-4 py-3 font-bold transition-all rounded-xl ${!searchTerm && !selectedTag ? 'text-white bg-gradient-to-r from-pink-400 to-blue-400 shadow-md shadow-blue-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}
+            onClick={clearAllFilters}
+            className={`w-full flex items-center gap-4 px-4 py-3 font-bold transition-all rounded-xl ${!hasActiveFilters ? 'text-white bg-gradient-to-r from-pink-400 to-blue-400 shadow-md shadow-blue-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}
           >
             <HomeIcon className="w-5 h-5" />
             首頁
@@ -189,8 +218,69 @@ export default function Home() {
           </div>
         </nav>
 
+        {/* Filters: Artist + Date Range */}
+        <div className="mt-2 space-y-2 px-1">
+          <div className="px-3 py-2 flex items-center justify-between text-slate-400">
+            <span className="font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+              <SlidersHorizontal className="w-4 h-4" />
+              篩選條件
+            </span>
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="text-xs text-pink-500 hover:text-pink-700 font-medium transition-colors"
+                data-testid="clear-all-filters"
+              >
+                清除全部
+              </button>
+            )}
+          </div>
+
+          {/* Artist dropdown */}
+          <div className="relative">
+            <select
+              value={selectedArtist ?? ''}
+              onChange={(e) => setSelectedArtist(e.target.value || null)}
+              className="w-full bg-white/50 text-slate-700 border border-transparent focus:border-pink-200 focus:ring-2 focus:ring-pink-100 font-medium py-2.5 px-4 rounded-xl outline-none appearance-none transition-all shadow-sm text-sm cursor-pointer"
+              data-testid="artist-filter"
+            >
+              <option value="">全部歌手</option>
+              {allArtists.map(artist => (
+                <option key={artist} value={artist}>{artist}</option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            </div>
+          </div>
+
+          {/* Date range */}
+          <div className="space-y-1.5">
+            <div className="relative">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full bg-white/50 text-slate-700 border border-transparent focus:border-pink-200 focus:ring-2 focus:ring-pink-100 font-medium py-2 px-4 rounded-xl outline-none transition-all shadow-sm text-sm"
+                data-testid="date-from"
+                placeholder="開始日期"
+              />
+            </div>
+            <div className="relative">
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-full bg-white/50 text-slate-700 border border-transparent focus:border-pink-200 focus:ring-2 focus:ring-pink-100 font-medium py-2 px-4 rounded-xl outline-none transition-all shadow-sm text-sm"
+                data-testid="date-to"
+                placeholder="結束日期"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* My Playlists */}
-        <div className="mt-4">
+        <div className="mt-2">
           <div className="px-4 py-2 flex items-center justify-between text-slate-400">
             <span className="font-bold text-xs uppercase tracking-wider flex items-center gap-2">
               <ListMusic className="w-4 h-4" />
@@ -376,8 +466,17 @@ export default function Home() {
 
                 <div className="mt-2 space-y-1">
                   {flattenedSongs.length === 0 ? (
-                    <div className="py-20 text-center text-slate-400">
-                      <p className="text-lg">目前尚無歌曲資料</p>
+                    <div className="py-20 text-center text-slate-400" data-testid="empty-state">
+                      <p className="text-lg font-medium text-slate-500">找不到符合條件的歌曲</p>
+                      {hasActiveFilters && (
+                        <button
+                          onClick={clearAllFilters}
+                          className="mt-3 text-sm text-pink-500 hover:text-pink-700 font-medium underline underline-offset-2 transition-colors"
+                          data-testid="clear-filters-empty"
+                        >
+                          清除所有篩選條件
+                        </button>
+                      )}
                     </div>
                   ) : (
                     flattenedSongs.map((song, index) => (
@@ -478,8 +577,17 @@ export default function Home() {
               /* Grouped View */
               <div className="mt-2 space-y-3">
                 {groupedSongs.length === 0 ? (
-                  <div className="py-20 text-center text-slate-400">
-                    <p className="text-lg">目前尚無歌曲資料</p>
+                  <div className="py-20 text-center text-slate-400" data-testid="empty-state">
+                    <p className="text-lg font-medium text-slate-500">找不到符合條件的歌曲</p>
+                    {hasActiveFilters && (
+                      <button
+                        onClick={clearAllFilters}
+                        className="mt-3 text-sm text-pink-500 hover:text-pink-700 font-medium underline underline-offset-2 transition-colors"
+                        data-testid="clear-filters-empty"
+                      >
+                        清除所有篩選條件
+                      </button>
+                    )}
                   </div>
                 ) : (
                   groupedSongs.map((song) => {
