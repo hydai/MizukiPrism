@@ -91,7 +91,7 @@ export default function MiniPlayer() {
         }}
         style={{ cursor: 'pointer' }}
       >
-        {/* LEFT COLUMN: 280px — album art, track info, like */}
+        {/* LEFT COLUMN: 280px desktop / flex-1 mobile — album art, track info, like */}
         <div
           className="flex items-center gap-3 flex-shrink-0"
           style={{ width: '280px' }}
@@ -165,9 +165,9 @@ export default function MiniPlayer() {
         >
           {/* Transport controls row */}
           <div className="flex items-center gap-4">
-            {/* Shuffle */}
+            {/* Shuffle — hidden on mobile */}
             <button
-              className="transition-colors"
+              className="hidden lg:block transition-colors"
               aria-label="Shuffle"
               style={{ color: 'var(--text-tertiary)' }}
               onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
@@ -231,9 +231,9 @@ export default function MiniPlayer() {
               <SkipForward style={{ width: '18px', height: '18px' }} />
             </button>
 
-            {/* Repeat */}
+            {/* Repeat — hidden on mobile */}
             <button
-              className="transition-colors"
+              className="hidden lg:block transition-colors"
               aria-label="Repeat"
               style={{ color: 'var(--text-tertiary)' }}
               onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
@@ -297,9 +297,38 @@ export default function MiniPlayer() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: 200px — queue, speaker, volume */}
+        {/* Mobile queue button — visible only on mobile */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowQueue(true);
+          }}
+          className="lg:hidden relative transition-colors flex-shrink-0"
+          aria-label="Open queue"
+          data-testid="queue-button-mobile"
+          style={{ color: 'var(--text-tertiary)', padding: '10px', minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <ListMusic style={{ width: '18px', height: '18px' }} />
+          {queue.length > 0 && (
+            <span
+              className="absolute -top-1 -right-1 flex items-center justify-center font-bold"
+              style={{
+                width: '16px',
+                height: '16px',
+                borderRadius: 'var(--radius-circle)',
+                background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                color: 'white',
+                fontSize: '10px',
+              }}
+            >
+              {queue.length}
+            </span>
+          )}
+        </button>
+
+        {/* RIGHT COLUMN: 200px desktop / hidden mobile — queue, speaker, volume */}
         <div
-          className="flex items-center gap-3 flex-shrink-0 justify-end"
+          className="hidden lg:flex items-center gap-3 flex-shrink-0 justify-end"
           style={{ width: '200px' }}
           onClick={(e) => e.stopPropagation()}
         >

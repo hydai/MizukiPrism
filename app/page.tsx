@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, LogIn, LogOut, User, WifiOff } from 'lucide-react';
+import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, LogIn, LogOut, User, WifiOff, Menu } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
@@ -60,6 +60,7 @@ export default function Home() {
   const [toastMessage, setToastMessage] = useState('');
   const [showPlaylistPanel, setShowPlaylistPanel] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [songs, setSongs] = useState<Song[]>([]);
 
   // Fetch songs from API
@@ -223,7 +224,7 @@ export default function Home() {
       <div className="flex h-screen bg-gradient-to-br from-[#fff0f5] via-[#f0f8ff] to-[#e6e6fa] text-slate-600 font-sans selection:bg-pink-200 selection:text-pink-900 overflow-hidden" style={{ background: 'linear-gradient(135deg, var(--bg-page-start) 0%, var(--bg-page-mid) 50%, var(--bg-page-end) 100%)' }}>
 
       {/* Sidebar */}
-      <aside className="w-64 bg-white/60 backdrop-blur-xl border-r border-white/40 flex flex-col flex-shrink-0 hidden md:flex shadow-sm z-20 overflow-hidden" style={{ background: 'var(--bg-surface-frosted)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRight: '1px solid var(--border-glass)' }}>
+      <aside className="w-64 bg-white/60 backdrop-blur-xl border-r border-white/40 flex flex-col flex-shrink-0 hidden lg:flex shadow-sm z-20 overflow-hidden" style={{ background: 'var(--bg-surface-frosted)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRight: '1px solid var(--border-glass)' }}>
 
         {/* ── 1. Logo Area ── */}
         <div className="px-5 py-5 flex items-center gap-3 flex-shrink-0">
@@ -591,8 +592,136 @@ export default function Home() {
 
       </aside>
 
+      {/* Mobile Sidebar Overlay — slide-over panel on mobile (hidden lg) */}
+      {showMobileSidebar && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="lg:hidden fixed inset-0 z-40"
+            style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(2px)' }}
+            onClick={() => setShowMobileSidebar(false)}
+          />
+          {/* Slide-over sidebar */}
+          <aside
+            className="lg:hidden fixed left-0 top-0 h-full z-50 flex flex-col overflow-hidden"
+            style={{
+              width: '280px',
+              background: 'var(--bg-surface-frosted)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              borderRight: '1px solid var(--border-glass)',
+            }}
+            data-testid="mobile-sidebar"
+          >
+            {/* Close button */}
+            <div className="px-4 py-4 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-9 h-9 rounded-radius-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))' }}
+                >
+                  <Disc3 className="w-5 h-5 text-white" />
+                </div>
+                <span
+                  className="font-bold text-xl tracking-tight bg-clip-text text-transparent"
+                  style={{ backgroundImage: 'linear-gradient(135deg, var(--accent-pink), var(--accent-blue))' }}
+                >
+                  MizukiPrism
+                </span>
+              </div>
+              <button
+                onClick={() => setShowMobileSidebar(false)}
+                className="p-2"
+                style={{ color: 'var(--text-tertiary)' }}
+                aria-label="Close menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 px-3 space-y-1 pb-3">
+              {/* Search */}
+              <div className="relative group pb-2">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="搜尋歌曲..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full font-medium py-2.5 pl-9 pr-4 outline-none transition-all text-sm"
+                  style={{
+                    background: 'var(--bg-surface-glass)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: 'var(--radius-pill)',
+                    color: 'var(--text-primary)',
+                  }}
+                />
+              </div>
+
+              {/* DISCOVER Section */}
+              <div className="pt-2 pb-1">
+                <div className="px-3 py-1.5 mb-1 font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}>DISCOVER</div>
+                <button onClick={() => { clearAllFilters(); setShowMobileSidebar(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all" style={!hasActiveFilters ? { background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))', color: 'var(--text-on-accent)' } : { background: 'transparent', color: 'var(--text-secondary)' }}>
+                  <HomeIcon className="w-4 h-4 flex-shrink-0" />首頁
+                </button>
+              </div>
+
+              {/* YOUR LIBRARY Section */}
+              <div className="pt-2 pb-1">
+                <div className="px-3 py-1.5 mb-1 font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}>YOUR LIBRARY</div>
+                <button onClick={() => { setShowCreateDialog(true); setShowMobileSidebar(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40" style={{ background: 'transparent', color: 'var(--text-secondary)' }} data-testid="mobile-create-playlist-button">
+                  <Plus className="w-4 h-4 flex-shrink-0" />建立新播放清單
+                </button>
+                {playlists.length > 0 && (
+                  <button onClick={() => { setShowPlaylistPanel(true); setShowMobileSidebar(false); }} className="w-full flex items-center justify-between px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40" style={{ background: 'transparent', color: 'var(--text-secondary)' }}>
+                    <span className="flex items-center gap-3"><ListMusic className="w-4 h-4 flex-shrink-0" />查看播放清單</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'var(--bg-accent-pink-muted)', color: 'var(--accent-pink)' }}>{playlists.length}</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Tag filters */}
+              <div className="pt-2 pb-2">
+                <div className="px-3 py-1.5 mb-1 font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}>風格分類</div>
+                <button onClick={() => { setSelectedTag(null); setShowMobileSidebar(false); }} className="w-full text-left px-3 py-2 rounded-radius-lg text-sm font-medium transition-all" style={selectedTag === null ? { color: 'var(--accent-pink)', background: 'var(--bg-accent-pink)' } : { color: 'var(--text-secondary)', background: 'transparent' }}>全部歌曲</button>
+                {allTags.map(tag => (
+                  <button key={tag} onClick={() => { setSelectedTag(tag === selectedTag ? null : tag); setShowMobileSidebar(false); }} className="w-full text-left px-3 py-2 rounded-radius-lg text-sm font-medium transition-all hover:bg-white/40" style={selectedTag === tag ? { color: 'var(--accent-pink)', background: 'var(--bg-accent-pink)' } : { color: 'var(--text-secondary)', background: 'transparent' }}>#{tag}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex-shrink-0 px-3 py-3 border-t" style={{ borderTop: '1px solid var(--border-glass)' }}>
+              {isLoggedIn && user ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center p-0.5" style={{ background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))' }}>
+                    <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: 'var(--bg-surface-frosted)' }}>
+                      <User className="w-4 h-4" style={{ color: 'var(--accent-pink)' }} />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{user.username}</div>
+                  </div>
+                  <button onClick={async () => { await logout(); setShowMobileSidebar(false); setToastMessage('已登出'); setShowToast(true); }} className="p-1.5 rounded-radius-sm" style={{ color: 'var(--text-tertiary)' }} data-testid="mobile-logout-button">
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <a href="/auth" className="flex items-center gap-3 px-3 py-2.5 rounded-radius-lg text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                  <LogIn className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />登入
+                </a>
+              )}
+            </div>
+          </aside>
+        </>
+      )}
+
       {/* Main Content */}
-      <main className="flex-1 md:m-3 md:rounded-3xl overflow-hidden relative shadow-2xl shadow-indigo-100/50 bg-white/40 backdrop-blur-md border border-white/60 flex flex-col" style={{ background: 'var(--bg-surface-glass)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-3xl)' }}>
+      <main className="flex-1 lg:m-3 lg:rounded-3xl overflow-hidden relative shadow-2xl shadow-indigo-100/50 bg-white/40 backdrop-blur-md border border-white/60 flex flex-col" style={{ background: 'var(--bg-surface-glass)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-3xl)' }}>
 
         {/* Decorative glows */}
         <div className="absolute -top-20 -right-20 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl pointer-events-none"></div>
@@ -806,6 +935,22 @@ export default function Home() {
           >
             {/* Left side: Play Controls */}
             <div className="flex items-center gap-3 flex-shrink-0">
+              {/* Hamburger menu — mobile only (hidden lg) */}
+              <button
+                className="lg:hidden flex items-center justify-center"
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: 'var(--radius-lg)',
+                  color: 'var(--text-secondary)',
+                }}
+                onClick={() => setShowMobileSidebar(true)}
+                aria-label="Open menu"
+                data-testid="mobile-menu-button"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+
               {/* PlayButton — 48×48 circular gradient play button */}
               <button
                 className="bg-gradient-to-r from-pink-400 to-blue-400 text-white flex items-center justify-center transition-all hover:scale-105 hover:brightness-110 flex-shrink-0"
@@ -891,7 +1036,7 @@ export default function Home() {
 
               {/* View Mode Toggle — restyled to match design language */}
               <div
-                className="hidden md:flex items-center gap-1 flex-shrink-0"
+                className="hidden lg:flex items-center gap-1 flex-shrink-0"
                 style={{
                   background: 'var(--bg-surface-muted)',
                   borderRadius: 'var(--radius-pill)',
@@ -939,10 +1084,10 @@ export default function Home() {
             </div>
 
             {/* Flexible spacer */}
-            <div className="flex-1 hidden md:block" />
+            <div className="flex-1 hidden lg:block" />
 
             {/* Right side: Tag Filter Chips */}
-            <div className="hidden md:flex items-center gap-1.5 flex-wrap">
+            <div className="hidden lg:flex items-center gap-1.5 flex-wrap">
               {/* "全部" chip */}
               <button
                 onClick={() => setSelectedTag(null)}
@@ -989,8 +1134,8 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Mobile search — must stay md:hidden with placeholder="搜尋..." */}
-            <div className="md:hidden relative ml-auto">
+            {/* Mobile search — must stay lg:hidden with placeholder="搜尋..." */}
+            <div className="lg:hidden relative ml-auto">
               <Search className="w-4 h-4 absolute left-3 top-2.5" style={{ color: 'var(--text-tertiary)' }} />
               <input
                 type="text"
@@ -1016,31 +1161,31 @@ export default function Home() {
               <>
                 {/* SongTableHeader */}
                 <div
-                  className="grid grid-cols-[32px_1fr_auto] md:grid-cols-[32px_2fr_2fr_100px_60px] gap-0 px-3 py-2 sticky top-[88px] z-10"
+                  className="grid grid-cols-[1fr_60px] lg:grid-cols-[32px_2fr_2fr_100px_60px] gap-0 px-3 py-2 sticky top-[88px] z-10"
                   style={{
                     borderBottom: '1px solid var(--border-table)',
                   }}
                 >
                   <div
-                    className="flex items-center justify-center text-center font-bold uppercase tracking-wider"
+                    className="hidden lg:flex items-center justify-center text-center font-bold uppercase tracking-wider"
                     style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}
                   >
                     #
                   </div>
                   <div
-                    className="flex items-center font-bold uppercase tracking-wider pl-3"
+                    className="flex items-center font-bold uppercase tracking-wider lg:pl-3"
                     style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}
                   >
                     標題
                   </div>
                   <div
-                    className="hidden md:flex items-center font-bold uppercase tracking-wider pl-3"
+                    className="hidden lg:flex items-center font-bold uppercase tracking-wider pl-3"
                     style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}
                   >
                     出處直播
                   </div>
                   <div
-                    className="hidden md:flex items-center font-bold uppercase tracking-wider pl-3"
+                    className="hidden lg:flex items-center font-bold uppercase tracking-wider pl-3"
                     style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}
                   >
                     發布日期
@@ -1075,7 +1220,7 @@ export default function Home() {
                         <div
                           key={`${song.id}-${song.performanceId}`}
                           data-testid="performance-row"
-                          className="group grid grid-cols-[32px_1fr_auto] md:grid-cols-[32px_2fr_2fr_100px_60px] gap-0 items-center transition-all cursor-default"
+                          className="group grid grid-cols-[1fr_60px] lg:grid-cols-[32px_2fr_2fr_100px_60px] gap-0 items-center transition-all cursor-default"
                           style={{
                             borderRadius: 'var(--radius-lg)',
                             padding: 'var(--space-3) var(--space-4)',
@@ -1094,9 +1239,9 @@ export default function Home() {
                             }
                           }}
                         >
-                          {/* # column: row number / play button */}
+                          {/* # column: row number / play button — hidden on mobile */}
                           <div
-                            className="flex items-center justify-center relative"
+                            className="hidden lg:flex items-center justify-center relative"
                             style={{ width: '32px', height: '32px' }}
                           >
                             <span
@@ -1136,7 +1281,34 @@ export default function Home() {
                           </div>
 
                           {/* Title column: song title + artist + NoteBadge */}
-                          <div className="min-w-0 pl-3">
+                          <div className="min-w-0 pl-1 lg:pl-3 flex items-center gap-2 lg:block">
+                            {/* Mobile play button — visible only on mobile (hidden lg) */}
+                            <button
+                              onClick={() => {
+                                if (!unavailableVideoIds.has(song.videoId)) {
+                                  playTrack({
+                                    id: song.performanceId,
+                                    songId: song.id,
+                                    title: song.title,
+                                    originalArtist: song.originalArtist,
+                                    videoId: song.videoId,
+                                    timestamp: song.timestamp,
+                                  });
+                                }
+                              }}
+                              disabled={unavailableVideoIds.has(song.videoId)}
+                              data-testid="mobile-play-button"
+                              className={`lg:hidden flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full ${
+                                unavailableVideoIds.has(song.videoId) ? 'cursor-not-allowed opacity-40' : ''
+                              }`}
+                              style={{
+                                background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                                color: 'white',
+                              }}
+                            >
+                              <Play className="w-4 h-4 fill-current" style={{ marginLeft: '2px' }} />
+                            </button>
+                            <div className="min-w-0 flex-1 lg:flex-none">
                             <div className="flex items-center gap-2 min-w-0">
                               <div
                                 className="font-bold truncate"
@@ -1171,11 +1343,12 @@ export default function Home() {
                             >
                               {song.originalArtist}
                             </div>
+                            </div>
                           </div>
 
                           {/* Stream title column (desktop only) */}
                           <div
-                            className="hidden md:flex items-center min-w-0 pl-3"
+                            className="hidden lg:flex items-center min-w-0 pl-3"
                             style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}
                           >
                             <span className="truncate">{song.streamTitle}</span>
@@ -1183,7 +1356,7 @@ export default function Home() {
 
                           {/* Date column (desktop only) */}
                           <div
-                            className="hidden md:flex items-center pl-3 font-mono"
+                            className="hidden lg:flex items-center pl-3 font-mono"
                             style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}
                           >
                             {song.date}
@@ -1396,7 +1569,7 @@ export default function Home() {
                               <div
                                 key={perf.id}
                                 data-testid="version-row"
-                                className="group/version grid grid-cols-[32px_1fr_auto] md:grid-cols-[32px_1fr_140px_60px] gap-0 items-center transition-all"
+                                className="group/version grid grid-cols-[1fr_60px] lg:grid-cols-[32px_1fr_140px_60px] gap-0 items-center transition-all"
                                 style={{
                                   borderRadius: 'var(--radius-lg)',
                                   padding: 'var(--space-3) var(--space-4)',
@@ -1408,9 +1581,9 @@ export default function Home() {
                                   (e.currentTarget as HTMLElement).style.background = '';
                                 }}
                               >
-                                {/* Play button column */}
+                                {/* Play button column — desktop only */}
                                 <div
-                                  className="flex items-center justify-center"
+                                  className="hidden lg:flex items-center justify-center"
                                   style={{ width: '32px', height: '32px' }}
                                 >
                                   <button
@@ -1445,7 +1618,34 @@ export default function Home() {
                                 </div>
 
                                 {/* Date + Note + Stream title */}
-                                <div className="min-w-0 pl-3">
+                                <div className="min-w-0 pl-1 lg:pl-3 flex items-center gap-2 lg:block">
+                                  {/* Mobile play button */}
+                                  <button
+                                    onClick={() => {
+                                      if (!unavailableVideoIds.has(perf.videoId)) {
+                                        playTrack({
+                                          id: perf.id,
+                                          songId: song.id,
+                                          title: song.title,
+                                          originalArtist: song.originalArtist,
+                                          videoId: perf.videoId,
+                                          timestamp: perf.timestamp,
+                                        });
+                                      }
+                                    }}
+                                    disabled={unavailableVideoIds.has(perf.videoId)}
+                                    data-testid="mobile-play-button"
+                                    className={`lg:hidden flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full ${
+                                      unavailableVideoIds.has(perf.videoId) ? 'cursor-not-allowed opacity-40' : ''
+                                    }`}
+                                    style={{
+                                      background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                                      color: 'white',
+                                    }}
+                                  >
+                                    <Play className="w-3.5 h-3.5 fill-current" style={{ marginLeft: '1px' }} />
+                                  </button>
+                                  <div className="min-w-0 flex-1 lg:flex-none">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span
                                       className="font-mono text-sm"
@@ -1474,11 +1674,12 @@ export default function Home() {
                                   >
                                     {perf.streamTitle}
                                   </p>
+                                  </div>
                                 </div>
 
                                 {/* Date column desktop (extra info hidden on mobile) */}
                                 <div
-                                  className="hidden md:flex items-center min-w-0 pl-3"
+                                  className="hidden lg:flex items-center min-w-0 pl-3"
                                   style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}
                                 >
                                 </div>

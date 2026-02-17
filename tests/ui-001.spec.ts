@@ -203,7 +203,7 @@ test.describe('UI-001: Error Handling & Responsive Design', () => {
     await page.waitForTimeout(500);
 
     // Mobile search should be visible in the action bar
-    const mobileSearch = page.locator('.md\\:hidden input[placeholder="搜尋..."]');
+    const mobileSearch = page.locator('.lg\\:hidden input[placeholder="搜尋..."]');
     await expect(mobileSearch).toBeVisible();
 
     // Verify sidebar search is NOT visible (sidebar is hidden)
@@ -227,18 +227,18 @@ test.describe('UI-001: Error Handling & Responsive Design', () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.waitForTimeout(500);
 
-    // Verify the stream title column (hidden md:flex) is not visible on mobile
-    const streamTitleCells = page.locator('.hidden.md\\:flex:has-text("")').first();
-    // The hidden md:flex elements should not be visible at mobile width
+    // Verify the stream title column (hidden lg:flex) is not visible on mobile
+    const streamTitleCells = page.locator('.hidden.lg\\:flex:has-text("")').first();
+    // The hidden lg:flex elements should not be visible at mobile width
 
     // Check that the grid has only the mobile columns (not desktop ones)
     const performanceRows = page.locator('[data-testid="performance-row"]');
     await expect(performanceRows.first()).toBeVisible();
 
-    // The row uses grid-cols-[auto_1fr_1fr_auto] on mobile (no stream title/date)
-    // and grid-cols-[auto_2fr_2fr_1fr_auto] on desktop
-    // Verify the "hidden md:flex" elements are not visible
-    const streamTitleColumn = page.locator('[data-testid="performance-row"]').first().locator('.hidden.md\\:flex').first();
+    // The row uses grid-cols-[1fr_60px] on mobile (no # / stream title/date)
+    // and grid-cols-[32px_2fr_2fr_100px_60px] on desktop
+    // Verify the "hidden lg:flex" elements are not visible
+    const streamTitleColumn = page.locator('[data-testid="performance-row"]').first().locator('.hidden.lg\\:flex').first();
     await expect(streamTitleColumn).not.toBeVisible();
 
     await page.screenshot({ path: '.screenshots/ui-001-ac6-mobile-columns-hidden.png', fullPage: true });
