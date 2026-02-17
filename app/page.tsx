@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, LogIn, LogOut, User, WifiOff, Menu } from 'lucide-react';
+import { Search, Play, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, LogIn, LogOut, User, WifiOff, ChevronLeft, MoreHorizontal, House } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
@@ -60,7 +60,7 @@ export default function Home() {
   const [toastMessage, setToastMessage] = useState('');
   const [showPlaylistPanel, setShowPlaylistPanel] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'home' | 'search' | 'library' | 'profile'>('home');
   const [songs, setSongs] = useState<Song[]>([]);
   const [loadError, setLoadError] = useState(false);
 
@@ -615,133 +615,42 @@ export default function Home() {
 
       </aside>
 
-      {/* Mobile Sidebar Overlay — slide-over panel on mobile (hidden lg) */}
-      {showMobileSidebar && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="lg:hidden fixed inset-0 z-40"
-            style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(2px)' }}
-            onClick={() => setShowMobileSidebar(false)}
-          />
-          {/* Slide-over sidebar */}
-          <aside
-            className="lg:hidden fixed left-0 top-0 h-full z-50 flex flex-col overflow-hidden"
-            style={{
-              width: '280px',
-              background: 'var(--bg-surface-frosted)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              borderRight: '1px solid var(--border-glass)',
-            }}
-            data-testid="mobile-sidebar"
-          >
-            {/* Close button */}
-            <div className="px-4 py-4 flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-9 h-9 rounded-radius-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))' }}
-                >
-                  <Disc3 className="w-5 h-5 text-white" />
-                </div>
-                <span
-                  className="font-bold text-xl tracking-tight bg-clip-text text-transparent"
-                  style={{ backgroundImage: 'linear-gradient(135deg, var(--accent-pink), var(--accent-blue))' }}
-                >
-                  MizukiPlay
-                </span>
-              </div>
-              <button
-                onClick={() => setShowMobileSidebar(false)}
-                className="p-2"
-                style={{ color: 'var(--text-tertiary)' }}
-                aria-label="Close menu"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* Mobile TopBar — 56px, fixed top, mobile only */}
+      <div
+        data-testid="mobile-topbar"
+        className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between"
+        style={{
+          height: '56px',
+          padding: '0 20px',
+          background: 'var(--bg-surface-frosted)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: '1px solid var(--border-glass)',
+        }}
+      >
+        {/* Left: back button */}
+        <button
+          aria-label="Back"
+          style={{ color: 'var(--text-secondary)', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <ChevronLeft style={{ width: '24px', height: '24px' }} />
+        </button>
 
-            {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 px-3 space-y-1 pb-3">
-              {/* Search */}
-              <div className="relative group pb-2">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
-                </div>
-                <input
-                  type="text"
-                  placeholder="搜尋歌曲..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full font-medium py-2.5 pl-9 pr-4 outline-none transition-all text-sm"
-                  style={{
-                    background: 'var(--bg-surface-glass)',
-                    backdropFilter: 'blur(8px)',
-                    border: '1px solid var(--border-glass)',
-                    borderRadius: 'var(--radius-pill)',
-                    color: 'var(--text-primary)',
-                  }}
-                />
-              </div>
+        {/* Center: Artist label */}
+        <span
+          style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)' }}
+        >
+          Artist
+        </span>
 
-              {/* DISCOVER Section */}
-              <div className="pt-2 pb-1">
-                <div className="px-3 py-1.5 mb-1 font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}>DISCOVER</div>
-                <button onClick={() => { clearAllFilters(); setShowMobileSidebar(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all" style={!hasActiveFilters ? { background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))', color: 'var(--text-on-accent)' } : { background: 'transparent', color: 'var(--text-secondary)' }}>
-                  <HomeIcon className="w-4 h-4 flex-shrink-0" />首頁
-                </button>
-              </div>
-
-              {/* YOUR LIBRARY Section */}
-              <div className="pt-2 pb-1">
-                <div className="px-3 py-1.5 mb-1 font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}>YOUR LIBRARY</div>
-                <button onClick={() => { setShowCreateDialog(true); setShowMobileSidebar(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40" style={{ background: 'transparent', color: 'var(--text-secondary)' }} data-testid="mobile-create-playlist-button">
-                  <Plus className="w-4 h-4 flex-shrink-0" />建立新播放清單
-                </button>
-                {playlists.length > 0 && (
-                  <button onClick={() => { setShowPlaylistPanel(true); setShowMobileSidebar(false); }} className="w-full flex items-center justify-between px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40" style={{ background: 'transparent', color: 'var(--text-secondary)' }}>
-                    <span className="flex items-center gap-3"><ListMusic className="w-4 h-4 flex-shrink-0" />查看播放清單</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'var(--bg-accent-pink-muted)', color: 'var(--accent-pink)' }}>{playlists.length}</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Tag filters */}
-              <div className="pt-2 pb-2">
-                <div className="px-3 py-1.5 mb-1 font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}>風格分類</div>
-                <button onClick={() => { setSelectedTag(null); setShowMobileSidebar(false); }} className="w-full text-left px-3 py-2 rounded-radius-lg text-sm font-medium transition-all" style={selectedTag === null ? { color: 'var(--accent-pink)', background: 'var(--bg-accent-pink)' } : { color: 'var(--text-secondary)', background: 'transparent' }}>全部歌曲</button>
-                {allTags.map(tag => (
-                  <button key={tag} onClick={() => { setSelectedTag(tag === selectedTag ? null : tag); setShowMobileSidebar(false); }} className="w-full text-left px-3 py-2 rounded-radius-lg text-sm font-medium transition-all hover:bg-white/40" style={selectedTag === tag ? { color: 'var(--accent-pink)', background: 'var(--bg-accent-pink)' } : { color: 'var(--text-secondary)', background: 'transparent' }}>#{tag}</button>
-                ))}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex-shrink-0 px-3 py-3 border-t" style={{ borderTop: '1px solid var(--border-glass)' }}>
-              {isLoggedIn && user ? (
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center p-0.5" style={{ background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))' }}>
-                    <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: 'var(--bg-surface-frosted)' }}>
-                      <User className="w-4 h-4" style={{ color: 'var(--accent-pink)' }} />
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{user.username}</div>
-                  </div>
-                  <button onClick={async () => { await logout(); setShowMobileSidebar(false); setToastMessage('已登出'); setShowToast(true); }} className="p-1.5 rounded-radius-sm" style={{ color: 'var(--text-tertiary)' }} data-testid="mobile-logout-button">
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <a href="/auth" className="flex items-center gap-3 px-3 py-2.5 rounded-radius-lg text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                  <LogIn className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />登入
-                </a>
-              )}
-            </div>
-          </aside>
-        </>
-      )}
+        {/* Right: more button */}
+        <button
+          aria-label="More options"
+          style={{ color: 'var(--text-secondary)', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <MoreHorizontal style={{ width: '24px', height: '24px' }} />
+        </button>
+      </div>
 
       {/* Main Content */}
       <main className="flex-1 lg:m-3 lg:rounded-3xl overflow-hidden relative shadow-2xl shadow-indigo-100/50 bg-white/40 backdrop-blur-md border border-white/60 flex flex-col" style={{ background: 'var(--bg-surface-glass)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-3xl)' }}>
@@ -751,7 +660,10 @@ export default function Home() {
         <div className="absolute top-40 -left-20 w-72 h-72 bg-blue-300/20 rounded-full blur-3xl pointer-events-none"></div>
 
         {/* Scrollable area */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10">
+        <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10 pt-14 lg:pt-0">
+
+          {/* Home tab content wrapper: always visible on desktop, only on home tab on mobile */}
+          <div className={mobileTab !== 'home' ? 'hidden lg:block' : ''}>
 
           {/* Hero Section - Streamer Profile (~280px height) */}
           <header
@@ -958,21 +870,6 @@ export default function Home() {
           >
             {/* Left side: Play Controls */}
             <div className="flex items-center gap-3 flex-shrink-0">
-              {/* Hamburger menu — mobile only (hidden lg) */}
-              <button
-                className="lg:hidden flex items-center justify-center"
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: 'var(--radius-lg)',
-                  color: 'var(--text-secondary)',
-                }}
-                onClick={() => setShowMobileSidebar(true)}
-                aria-label="Open menu"
-                data-testid="mobile-menu-button"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
 
               {/* PlayButton — 48×48 circular gradient play button */}
               <button
@@ -1157,24 +1054,6 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Mobile search — must stay lg:hidden with placeholder="搜尋..." */}
-            <div className="lg:hidden relative ml-auto">
-              <Search className="w-4 h-4 absolute left-3 top-2.5" style={{ color: 'var(--text-tertiary)' }} />
-              <input
-                type="text"
-                placeholder="搜尋..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="py-2 pl-9 pr-4 text-sm outline-none transition-all w-36 focus:w-48"
-                style={{
-                  background: 'var(--bg-surface-glass)',
-                  border: '1px solid var(--border-glass)',
-                  borderRadius: 'var(--radius-pill)',
-                  color: 'var(--text-primary)',
-                  backdropFilter: 'blur(8px)',
-                }}
-              />
-            </div>
           </div>
 
           {/* Song List - Conditional Rendering based on View Mode */}
@@ -1845,9 +1724,392 @@ export default function Home() {
               </div>
             )}
           </div>
+          {/* End home tab content wrapper */}
+          </div>
+
+          {/* Mobile Search Tab content — only visible on mobile when Search tab is active */}
+          {mobileTab === 'search' && (
+            <div
+              className="lg:hidden flex-1 px-4 pt-4 pb-32"
+              data-testid="mobile-search-tab"
+            >
+              {/* Search input */}
+              <div className="relative mb-4">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+                  style={{ color: 'var(--text-tertiary)' }}
+                />
+                <input
+                  type="text"
+                  placeholder="搜尋..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full py-3 pl-10 pr-4 text-sm outline-none"
+                  style={{
+                    background: 'var(--bg-surface-glass)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: 'var(--radius-pill)',
+                    color: 'var(--text-primary)',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                  data-testid="mobile-search-input"
+                  autoFocus
+                />
+              </div>
+              {/* Artist filter */}
+              <div className="relative mb-3">
+                <select
+                  value={selectedArtist ?? ''}
+                  onChange={(e) => setSelectedArtist(e.target.value || null)}
+                  className="w-full font-medium py-2 px-3 outline-none appearance-none text-sm cursor-pointer"
+                  style={{
+                    background: 'var(--bg-surface-glass)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: 'var(--radius-lg)',
+                    color: 'var(--text-secondary)',
+                  }}
+                  data-testid="mobile-artist-filter"
+                >
+                  <option value="">全部歌手</option>
+                  {allArtists.map(artist => (
+                    <option key={artist} value={artist}>{artist}</option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                  <ChevronDown className="w-3.5 h-3.5" style={{ color: 'var(--text-tertiary)' }} />
+                </div>
+              </div>
+              {/* Search results */}
+              <div className="space-y-0.5">
+                {flattenedSongs.map((song, index) => {
+                  const isCurrentlyPlaying = currentTrack?.id === song.performanceId;
+                  return (
+                    <div
+                      key={`search-${song.id}-${song.performanceId}`}
+                      data-testid="performance-row"
+                      className="flex items-center gap-3 transition-all cursor-default"
+                      style={{
+                        borderRadius: 'var(--radius-lg)',
+                        padding: '12px 16px',
+                        background: isCurrentlyPlaying ? 'var(--bg-accent-pink-muted)' : undefined,
+                      }}
+                    >
+                      <button
+                        onClick={() => {
+                          if (!unavailableVideoIds.has(song.videoId)) {
+                            playTrack({
+                              id: song.performanceId,
+                              songId: song.id,
+                              title: song.title,
+                              originalArtist: song.originalArtist,
+                              videoId: song.videoId,
+                              timestamp: song.timestamp,
+                            });
+                          }
+                        }}
+                        disabled={unavailableVideoIds.has(song.videoId)}
+                        className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full ${unavailableVideoIds.has(song.videoId) ? 'opacity-40 cursor-not-allowed' : ''}`}
+                        style={{
+                          background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                          color: 'white',
+                        }}
+                      >
+                        <Play className="w-4 h-4 fill-current" style={{ marginLeft: '2px' }} />
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <div
+                          className="font-bold truncate"
+                          style={{ fontSize: '15px', fontWeight: 600, color: isCurrentlyPlaying ? 'var(--accent-pink)' : 'var(--text-primary)' }}
+                        >
+                          {song.title}
+                        </div>
+                        <div className="truncate" style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                          {song.originalArtist}
+                        </div>
+                      </div>
+                      <span className="font-mono" style={{ fontSize: '13px', color: 'var(--text-secondary)', minWidth: '40px', textAlign: 'right' }}>
+                        {formatTime(song.timestamp)}
+                      </span>
+                    </div>
+                  );
+                })}
+                {flattenedSongs.length === 0 && (
+                  <div className="py-16 text-center" style={{ color: 'var(--text-tertiary)' }}>
+                    <p className="text-base font-medium" style={{ color: 'var(--text-secondary)' }}>找不到符合條件的歌曲</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Mobile Library Tab content — only visible on mobile when Library tab is active */}
+          {mobileTab === 'library' && (
+            <div
+              className="lg:hidden flex-1 px-4 pt-4 pb-32"
+              data-testid="mobile-library-tab"
+            >
+              <div className="mb-4">
+                <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>你的音樂庫</h2>
+                <button
+                  onClick={() => setShowCreateDialog(true)}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-radius-lg font-medium text-sm transition-all"
+                  style={{
+                    background: 'var(--bg-surface-glass)',
+                    border: '1px solid var(--border-glass)',
+                    color: 'var(--text-secondary)',
+                    borderRadius: 'var(--radius-lg)',
+                  }}
+                  data-testid="mobile-create-playlist-button"
+                >
+                  <Plus className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-pink)' }} />
+                  建立新播放清單
+                </button>
+              </div>
+              {playlists.length > 0 ? (
+                <div>
+                  <button
+                    onClick={() => setShowPlaylistPanel(true)}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-radius-lg font-medium text-sm transition-all mb-2"
+                    style={{
+                      background: 'var(--bg-surface-glass)',
+                      border: '1px solid var(--border-glass)',
+                      color: 'var(--text-secondary)',
+                      borderRadius: 'var(--radius-lg)',
+                    }}
+                    data-testid="mobile-view-playlists-button"
+                  >
+                    <span className="flex items-center gap-3">
+                      <ListMusic className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-pink)' }} />
+                      查看播放清單
+                    </span>
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={{ background: 'var(--bg-accent-pink-muted)', color: 'var(--accent-pink)' }}
+                    >
+                      {playlists.length}
+                    </span>
+                  </button>
+                </div>
+              ) : (
+                <div className="py-16 text-center" style={{ color: 'var(--text-tertiary)' }}>
+                  <p className="text-base" style={{ color: 'var(--text-secondary)' }}>尚無播放清單，立即建立一個吧！</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Mobile Profile Tab content — only visible on mobile when Profile tab is active */}
+          {mobileTab === 'profile' && (
+            <div
+              className="lg:hidden flex-1 px-4 pt-4 pb-32"
+              data-testid="mobile-profile-tab"
+            >
+              {isLoggedIn && user ? (
+                <div>
+                  <div className="flex items-center gap-4 mb-6 p-4 rounded-radius-lg" style={{ background: 'var(--bg-surface-glass)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-lg)' }}>
+                    <div
+                      className="w-14 h-14 rounded-full flex-shrink-0 flex items-center justify-center p-0.5"
+                      style={{ background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))' }}
+                    >
+                      <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: 'var(--bg-surface-frosted)' }}>
+                        <User className="w-7 h-7" style={{ color: 'var(--accent-pink)' }} />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-base font-bold truncate" style={{ color: 'var(--text-primary)' }} data-testid="logged-in-username">
+                        {user.username}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        {isOnline ? (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: '#DCFCE7', color: '#16A34A' }}>Online</span>
+                        ) : (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1" style={{ background: '#FEF9C3', color: '#CA8A04' }}>
+                            <WifiOff className="w-2.5 h-2.5" />離線
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await logout();
+                      setToastMessage('已登出');
+                      setShowToast(true);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-radius-lg font-medium text-sm"
+                    style={{
+                      background: 'var(--bg-surface-glass)',
+                      border: '1px solid var(--border-glass)',
+                      color: 'var(--text-secondary)',
+                      borderRadius: 'var(--radius-lg)',
+                    }}
+                    data-testid="mobile-logout-button"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    登出
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div
+                    className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center p-1"
+                    style={{ background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))' }}
+                  >
+                    <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: 'var(--bg-surface-frosted)' }}>
+                      <User className="w-9 h-9" style={{ color: 'var(--text-tertiary)' }} />
+                    </div>
+                  </div>
+                  <p className="mb-4 font-medium" style={{ color: 'var(--text-secondary)' }}>登入以使用完整功能</p>
+                  <a
+                    href="/auth"
+                    className="inline-flex items-center gap-2 px-6 py-3 font-semibold text-white"
+                    style={{
+                      background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                      borderRadius: 'var(--radius-pill)',
+                      fontSize: 'var(--font-size-sm)',
+                    }}
+                    data-testid="login-button"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    登入
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
       </div>
+
+      {/* Mobile BottomNav — 64px, fixed bottom, mobile only */}
+      <nav
+        data-testid="mobile-bottom-nav"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-[70] flex items-start justify-around"
+        style={{
+          height: '64px',
+          padding: '8px 0 16px 0',
+          background: 'var(--bg-surface-frosted)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderTop: '1px solid var(--border-glass)',
+        }}
+      >
+        {/* Home */}
+        <button
+          data-testid="bottom-nav-home"
+          onClick={() => setMobileTab('home')}
+          className="flex flex-col items-center justify-start"
+          style={{ gap: '4px', flex: 1 }}
+        >
+          <House
+            style={{
+              width: '22px',
+              height: '22px',
+              color: mobileTab === 'home' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
+            }}
+          />
+          <span
+            style={{
+              fontSize: '10px',
+              fontWeight: mobileTab === 'home' ? 700 : 500,
+              color: mobileTab === 'home' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
+            }}
+          >
+            Home
+          </span>
+        </button>
+
+        {/* Search */}
+        <button
+          data-testid="bottom-nav-search"
+          onClick={() => setMobileTab('search')}
+          className="flex flex-col items-center justify-start"
+          style={{ gap: '4px', flex: 1 }}
+        >
+          <Search
+            style={{
+              width: '22px',
+              height: '22px',
+              color: mobileTab === 'search' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
+            }}
+          />
+          <span
+            style={{
+              fontSize: '10px',
+              fontWeight: mobileTab === 'search' ? 700 : 500,
+              color: mobileTab === 'search' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
+            }}
+          >
+            Search
+          </span>
+        </button>
+
+        {/* Library */}
+        <button
+          data-testid="bottom-nav-library"
+          onClick={() => setMobileTab('library')}
+          className="flex flex-col items-center justify-start"
+          style={{ gap: '4px', flex: 1 }}
+        >
+          <ListMusic
+            style={{
+              width: '22px',
+              height: '22px',
+              color: mobileTab === 'library' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
+            }}
+          />
+          <span
+            style={{
+              fontSize: '10px',
+              fontWeight: mobileTab === 'library' ? 700 : 500,
+              color: mobileTab === 'library' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
+            }}
+          >
+            Library
+          </span>
+        </button>
+
+        {/* Profile */}
+        <button
+          data-testid="bottom-nav-profile"
+          onClick={() => setMobileTab('profile')}
+          className="flex flex-col items-center justify-start"
+          style={{ gap: '4px', flex: 1 }}
+        >
+          {/* Gradient ellipse avatar icon */}
+          <div
+            style={{
+              width: '22px',
+              height: '22px',
+              borderRadius: '50%',
+              background: mobileTab === 'profile'
+                ? 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))'
+                : 'var(--bg-surface-muted)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: mobileTab === 'profile' ? 'none' : '1px solid var(--border-glass)',
+            }}
+          >
+            <User
+              style={{
+                width: '12px',
+                height: '12px',
+                color: mobileTab === 'profile' ? 'white' : 'var(--text-tertiary)',
+              }}
+            />
+          </div>
+          <span
+            style={{
+              fontSize: '10px',
+              fontWeight: mobileTab === 'profile' ? 700 : 500,
+              color: mobileTab === 'profile' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
+            }}
+          >
+            Profile
+          </span>
+        </button>
+      </nav>
 
       {/* Playlist UI */}
       <PlaylistPanel

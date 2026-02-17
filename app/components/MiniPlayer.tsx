@@ -72,7 +72,7 @@ export default function MiniPlayer() {
   return (
     <div
       data-testid="mini-player"
-      className="fixed bottom-0 left-0 right-0 z-[60]"
+      className="fixed left-0 right-0 z-[60] bottom-16 lg:bottom-0"
       style={{
         height: '80px',
         background: 'var(--bg-surface-frosted)',

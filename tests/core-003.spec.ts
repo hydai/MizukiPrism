@@ -262,22 +262,30 @@ test.describe('CORE-003: Search & Filter', () => {
     await page.screenshot({ path: screenshotPath('ac10-timeline-view-search') });
   });
 
-  test('AC11: Mobile search input appears in action bar on mobile', async ({ page }) => {
+  test('AC11: Mobile search input accessible via BottomNav Search tab', async ({ page }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 812 });
+    await page.waitForTimeout(300);
 
-    // Mobile search input should be visible in the action bar (md:hidden = visible on mobile)
-    const mobileSearch = page.locator('input[placeholder="搜尋..."]');
-    await expect(mobileSearch).toBeVisible();
-
-    // Sidebar search should be hidden on mobile
-    const sidebarSearch = page.locator('input[placeholder="搜尋歌曲..."]');
-    // The sidebar itself is hidden on mobile (hidden md:flex)
+    // The sidebar itself is hidden on mobile
     const sidebar = page.locator('aside');
     await expect(sidebar).toBeHidden();
 
+    // BottomNav should be visible
+    const bottomNav = page.locator('[data-testid="mobile-bottom-nav"]');
+    await expect(bottomNav).toBeVisible();
+
+    // Click the Search tab in BottomNav
+    await page.locator('[data-testid="bottom-nav-search"]').click();
+    await page.waitForTimeout(300);
+
+    // Mobile search input should now be visible in the Search tab
+    const mobileSearch = page.locator('[data-testid="mobile-search-input"]');
+    await expect(mobileSearch).toBeVisible();
+
     // Mobile search should filter results
     await mobileSearch.fill('First Love');
+    await page.waitForTimeout(300);
 
     const rows = page.getByTestId('performance-row');
     const count = await rows.count();

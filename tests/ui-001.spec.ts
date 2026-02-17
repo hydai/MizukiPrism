@@ -197,18 +197,26 @@ test.describe('UI-001: Error Handling & Responsive Design', () => {
     await page.screenshot({ path: '.screenshots/ui-001-ac4-mobile-sidebar-hidden.png', fullPage: true });
   });
 
-  test('AC5: Mobile view - search input accessible in action bar', async ({ page }) => {
+  test('AC5: Mobile view - search input accessible via Search tab', async ({ page }) => {
     // Set viewport to mobile size
     await page.setViewportSize({ width: 375, height: 812 });
     await page.waitForTimeout(500);
 
-    // Mobile search should be visible in the action bar
-    const mobileSearch = page.locator('.lg\\:hidden input[placeholder="搜尋..."]');
-    await expect(mobileSearch).toBeVisible();
-
-    // Verify sidebar search is NOT visible (sidebar is hidden)
+    // Verify sidebar is NOT visible (sidebar is hidden on mobile)
     const sidebar = page.locator('aside');
     await expect(sidebar).not.toBeVisible();
+
+    // Verify BottomNav is visible
+    const bottomNav = page.locator('[data-testid="mobile-bottom-nav"]');
+    await expect(bottomNav).toBeVisible();
+
+    // Click the Search tab in BottomNav
+    await page.locator('[data-testid="bottom-nav-search"]').click();
+    await page.waitForTimeout(300);
+
+    // Mobile search input should now be visible in the Search tab
+    const mobileSearch = page.locator('[data-testid="mobile-search-input"]');
+    await expect(mobileSearch).toBeVisible();
 
     // Verify mobile search works
     await mobileSearch.fill('Idol');
