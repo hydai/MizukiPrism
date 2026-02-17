@@ -59,6 +59,7 @@ export default function MiniPlayer() {
     <div
       data-testid="mini-player"
       className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-white/50 shadow-2xl"
+      style={{ background: 'var(--bg-surface-frosted)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderTop: '1px solid var(--border-glass)' }}
     >
       {/* Progress bar */}
       <div

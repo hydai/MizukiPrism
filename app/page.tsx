@@ -220,10 +220,10 @@ export default function Home() {
           <span className="font-bold text-sm">{apiLoadError}</span>
         </div>
       )}
-      <div className="flex h-screen bg-gradient-to-br from-[#fff0f5] via-[#f0f8ff] to-[#e6e6fa] text-slate-600 font-sans selection:bg-pink-200 selection:text-pink-900 overflow-hidden">
+      <div className="flex h-screen bg-gradient-to-br from-[#fff0f5] via-[#f0f8ff] to-[#e6e6fa] text-slate-600 font-sans selection:bg-pink-200 selection:text-pink-900 overflow-hidden" style={{ background: 'linear-gradient(135deg, var(--bg-page-start) 0%, var(--bg-page-mid) 50%, var(--bg-page-end) 100%)' }}>
 
       {/* Sidebar */}
-      <aside className="w-64 bg-white/60 backdrop-blur-xl border-r border-white/40 flex flex-col gap-2 p-3 flex-shrink-0 hidden md:flex shadow-sm z-20">
+      <aside className="w-64 bg-white/60 backdrop-blur-xl border-r border-white/40 flex flex-col gap-2 p-3 flex-shrink-0 hidden md:flex shadow-sm z-20" style={{ background: 'var(--bg-surface-frosted)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRight: '1px solid var(--border-glass)' }}>
         {/* Logo */}
         <div className="px-4 py-4 mb-2 flex items-center gap-2 text-slate-800">
           <div className="p-2 bg-gradient-to-tr from-pink-400 to-blue-400 rounded-lg text-white shadow-lg shadow-pink-200">
@@ -422,7 +422,7 @@ export default function Home() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 md:m-3 md:rounded-3xl overflow-hidden relative shadow-2xl shadow-indigo-100/50 bg-white/40 backdrop-blur-md border border-white/60 flex flex-col">
+      <main className="flex-1 md:m-3 md:rounded-3xl overflow-hidden relative shadow-2xl shadow-indigo-100/50 bg-white/40 backdrop-blur-md border border-white/60 flex flex-col" style={{ background: 'var(--bg-surface-glass)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-3xl)' }}>
 
         {/* Decorative glows */}
         <div className="absolute -top-20 -right-20 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl pointer-events-none"></div>
@@ -434,7 +434,7 @@ export default function Home() {
           {/* Header - Streamer Profile */}
           <header className="relative px-8 py-10 flex flex-col md:flex-row items-end gap-8 border-b border-white/40 bg-gradient-to-b from-white/60 to-transparent">
             {/* Avatar */}
-            <div className="w-40 h-40 sm:w-56 sm:h-56 rounded-2xl overflow-hidden flex-shrink-0 shadow-2xl shadow-pink-500/10 ring-4 ring-white">
+            <div className="w-40 h-40 sm:w-56 sm:h-56 rounded-2xl overflow-hidden flex-shrink-0 shadow-2xl shadow-pink-500/10 ring-4 ring-white" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
               <div className="w-full h-full bg-gradient-to-br from-pink-100 to-blue-100 flex items-center justify-center">
                 <Mic2 className="w-20 h-20 text-white drop-shadow-lg" />
               </div>
@@ -468,7 +468,7 @@ export default function Home() {
           </header>
 
           {/* Action Bar */}
-          <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md px-8 py-4 flex items-center justify-between border-b border-white/50 shadow-sm">
+          <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md px-8 py-4 flex items-center justify-between border-b border-white/50 shadow-sm" style={{ background: 'var(--bg-overlay)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderTop: '1px solid var(--border-glass)', borderBottom: '1px solid var(--border-glass)' }}>
             <div className="flex items-center gap-4">
               {/* Play All Button */}
               <button className="w-14 h-14 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 text-white flex items-center justify-center shadow-lg shadow-pink-500/30 transform hover:scale-105 transition-all hover:brightness-110">
