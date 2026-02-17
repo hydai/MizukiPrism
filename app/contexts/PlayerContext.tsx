@@ -16,6 +16,11 @@ interface PlayerContextType {
   currentTrack: Track | null;
   isPlaying: boolean;
   isPlayerReady: boolean;
+  playerError: string | null;
+  apiLoadError: string | null;
+  unavailableVideoIds: Set<string>;
+  timestampWarning: string | null;
+  clearTimestampWarning: () => void;
   currentTime: number;
   duration: number;
   playTrack: (track: Track) => void;
@@ -54,6 +59,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPlayerReady, setIsPlayerReady] = useState(false);
+  const [playerError, setPlayerError] = useState<string | null>(null);
+  const [apiLoadError, setApiLoadError] = useState<string | null>(null);
+  const [unavailableVideoIds, setUnavailableVideoIds] = useState<Set<string>>(new Set());
+  const [timestampWarning, setTimestampWarning] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showModal, setShowModal] = useState(false);
@@ -64,6 +73,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const playerRef = useRef<any>(null);
   const playerDivId = 'youtube-player';
   const timeUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const apiLoadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const clearTimestampWarning = () => setTimestampWarning(null);
 
   // Load YouTube IFrame API
   useEffect(() => {
@@ -79,13 +91,36 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     const firstScriptTag = document.getElementsByTagName('script')[0];
     firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
 
+    // Set timeout for API load failure (10 seconds)
+    apiLoadTimeoutRef.current = setTimeout(() => {
+      if (!window.YT || !window.YT.Player) {
+        setApiLoadError('播放器載入失敗，請重新整理頁面');
+      }
+    }, 10000);
+
     window.onYouTubeIframeAPIReady = () => {
+      if (apiLoadTimeoutRef.current) {
+        clearTimeout(apiLoadTimeoutRef.current);
+        apiLoadTimeoutRef.current = null;
+      }
       setIsPlayerReady(true);
+    };
+
+    // Handle script load error
+    tag.onerror = () => {
+      if (apiLoadTimeoutRef.current) {
+        clearTimeout(apiLoadTimeoutRef.current);
+        apiLoadTimeoutRef.current = null;
+      }
+      setApiLoadError('播放器載入失敗，請重新整理頁面');
     };
 
     return () => {
       if (timeUpdateIntervalRef.current) {
         clearInterval(timeUpdateIntervalRef.current);
+      }
+      if (apiLoadTimeoutRef.current) {
+        clearTimeout(apiLoadTimeoutRef.current);
       }
     };
   }, []);
@@ -93,6 +128,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   // Initialize YouTube player when ready and track is available
   useEffect(() => {
     if (!isPlayerReady || !currentTrack) return;
+
+    // Clear previous errors when starting new track
+    setPlayerError(null);
 
     // Destroy existing player
     if (playerRef.current) {
@@ -113,10 +151,19 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       },
       events: {
         onReady: (event: any) => {
-          event.target.seekTo(currentTrack.timestamp, true);
+          const videoDuration = event.target.getDuration();
+          setDuration(videoDuration);
+
+          // Check if timestamp exceeds video length
+          if (currentTrack.timestamp > 0 && videoDuration > 0 && currentTrack.timestamp >= videoDuration) {
+            event.target.seekTo(0, true);
+            setTimestampWarning('時間戳可能有誤');
+          } else {
+            event.target.seekTo(currentTrack.timestamp, true);
+          }
+
           event.target.playVideo();
           setIsPlaying(true);
-          setDuration(event.target.getDuration());
 
           // Start time update interval
           if (timeUpdateIntervalRef.current) {
@@ -166,6 +213,20 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
             } else {
               setIsPlaying(false);
             }
+          }
+        },
+        onError: (event: any) => {
+          // YouTube error codes:
+          // 2: Invalid parameter
+          // 5: HTML5 player error
+          // 100: Video not found / removed
+          // 101: Video not allowed in embedded players
+          // 150: Same as 101 (owner restricted embedding)
+          if ([100, 101, 150].includes(event.data)) {
+            setPlayerError('此影片已無法播放');
+            setUnavailableVideoIds(prev => new Set([...prev, currentTrack.videoId]));
+            // Note: we intentionally do NOT set isPlaying=false here to avoid
+            // breaking the playback state machine. The error is shown in the UI.
           }
         },
       },
@@ -260,6 +321,11 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         currentTrack,
         isPlaying,
         isPlayerReady,
+        playerError,
+        apiLoadError,
+        unavailableVideoIds,
+        timestampWarning,
+        clearTimestampWarning,
         currentTime,
         duration,
         playTrack,

@@ -25,6 +25,18 @@ export default function NowPlayingModal() {
     setShowModal,
   } = usePlayer();
 
+  // Keyboard navigation: Escape to close modal
+  useEffect(() => {
+    if (!showModal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showModal, setShowModal]);
+
   if (!showModal || !currentTrack) return null;
 
   const progress = currentTrack.timestamp

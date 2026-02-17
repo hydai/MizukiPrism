@@ -35,6 +35,25 @@ export default function PlaylistPanel({ show, onClose, songsData }: PlaylistPane
     setMounted(true);
   }, []);
 
+  // Keyboard navigation: Escape to close playlist panel
+  // Only close if the active element is not inside the panel (e.g., not while renaming)
+  useEffect(() => {
+    if (!show) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        const activeElement = document.activeElement;
+        const panelEl = document.querySelector('[data-testid="playlist-panel"]');
+        // Only close if focus is outside the panel or on the panel itself
+        const isFocusInsidePanel = panelEl && panelEl.contains(activeElement);
+        if (!isFocusInsidePanel) {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [show, onClose]);
+
   if (!mounted || !show) return null;
 
   const handleDragStart = (e: React.DragEvent, index: number) => {

@@ -1,12 +1,14 @@
 'use client';
 
-import { Play, Pause, SkipBack, SkipForward, ListMusic } from 'lucide-react';
+import { useEffect } from 'react';
+import { Play, Pause, SkipBack, SkipForward, ListMusic, AlertCircle } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 
 export default function MiniPlayer() {
   const {
     currentTrack,
     isPlaying,
+    playerError,
     currentTime,
     duration,
     togglePlayPause,
@@ -17,6 +19,25 @@ export default function MiniPlayer() {
     queue,
     setShowQueue,
   } = usePlayer();
+
+  // Keyboard navigation: Space for play/pause when player is active
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle Space if no input/textarea/button is focused
+      const activeElement = document.activeElement;
+      const isInputFocused = activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement instanceof HTMLSelectElement;
+
+      if (e.code === 'Space' && !isInputFocused && currentTrack) {
+        e.preventDefault();
+        togglePlayPause();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentTrack, togglePlayPause]);
 
   if (!currentTrack) return null;
 
@@ -62,7 +83,14 @@ export default function MiniPlayer() {
         {/* Track info */}
         <div className="flex-1 min-w-0">
           <div className="font-bold text-slate-800 truncate">{currentTrack.title}</div>
-          <div className="text-sm text-slate-500 truncate">{currentTrack.originalArtist}</div>
+          {playerError ? (
+            <div className="flex items-center gap-1.5 text-sm text-red-500 truncate" data-testid="player-error-message">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>{playerError}</span>
+            </div>
+          ) : (
+            <div className="text-sm text-slate-500 truncate">{currentTrack.originalArtist}</div>
+          )}
         </div>
 
         {/* Controls */}
@@ -85,6 +113,7 @@ export default function MiniPlayer() {
             }}
             className="w-12 h-12 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 text-white flex items-center justify-center shadow-lg hover:brightness-110 transform hover:scale-105 transition-all"
             aria-label={isPlaying ? 'Pause' : 'Play'}
+            data-testid="mini-player-play-button"
           >
             {isPlaying ? (
               <Pause className="w-5 h-5 fill-current" />
