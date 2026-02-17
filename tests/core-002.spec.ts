@@ -224,6 +224,9 @@ test.describe('CORE-002: Song Grouped View & Dual View Toggle', () => {
   test('AC7: Switch back to timeline view restores flat timeline list', async ({ page }) => {
     await page.goto('http://localhost:3000');
 
+    // Wait for data to load from API
+    await page.waitForSelector('[data-testid="performance-row"]', { timeout: 10000 });
+
     // Remember the initial state
     const initialRows = await page.getByTestId('performance-row').count();
 
