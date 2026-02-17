@@ -601,40 +601,193 @@ export default function Home() {
         {/* Scrollable area */}
         <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10">
 
-          {/* Header - Streamer Profile */}
-          <header className="relative px-8 py-10 flex flex-col md:flex-row items-end gap-8 border-b border-white/40 bg-gradient-to-b from-white/60 to-transparent">
-            {/* Avatar */}
-            <div className="w-40 h-40 sm:w-56 sm:h-56 rounded-2xl overflow-hidden flex-shrink-0 shadow-2xl shadow-pink-500/10 ring-4 ring-white" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
-              <div className="w-full h-full bg-gradient-to-br from-pink-100 to-blue-100 flex items-center justify-center">
-                <Mic2 className="w-20 h-20 text-white drop-shadow-lg" />
-              </div>
+          {/* Hero Section - Streamer Profile (~280px height) */}
+          <header
+            className="relative flex items-center gap-8 overflow-hidden flex-shrink-0"
+            style={{
+              minHeight: '280px',
+              padding: '40px 40px 0 40px',
+              borderBottom: '1px solid var(--border-glass)',
+            }}
+          >
+            {/* Left: Avatar */}
+            <div
+              className="flex-shrink-0 overflow-hidden"
+              style={{
+                width: '180px',
+                height: '180px',
+                borderRadius: 'var(--radius-xl)',
+                border: '1px solid var(--border-glass)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                alignSelf: 'flex-end',
+                marginBottom: '40px',
+              }}
+            >
+              <img
+                src={streamerData.avatarUrl}
+                alt={streamerData.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.currentTarget as HTMLImageElement;
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    parent.style.background = 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))';
+                    parent.style.display = 'flex';
+                    parent.style.alignItems = 'center';
+                    parent.style.justifyContent = 'center';
+                  }
+                }}
+              />
             </div>
 
-            <div className="flex flex-col gap-3 w-full mb-2">
-              <span className="text-sm font-bold uppercase tracking-wider text-pink-500 flex items-center gap-1 bg-pink-50 w-fit px-2 py-1 rounded-md border border-pink-100">
-                <Sparkles className="w-3.5 h-3.5" />
-                Verified Artist
-              </span>
-              <h1 className="text-4xl md:text-7xl font-black text-slate-800 tracking-tight drop-shadow-sm">
+            {/* Right: Info Stack */}
+            <div
+              className="flex flex-col justify-end flex-1 min-w-0"
+              style={{
+                paddingBottom: '40px',
+                gap: '8px',
+              }}
+            >
+              {/* VerifiedBadge Component */}
+              <div
+                className="flex items-center gap-1.5 w-fit"
+                style={{
+                  background: 'var(--bg-accent-blue-muted)',
+                  color: 'var(--accent-blue)',
+                  borderRadius: 'var(--radius-pill)',
+                  padding: '4px 12px 4px 8px',
+                  fontSize: 'var(--font-size-xs)',
+                  fontWeight: 700,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6 0L7.545 4.455L12 6L7.545 7.545L6 12L4.455 7.545L0 6L4.455 4.455L6 0Z" fill="currentColor" />
+                </svg>
+                認證藝人
+              </div>
+
+              {/* Streamer Name */}
+              <h1
+                className="tracking-tight leading-none"
+                style={{
+                  fontSize: 'var(--font-size-3xl)',
+                  fontWeight: 900,
+                  color: 'var(--text-primary)',
+                  lineHeight: 1.1,
+                }}
+              >
                 {streamerData.name}
               </h1>
-              <p className="text-slate-600 text-sm md:text-base max-w-2xl font-medium leading-relaxed">
+
+              {/* Description / Stats Text */}
+              <p
+                style={{
+                  color: 'var(--text-secondary)',
+                  fontSize: 'var(--font-size-base)',
+                  maxWidth: '480px',
+                  lineHeight: 1.5,
+                  margin: '2px 0',
+                }}
+              >
                 {streamerData.description}
+                {' '}
+                <span style={{ color: 'var(--text-tertiary)' }}>·</span>
+                {' '}
+                <span style={{ fontWeight: 600 }}>{flattenedSongs.length} 首歌曲</span>
               </p>
 
-              <div className="flex items-center gap-4 mt-2 text-sm text-slate-500 font-bold">
-                <span>{flattenedSongs.length} 首歌曲</span>
-                <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                <div className="flex gap-3">
-                  <a href={streamerData.socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="hover:text-red-500 transition-colors bg-white p-1.5 rounded-full shadow-sm hover:shadow-md">
-                    <Youtube className="w-4 h-4"/>
-                  </a>
-                  <a href={streamerData.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 transition-colors bg-white p-1.5 rounded-full shadow-sm hover:shadow-md">
-                    <Twitter className="w-4 h-4"/>
-                  </a>
+              {/* Statistics Row: Followers + Rank */}
+              <div
+                className="flex items-center gap-6"
+                style={{ fontSize: 'var(--font-size-base)', marginTop: '4px' }}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span
+                    style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 'var(--font-size-xl)' }}
+                  >
+                    50萬+
+                  </span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}>
+                    追蹤者
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: '1px',
+                    height: '16px',
+                    background: 'var(--border-default)',
+                  }}
+                />
+                <div className="flex items-center gap-1.5">
+                  <span
+                    style={{ fontWeight: 700, color: 'var(--accent-pink)', fontSize: 'var(--font-size-xl)' }}
+                  >
+                    #12
+                  </span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}>
+                    排名
+                  </span>
                 </div>
               </div>
+
+              {/* Social Links Row */}
+              <div className="flex items-center gap-2" style={{ marginTop: '4px' }}>
+                {/* YouTube SocialButton */}
+                <a
+                  href={streamerData.socialLinks.youtube}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 transition-all hover:opacity-80"
+                  style={{
+                    background: 'var(--bg-surface-glass)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: 'var(--radius-pill)',
+                    padding: '6px 14px 6px 10px',
+                    color: 'var(--text-secondary)',
+                    fontSize: 'var(--font-size-sm)',
+                    fontWeight: 600,
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                  }}
+                >
+                  <Youtube className="w-4 h-4" style={{ color: '#FF0000' }} />
+                  YouTube
+                </a>
+                {/* Twitter SocialButton */}
+                <a
+                  href={streamerData.socialLinks.twitter}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 transition-all hover:opacity-80"
+                  style={{
+                    background: 'var(--bg-surface-glass)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: 'var(--radius-pill)',
+                    padding: '6px 14px 6px 10px',
+                    color: 'var(--text-secondary)',
+                    fontSize: 'var(--font-size-sm)',
+                    fontWeight: 600,
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                  }}
+                >
+                  <Twitter className="w-4 h-4" style={{ color: '#1DA1F2' }} />
+                  Twitter
+                </a>
+              </div>
             </div>
+
+            {/* Bottom gradient overlay: white fading to transparent from bottom up */}
+            <div
+              className="absolute bottom-0 left-0 right-0 pointer-events-none"
+              style={{
+                height: '60px',
+                background: 'linear-gradient(to top, rgba(255,255,255,0.6) 0%, transparent 100%)',
+              }}
+            />
           </header>
 
           {/* Action Bar */}
