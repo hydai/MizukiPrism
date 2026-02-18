@@ -599,6 +599,7 @@ MizukiPrism 讓 Mizuki 的粉絲能快速瀏覽、搜尋並播放她在歌回直
 | 策展人驗證 | Curator Auth | 策展管理介面的簡易存取控制機制。透過共用密鑰（shared secret）驗證，非使用者帳號系統。 |
 | 時間戳 | Timestamp | 影片中的時間點，格式為 `H:MM:SS` 或 `HH:MM:SS`，標記版本在影片中的起訖位置。 |
 | 演出備註 | Note | 版本上的選填文字標註，描述該次演出的特殊性質（如「清唱版」、「吉他伴奏」）。 |
+| 時間軸貢獻者 | Setlist Contributor | 在 YouTube 留言區整理並發布歌曲時間軸的粉絲。其使用者名稱與頻道連結記錄於直播場次資料中，作為該場次歌單的建立者。 |
 
 ### 4.2 Patterns
 
@@ -685,6 +686,8 @@ Song (1) ←──── (*) Version (*) ────→ (1) Stream
 | youtubeUrl | string | 是 | YouTube 影片 URL |
 | date | string | 是 | 直播日期（ISO 8601 日期格式，如 `2024-03-15`） |
 | title | string | 是 | 直播標題 |
+| setlistContributor | string | 否 | 時間軸貢獻者的 YouTube 使用者名稱。該場次的歌單視為由此貢獻者建立的播放清單，標題即為直播標題 |
+| setlistContributorUrl | string | 否 | 時間軸貢獻者的 YouTube 頻道 URL |
 
 **唯一性約束**：`youtubeUrl` 唯一。
 
@@ -838,9 +841,9 @@ MizukiLens 是 MizukiPrism 的上游資料收集管線工具，透過第三方 s
 
 ```
 留言區搜尋 → 找到有效時間軸？
-  ├→ 是：解析並儲存，標記來源為 "comment"
+  ├→ 是：解析並儲存，標記來源為 "comment"，記錄留言者資訊為時間軸貢獻者
   └→ 否：描述欄搜尋 → 找到有效時間軸？
-        ├→ 是：解析並儲存，標記來源為 "description"
+        ├→ 是：解析並儲存，標記來源為 "description"（貢獻者留空）
         └→ 否：標記場次為「待處理」(pending)
 ```
 
@@ -852,6 +855,7 @@ MizukiLens 是 MizukiPrism 的上游資料收集管線工具，透過第三方 s
 | 留言抓取完成 | — | 掃描所有留言，識別包含 ≥3 個時間戳模式的留言為候選時間軸留言 |
 | 找到多個候選留言 | — | 依以下權重排序選取最佳候選：(1) 置頂留言最優先 (2) 按讚數最多 (3) 時間戳數量最多 |
 | 選定候選留言 | — | 解析每行的時間戳與歌曲資訊，產生結構化歌曲列表 |
+| 選定候選留言 | — | 記錄該留言作者的使用者名稱與頻道 URL 為時間軸貢獻者（setlist contributor） |
 | 留言區已關閉 | — | 跳過留言區，進入描述欄擷取 |
 
 **時間戳解析規則**：
@@ -912,13 +916,14 @@ MizukiLens 是 MizukiPrism 的上游資料收集管線工具，透過第三方 s
 | 狀態 | 操作 | 結果 |
 |------|------|------|
 | 有待審核場次 | 執行 `review` | 進入 TUI 審核模式，列出所有待審核場次 |
-| TUI 場次列表 | 選擇場次 | 展開該場次的歌曲列表，顯示解析來源、時間戳、歌名、原唱者 |
+| TUI 場次列表 | 選擇場次 | 展開該場次的歌曲列表，顯示解析來源、時間軸貢獻者、時間戳、歌名、原唱者 |
 | 歌曲列表 | 編輯歌名 | 就地編輯歌名文字 |
 | 歌曲列表 | 編輯原唱者 | 就地編輯原唱者文字 |
 | 歌曲列表 | 編輯時間戳 | 就地編輯開始/結束時間戳，格式驗證即時回饋 |
 | 歌曲列表 | 新增歌曲 | 在指定位置插入新的歌曲條目 |
 | 歌曲列表 | 刪除歌曲 | 刪除選中的歌曲條目（確認後） |
 | 歌曲列表 | 新增演出備註 | 為歌曲版本附加備註文字（如「清唱版」） |
+| 歌曲列表 | 編輯貢獻者 | 就地編輯時間軸貢獻者名稱與頻道 URL |
 | 場次審核完成 | 確認（approve） | 場次狀態標記為「已審核」(approved)，可供匯出 |
 | 場次有問題 | 跳過（skip） | 場次維持「待審核」狀態 |
 | 場次不是歌回 | 排除（exclude） | 場次標記為「已排除」(excluded)，不會再出現在審核列表中 |
@@ -1054,6 +1059,7 @@ discovered → extracted → approved → exported → imported
 | 場次狀態 | Stream Status | 場次在 MizukiLens 工作流程中的階段，共 7 種狀態（見 §3.1.7）。 |
 | 快取 | Cache | 本地儲存的場次後設資料、解析結果與審核狀態，以 SQLite 資料庫實作。 |
 | 抓取模式 | Fetch Mode | 抓取直播列表的方式：全量（`--all`）、最近 N 場（`--recent N`）、日期範圍（`--after`/`--before`）。 |
+| 時間軸貢獻者 | Setlist Contributor | 在 YouTube 留言區整理並發布歌曲時間軸的粉絲。其使用者名稱與頻道連結隨場次資料一同記錄與匯出，在 MizukiPrism 中作為該場次歌單的建立者呈現。 |
 
 ### 4.2 Patterns
 
@@ -1083,7 +1089,8 @@ YouTube ──scrapetube/yt-dlp──→ Description Extraction ──↗
    b. 按讚數（like_count）→ 降冪
    c. 時間戳數量 → 降冪
 5. 取排名第一的留言為最佳候選
-6. 解析該留言的每一行為 (timestamp, song_info) 對
+6. 記錄該留言作者的使用者名稱與頻道 URL 為時間軸貢獻者
+7. 解析該留言的每一行為 (timestamp, song_info) 對
 ```
 
 #### 4.2.3 與 MizukiPrism 的資料對應
@@ -1091,6 +1098,7 @@ YouTube ──scrapetube/yt-dlp──→ Description Extraction ──↗
 | MizukiLens 產出 | MizukiPrism 實體 | 對應關係 |
 |------------------|------------------|----------|
 | 場次（YouTube URL + 日期 + 標題） | Stream | 1:1，以 YouTube URL 為唯一鍵 |
+| 時間軸貢獻者（留言者名稱 + 頻道 URL） | Stream.setlistContributor | 隨場次匯出，作為該場次歌單的建立者 |
 | 解析出的歌曲（歌名 + 原唱者） | Song | 以 name + artist 為唯一鍵，跨場次合併 |
 | 歌曲在場次中的演出（時間戳 + 備註） | Version | songId + streamId 的交會點 |
 
@@ -1133,6 +1141,8 @@ YouTube ──scrapetube/yt-dlp──→ Description Extraction ──↗
 | youtubeUrl | string | 是 | 正規化 URL（`https://www.youtube.com/watch?v={id}`） |
 | date | string | 是 | 直播日期（ISO 8601 日期，如 `2024-03-15`） |
 | title | string | 是 | 直播標題 |
+| setlistContributor | string | 否 | 時間軸貢獻者的 YouTube 使用者名稱（來源為留言時記錄，描述欄或手動輸入時為空） |
+| setlistContributorUrl | string | 否 | 時間軸貢獻者的 YouTube 頻道 URL |
 
 ##### Song
 
@@ -1168,6 +1178,8 @@ YouTube ──scrapetube/yt-dlp──→ Description Extraction ──↗
 | date | TEXT | 直播日期 |
 | status | TEXT | 場次狀態（discovered/extracted/pending/approved/exported/imported/excluded） |
 | source | TEXT | 時間軸來源（comment/description/manual/null） |
+| contributor_name | TEXT | 時間軸貢獻者的 YouTube 使用者名稱（來源為留言時記錄） |
+| contributor_url | TEXT | 時間軸貢獻者的 YouTube 頻道 URL |
 | raw_comment | TEXT | 原始時間軸留言文字（供參考） |
 | raw_description | TEXT | 原始描述欄文字 |
 | created_at | TEXT | 首次發現時間 |
