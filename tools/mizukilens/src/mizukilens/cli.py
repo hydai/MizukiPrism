@@ -110,31 +110,124 @@ def import_cmd(file: str | None) -> None:
 
 
 # ---------------------------------------------------------------------------
-# status  (stub)
+# status  (implemented)
 # ---------------------------------------------------------------------------
 
 @main.command("status")
 @click.option("--detail", is_flag=True, default=False,
               help="List all streams and their individual statuses.")
 def status_cmd(detail: bool) -> None:
-    """Show cache statistics and stream status summary. (not yet implemented)"""
-    console.print("[yellow]status コマンドはまだ実装されていません（stub）。[/yellow]")
-    console.print("LENS-002 で実装予定です。")
+    """Show cache statistics and stream status summary."""
+    from mizukilens.cache import open_db, get_status_counts, list_streams
+    from rich.table import Table
+    from rich import box
+
+    conn = open_db()
+    try:
+        counts = get_status_counts(conn)
+        total = sum(counts.values())
+
+        # Summary statistics table
+        tbl = Table(
+            title="MizukiLens — キャッシュ統計 (Cache Statistics)",
+            box=box.ROUNDED,
+            show_header=True,
+            header_style="bold cyan",
+        )
+        tbl.add_column("Status", style="bold")
+        tbl.add_column("Count", justify="right")
+
+        status_labels = {
+            "discovered": "[blue]discovered[/blue]",
+            "extracted":  "[cyan]extracted[/cyan]",
+            "pending":    "[yellow]pending[/yellow]",
+            "approved":   "[green]approved[/green]",
+            "exported":   "[magenta]exported[/magenta]",
+            "imported":   "[bright_green]imported[/bright_green]",
+            "excluded":   "[red]excluded[/red]",
+        }
+
+        for status, label in status_labels.items():
+            cnt = counts.get(status, 0)
+            tbl.add_row(label, str(cnt))
+
+        tbl.add_section()
+        tbl.add_row("[bold]Total[/bold]", f"[bold]{total}[/bold]")
+        console.print(tbl)
+
+        if detail:
+            streams = list_streams(conn)
+            if not streams:
+                console.print("\n[dim]キャッシュにデータがありません。[/dim]")
+                return
+
+            detail_tbl = Table(
+                title="Stream Detail",
+                box=box.SIMPLE,
+                show_header=True,
+                header_style="bold",
+            )
+            detail_tbl.add_column("Video ID", style="cyan", no_wrap=True)
+            detail_tbl.add_column("Title")
+            detail_tbl.add_column("Date", no_wrap=True)
+            detail_tbl.add_column("Status", no_wrap=True)
+
+            for row in streams:
+                status_val = row["status"] or ""
+                label = status_labels.get(status_val, status_val)
+                detail_tbl.add_row(
+                    row["video_id"] or "",
+                    row["title"] or "",
+                    row["date"] or "",
+                    label,
+                )
+            console.print(detail_tbl)
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
-# cache  (stub)
+# cache  (implemented)
 # ---------------------------------------------------------------------------
 
 @main.group("cache")
 def cache_group() -> None:
-    """Manage the local SQLite cache. (not yet implemented)"""
+    """Manage the local SQLite cache."""
 
 
 @cache_group.command("clear")
 @click.option("--stream", "stream_id", type=str, default=None, metavar="VIDEO_ID",
               help="Clear cache for a specific stream only.")
 def cache_clear_cmd(stream_id: str | None) -> None:
-    """Clear all cached data (or a single stream's cache). (not yet implemented)"""
-    console.print("[yellow]cache clear コマンドはまだ実装されていません（stub）。[/yellow]")
-    console.print("LENS-002 で実装予定です。")
+    """Clear all cached data (or a single stream's cache)."""
+    from mizukilens.cache import open_db, clear_all, clear_stream
+
+    conn = open_db()
+    try:
+        if stream_id:
+            # Confirm before deleting a specific stream
+            confirmed = click.confirm(
+                f"ストリーム {stream_id!r} のキャッシュを削除しますか？ (Delete cache for stream {stream_id!r}?)",
+                default=False,
+            )
+            if not confirmed:
+                console.print("[dim]キャンセルしました。[/dim]")
+                return
+            deleted = clear_stream(conn, stream_id)
+            if deleted:
+                console.print(f"[green]ストリーム {stream_id!r} のキャッシュを削除しました。[/green]")
+            else:
+                console.print(f"[yellow]ストリーム {stream_id!r} はキャッシュに存在しません。[/yellow]")
+        else:
+            # Confirm before clearing all cache
+            confirmed = click.confirm(
+                "すべてのキャッシュデータを削除しますか？ (Clear ALL cache data?)",
+                default=False,
+            )
+            if not confirmed:
+                console.print("[dim]キャンセルしました。[/dim]")
+                return
+            count = clear_all(conn)
+            console.print(f"[green]キャッシュを削除しました。{count} 件のストリームを削除しました。[/green]")
+    finally:
+        conn.close()
