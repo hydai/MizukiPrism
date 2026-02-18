@@ -58,7 +58,8 @@ class TestStubCommands:
 
     def test_cache_clear_stub(self) -> None:
         runner = CliRunner()
-        result = runner.invoke(main, ["cache", "clear"])
+        # Answer "n" to the confirmation prompt — should exit cleanly
+        result = runner.invoke(main, ["cache", "clear"], input="n\n")
         assert result.exit_code == 0
 
 
