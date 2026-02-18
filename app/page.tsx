@@ -1366,13 +1366,13 @@ export default function Home() {
               <>
                 {/* SongTableHeader */}
                 <div
-                  className="grid grid-cols-[1fr_60px] lg:grid-cols-[32px_2fr_2fr_100px_60px] gap-0 px-3 py-2 sticky top-[88px] z-10"
+                  className="grid grid-cols-[32px_1fr_60px] lg:grid-cols-[32px_2fr_2fr_100px_60px] gap-0 px-3 py-2 sticky top-[88px] z-10"
                   style={{
                     borderBottom: '1px solid var(--border-table)',
                   }}
                 >
                   <div
-                    className="hidden lg:flex items-center justify-center text-center font-bold uppercase tracking-wider"
+                    className="flex items-center justify-center text-center font-bold uppercase tracking-wider"
                     style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}
                   >
                     #
@@ -1431,12 +1431,12 @@ export default function Home() {
                         <div
                           key={`${song.id}-${song.performanceId}`}
                           data-testid="performance-row"
-                          className="group grid grid-cols-[1fr_60px] lg:grid-cols-[32px_2fr_2fr_100px_60px] gap-0 items-center transition-all cursor-default"
+                          className="group grid grid-cols-[32px_1fr_60px] lg:grid-cols-[32px_2fr_2fr_100px_60px] gap-0 items-center transition-all cursor-default"
                           style={{
                             borderRadius: 'var(--radius-lg)',
                             padding: 'var(--space-3) var(--space-4)',
                             background: isCurrentlyPlaying
-                              ? 'var(--bg-accent-pink-muted)'
+                              ? '#FCE7F320'
                               : undefined,
                           }}
                           onMouseEnter={(e) => {
@@ -1450,13 +1450,24 @@ export default function Home() {
                             }
                           }}
                         >
-                          {/* # column: row number / play button — hidden on mobile */}
+                          {/* # column: row number / play button — visible on mobile and desktop */}
                           <div
-                            className="hidden lg:flex items-center justify-center relative"
+                            className="flex items-center justify-center relative"
                             style={{ width: '32px', height: '32px' }}
                           >
+                            {/* Mobile: show number or accent music note when playing */}
                             <span
-                              className="group-hover:opacity-0 transition-opacity font-mono text-sm select-none"
+                              className="lg:hidden font-mono select-none"
+                              style={{
+                                fontSize: '14px',
+                                color: isCurrentlyPlaying ? 'var(--accent-pink)' : 'var(--text-tertiary)',
+                              }}
+                            >
+                              {index + 1}
+                            </span>
+                            {/* Desktop: number that fades on hover, replaced by play button */}
+                            <span
+                              className="hidden lg:block group-hover:opacity-0 transition-opacity font-mono text-sm select-none"
                               style={{ color: 'var(--text-tertiary)' }}
                             >
                               {index + 1}
@@ -1476,7 +1487,7 @@ export default function Home() {
                               }}
                               disabled={unavailableVideoIds.has(song.videoId)}
                               data-testid="play-button"
-                              className={`absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all ${
+                              className={`hidden lg:flex absolute inset-0 items-center justify-center opacity-0 group-hover:opacity-100 transition-all ${
                                 unavailableVideoIds.has(song.videoId)
                                   ? 'cursor-not-allowed'
                                   : 'transform hover:scale-110'
@@ -1492,68 +1503,58 @@ export default function Home() {
                           </div>
 
                           {/* Title column: song title + artist + NoteBadge */}
-                          <div className="min-w-0 pl-1 lg:pl-3 flex items-center gap-2 lg:block">
-                            {/* Mobile play button — visible only on mobile (hidden lg) */}
-                            <button
-                              onClick={() => {
-                                if (!unavailableVideoIds.has(song.videoId)) {
-                                  playTrack({
-                                    id: song.performanceId,
-                                    songId: song.id,
-                                    title: song.title,
-                                    originalArtist: song.originalArtist,
-                                    videoId: song.videoId,
-                                    timestamp: song.timestamp,
-                                  });
-                                }
-                              }}
-                              disabled={unavailableVideoIds.has(song.videoId)}
-                              data-testid="mobile-play-button"
-                              className={`lg:hidden flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full ${
-                                unavailableVideoIds.has(song.videoId) ? 'cursor-not-allowed opacity-40' : ''
-                              }`}
-                              style={{
-                                background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
-                                color: 'white',
-                              }}
-                            >
-                              <Play className="w-4 h-4 fill-current" style={{ marginLeft: '2px' }} />
-                            </button>
-                            <div className="min-w-0 flex-1 lg:flex-none">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div
-                                className="font-bold truncate"
-                                style={{
-                                  color: 'var(--text-primary)',
-                                  fontSize: 'var(--font-size-md)',
-                                }}
-                              >
-                                {song.title}
-                              </div>
-                              {song.note && (
-                                <span
-                                  className="inline-flex items-center border border-blue-200 text-blue-500 bg-blue-50 font-medium flex-shrink-0"
+                          <div
+                            className="min-w-0 lg:pl-3 cursor-pointer"
+                            onClick={() => {
+                              if (!unavailableVideoIds.has(song.videoId)) {
+                                playTrack({
+                                  id: song.performanceId,
+                                  songId: song.id,
+                                  title: song.title,
+                                  originalArtist: song.originalArtist,
+                                  videoId: song.videoId,
+                                  timestamp: song.timestamp,
+                                });
+                              }
+                            }}
+                          >
+                            {/* Unified title block — vertical stack, responsive font sizing */}
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <div
+                                  className="font-bold truncate"
                                   style={{
-                                    background: 'var(--bg-accent-blue-muted)',
-                                    color: 'var(--accent-blue)',
-                                    borderRadius: 'var(--radius-pill)',
-                                    fontSize: 'var(--font-size-xs)',
-                                    padding: 'var(--space-1) var(--space-3)',
+                                    fontSize: '15px',
+                                    color: isCurrentlyPlaying ? 'var(--accent-pink-dark)' : 'var(--text-primary)',
                                   }}
                                 >
-                                  {song.note}
-                                </span>
-                              )}
-                            </div>
-                            <div
-                              className="truncate mt-0.5"
-                              style={{
-                                color: 'var(--text-secondary)',
-                                fontSize: 'var(--font-size-sm)',
-                              }}
-                            >
-                              {song.originalArtist}
-                            </div>
+                                  {song.title}
+                                </div>
+                                {song.note && (
+                                  <span
+                                    className="inline-flex items-center border font-medium flex-shrink-0"
+                                    style={{
+                                      background: 'var(--bg-accent-blue-muted)',
+                                      color: 'var(--accent-blue)',
+                                      borderColor: 'var(--border-accent-blue)',
+                                      borderRadius: 'var(--radius-pill)',
+                                      fontSize: 'var(--font-size-xs)',
+                                      padding: 'var(--space-1) var(--space-3)',
+                                    }}
+                                  >
+                                    {song.note}
+                                  </span>
+                                )}
+                              </div>
+                              <div
+                                className="truncate"
+                                style={{
+                                  fontSize: '13px',
+                                  color: 'var(--text-secondary)',
+                                }}
+                              >
+                                {song.originalArtist}
+                              </div>
                             </div>
                           </div>
 
