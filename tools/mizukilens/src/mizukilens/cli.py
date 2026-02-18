@@ -66,9 +66,110 @@ def config_cmd() -> None:
               help="Ignore cache state and reprocess all matching archives.")
 def fetch_cmd(fetch_all: bool, recent: int | None, after: str | None,
               before: str | None, force: bool) -> None:
-    """Discover and scrape YouTube livestream archives. (not yet implemented)"""
-    console.print("[yellow]fetch コマンドはまだ実装されていません（stub）。[/yellow]")
-    console.print("LENS-003 で実装予定です。")
+    """Discover YouTube livestream archives and save them to the local cache."""
+    import sys
+    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+    from mizukilens.cache import open_db
+    from mizukilens.discovery import (
+        fetch_streams, get_active_channel_info, NetworkError
+    )
+
+    # --- Validate: exactly one mode must be provided ----------------------
+    modes_given = sum([fetch_all, recent is not None, after is not None])
+    if modes_given == 0:
+        console.print(
+            "[red]エラー:[/red] 実行モードを指定してください: "
+            "[bold]--all[/bold], [bold]--recent N[/bold], または [bold]--after YYYY-MM-DD[/bold]"
+        )
+        sys.exit(1)
+    if fetch_all and recent is not None:
+        console.print("[red]エラー:[/red] [bold]--all[/bold] と [bold]--recent[/bold] は同時に指定できません。")
+        sys.exit(1)
+    if fetch_all and after is not None:
+        console.print("[red]エラー:[/red] [bold]--all[/bold] と [bold]--after[/bold] は同時に指定できません。")
+        sys.exit(1)
+    if recent is not None and after is not None:
+        console.print("[red]エラー:[/red] [bold]--recent[/bold] と [bold]--after[/bold] は同時に指定できません。")
+        sys.exit(1)
+    if before is not None and after is None:
+        console.print("[red]エラー:[/red] [bold]--before[/bold] は [bold]--after[/bold] と一緒に指定してください。")
+        sys.exit(1)
+
+    # --- Load config -------------------------------------------------------
+    try:
+        channel_id, keywords = get_active_channel_info()
+    except RuntimeError as exc:
+        console.print(f"[red]設定エラー:[/red] {exc}")
+        sys.exit(1)
+
+    # --- Describe what we're doing ----------------------------------------
+    if fetch_all:
+        mode_desc = "すべての直播アーカイブを取得中"
+    elif recent is not None:
+        mode_desc = f"最新 {recent} 件の直播アーカイブを取得中"
+    else:
+        if before:
+            mode_desc = f"{after} 〜 {before} の直播アーカイブを取得中"
+        else:
+            mode_desc = f"{after} 以降の直播アーカイブを取得中"
+
+    console.print(f"[cyan]チャンネル:[/cyan] {channel_id}")
+    console.print(f"[cyan]モード:[/cyan] {mode_desc}")
+    if force:
+        console.print("[yellow]--force: excluded/imported を含む全場次を再処理します[/yellow]")
+
+    # --- First attempt: content_type="streams" ----------------------------
+    conn = open_db()
+    try:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            console=console,
+            transient=True,
+        ) as progress:
+            task = progress.add_task(mode_desc, total=None)
+            processed: list[dict] = []
+
+            def on_progress(info: dict) -> None:
+                processed.append(info)
+                progress.update(task, advance=1, description=f"{mode_desc} ({len(processed)} 件)")
+
+            try:
+                result = fetch_streams(
+                    conn,
+                    channel_id=channel_id,
+                    channel_id_str=channel_id,
+                    keywords=keywords,
+                    fetch_all=fetch_all,
+                    recent=recent,
+                    after=after,
+                    before=before,
+                    force=force,
+                    use_keyword_filter=False,
+                    progress_callback=on_progress,
+                )
+            except NetworkError as exc:
+                console.print(f"\n[red]ネットワークエラー:[/red] {exc}")
+                console.print(
+                    "[yellow]ヒント:[/yellow] しばらく待ってから再度 fetch を実行してください。"
+                )
+                console.print(
+                    f"[dim]部分的な結果（{len(processed)} 件）はキャッシュに保存されました。[/dim]"
+                )
+                return
+
+    finally:
+        conn.close()
+
+    # --- Print summary ----------------------------------------------------
+    console.print()
+    console.print(f"[bold green]完了![/bold green]  {result.summary_line()}")
+    if result.skipped > 0:
+        console.print(
+            f"[dim]キーワードに一致しない動画をスキップ: {result.skipped} 件[/dim]"
+        )
 
 
 # ---------------------------------------------------------------------------

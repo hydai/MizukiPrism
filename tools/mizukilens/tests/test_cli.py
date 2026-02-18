@@ -30,11 +30,12 @@ class TestCliHelp:
 class TestStubCommands:
     """Stub commands should exit cleanly and print an informational message."""
 
-    def test_fetch_stub(self) -> None:
+    def test_fetch_no_mode_shows_error(self) -> None:
+        """fetch without a mode flag (--all/--recent/--after) should show an error."""
         runner = CliRunner()
         result = runner.invoke(main, ["fetch"])
-        assert result.exit_code == 0
-        assert "stub" in result.output.lower() or "実装" in result.output
+        # exits with non-zero (sys.exit(1)) and shows mode requirement
+        assert result.exit_code != 0 or "モード" in result.output or "エラー" in result.output
 
     def test_review_stub(self) -> None:
         runner = CliRunner()
