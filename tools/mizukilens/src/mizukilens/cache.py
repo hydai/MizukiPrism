@@ -31,7 +31,7 @@ VALID_STATUSES: tuple[str, ...] = (
 # ``None`` key covers the initial insertion (no prior status).
 VALID_TRANSITIONS: dict[str | None, set[str]] = {
     None:          {"discovered"},
-    "discovered":  {"extracted", "excluded"},
+    "discovered":  {"extracted", "pending", "excluded"},
     "extracted":   {"pending", "approved"},
     "pending":     {"extracted", "approved", "excluded"},
     "approved":    {"exported", "extracted"},   # re-review goes back to extracted

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
@@ -19,7 +19,7 @@ class TestCliHelp:
         runner = CliRunner()
         result = runner.invoke(main, ["--help"])
         assert result.exit_code == 0
-        for cmd in ("config", "fetch", "review", "export", "import", "status", "cache"):
+        for cmd in ("config", "fetch", "extract", "review", "export", "import", "status", "cache"):
             assert cmd in result.output
 
     def test_module_invocable(self) -> None:
@@ -62,6 +62,79 @@ class TestStubCommands:
         # Answer "n" to the confirmation prompt — should exit cleanly
         result = runner.invoke(main, ["cache", "clear"], input="n\n")
         assert result.exit_code == 0
+
+
+class TestExtractCommand:
+    """Tests for the extract subcommand."""
+
+    def test_extract_no_mode_shows_error(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(main, ["extract"])
+        assert result.exit_code != 0
+        assert "エラー" in result.output
+
+    def test_extract_stream_not_in_cache_shows_error(self, tmp_path: Path) -> None:
+        from mizukilens.cache import open_db
+        db_path = tmp_path / "test.db"
+        conn = open_db(db_path)
+        conn.close()
+
+        with patch("mizukilens.cache.open_db", return_value=open_db(db_path)):
+            runner = CliRunner()
+            result = runner.invoke(main, ["extract", "--stream", "nonexistent_vid"])
+            assert result.exit_code != 0
+            assert "見つかりません" in result.output
+
+    def test_extract_stream_success(self, tmp_path: Path) -> None:
+        from mizukilens.cache import open_db, upsert_stream
+        db_path = tmp_path / "test.db"
+        conn = open_db(db_path)
+        upsert_stream(conn, video_id="vid_test", status="discovered", title="Test Stream")
+        conn.close()
+
+        good_comment = (
+            "0:00 Song A\n1:30 Song B\n3:00 Song C\n5:00 Song D\n"
+        )
+
+        def mock_open_db(*args, **kwargs):
+            return open_db(db_path)
+
+        mock_comment = {
+            "cid": "c1", "text": good_comment, "votes": "100",
+            "is_pinned": False, "author": "u", "channel": "ch",
+            "replies": "0", "photo": "", "heart": False, "reply": False,
+        }
+        mock_downloader = MagicMock()
+        mock_downloader.get_comments.return_value = iter([mock_comment])
+
+        with (
+            patch("mizukilens.cache.open_db", side_effect=mock_open_db),
+            patch(
+                "youtube_comment_downloader.YoutubeCommentDownloader",
+                return_value=mock_downloader,
+            ),
+        ):
+            runner = CliRunner()
+            result = runner.invoke(main, ["extract", "--stream", "vid_test"])
+
+        assert result.exit_code == 0
+        assert "完了" in result.output
+
+    def test_extract_all_no_discovered_streams(self, tmp_path: Path) -> None:
+        from mizukilens.cache import open_db
+        db_path = tmp_path / "test.db"
+        conn = open_db(db_path)
+        conn.close()
+
+        def mock_open_db(*args, **kwargs):
+            return open_db(db_path)
+
+        with patch("mizukilens.cache.open_db", side_effect=mock_open_db):
+            runner = CliRunner()
+            result = runner.invoke(main, ["extract", "--all"])
+
+        assert result.exit_code == 0
+        assert "ありません" in result.output
 
 
 class TestConfigCommand:

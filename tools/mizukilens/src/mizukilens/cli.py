@@ -173,6 +173,101 @@ def fetch_cmd(fetch_all: bool, recent: int | None, after: str | None,
 
 
 # ---------------------------------------------------------------------------
+# extract  (implemented)
+# ---------------------------------------------------------------------------
+
+@main.command("extract")
+@click.option("--stream", "stream_id", type=str, default=None, metavar="VIDEO_ID",
+              help="Extract timestamps for a specific stream only.")
+@click.option("--all", "extract_all", is_flag=True, default=False,
+              help="Extract timestamps for all discovered streams.")
+def extract_cmd(stream_id: str | None, extract_all: bool) -> None:
+    """Extract song timestamps from comments or description for discovered streams."""
+    import sys
+    from rich.progress import Progress, SpinnerColumn, TextColumn
+    from mizukilens.cache import open_db, get_stream, list_streams
+    from mizukilens.extraction import extract_timestamps, extract_all_discovered
+
+    # Validate: must specify one mode
+    if stream_id is None and not extract_all:
+        console.print(
+            "[red]エラー:[/red] 実行モードを指定してください: "
+            "[bold]--stream VIDEO_ID[/bold] または [bold]--all[/bold]"
+        )
+        sys.exit(1)
+
+    conn = open_db()
+    try:
+        if stream_id:
+            # Single stream extraction
+            stream = get_stream(conn, stream_id)
+            if stream is None:
+                console.print(f"[red]エラー:[/red] ストリーム [bold]{stream_id}[/bold] がキャッシュに見つかりません。")
+                sys.exit(1)
+
+            console.print(f"[cyan]抽出中:[/cyan] {stream_id}")
+            result = extract_timestamps(conn, stream_id)
+
+            if result.status == "extracted":
+                source_label = "留言区" if result.source == "comment" else "概要欄"
+                console.print(
+                    f"[green]完了![/green]  {source_label}から {len(result.songs)} 曲を抽出しました。"
+                )
+                if result.suspicious_timestamps:
+                    console.print(
+                        f"[yellow]警告:[/yellow] 疑わしいタイムスタンプが {len(result.suspicious_timestamps)} 件あります（12時間超）。"
+                    )
+            else:
+                console.print(
+                    f"[yellow]待機中:[/yellow] ストリーム {stream_id} のタイムスタンプを自動抽出できませんでした。"
+                )
+                console.print("[dim]TUI で手動入力するか、後で再試行してください。[/dim]")
+        else:
+            # Batch extraction of all discovered streams
+            streams = list_streams(conn, status="discovered")
+            if not streams:
+                console.print("[dim]抽出待ちのストリームがありません（status=discovered）。[/dim]")
+                return
+
+            console.print(f"[cyan]抽出対象:[/cyan] {len(streams)} 件のストリーム")
+
+            extracted_count = 0
+            pending_count = 0
+            processed = 0
+
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+                transient=True,
+            ) as progress:
+                task = progress.add_task("タイムスタンプ抽出中...", total=len(streams))
+
+                def on_progress(result):
+                    nonlocal extracted_count, pending_count, processed
+                    processed += 1
+                    if result.status == "extracted":
+                        extracted_count += 1
+                    else:
+                        pending_count += 1
+                    progress.update(
+                        task,
+                        advance=1,
+                        description=f"抽出中 ({processed}/{len(streams)}) — 成功: {extracted_count}, 待機: {pending_count}",
+                    )
+
+                extract_all_discovered(conn, progress_callback=on_progress)
+
+            console.print()
+            console.print(
+                f"[bold green]完了![/bold green]  "
+                f"抽出成功: {extracted_count} 件、待処理: {pending_count} 件"
+            )
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
 # review  (stub)
 # ---------------------------------------------------------------------------
 
