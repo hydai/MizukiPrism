@@ -84,16 +84,19 @@ def _now_iso() -> str:
 
 _CREATE_STREAMS = """
 CREATE TABLE IF NOT EXISTS streams (
-    video_id         TEXT PRIMARY KEY,
-    channel_id       TEXT,
-    title            TEXT,
-    date             TEXT,
-    status           TEXT NOT NULL,
-    source           TEXT,
-    raw_comment      TEXT,
-    raw_description  TEXT,
-    created_at       TEXT NOT NULL,
-    updated_at       TEXT NOT NULL
+    video_id            TEXT PRIMARY KEY,
+    channel_id          TEXT,
+    title               TEXT,
+    date                TEXT,
+    status              TEXT NOT NULL,
+    source              TEXT,
+    raw_comment         TEXT,
+    raw_description     TEXT,
+    comment_author      TEXT,
+    comment_author_url  TEXT,
+    comment_id          TEXT,
+    created_at          TEXT NOT NULL,
+    updated_at          TEXT NOT NULL
 );
 """
 
@@ -154,6 +157,16 @@ def _init_schema(conn: sqlite3.Connection) -> None:
     conn.execute(_CREATE_PARSED_SONGS)
     for idx in _CREATE_INDEXES:
         conn.execute(idx)
+
+    # Migration: add comment attribution columns to existing databases.
+    # ALTER TABLE ... ADD COLUMN is a no-op if the column already exists
+    # (SQLite raises "duplicate column name" which we catch and ignore).
+    for col in ("comment_author TEXT", "comment_author_url TEXT", "comment_id TEXT"):
+        try:
+            conn.execute(f"ALTER TABLE streams ADD COLUMN {col}")
+        except sqlite3.OperationalError:
+            pass  # column already exists
+
     conn.commit()
 
 
@@ -193,6 +206,9 @@ def upsert_stream(
     source: str | None = None,
     raw_comment: str | None = None,
     raw_description: str | None = None,
+    comment_author: str | None = None,
+    comment_author_url: str | None = None,
+    comment_id: str | None = None,
 ) -> None:
     """Insert or update a stream row.
 
@@ -210,30 +226,40 @@ def upsert_stream(
         """
         INSERT INTO streams
             (video_id, channel_id, title, date, status, source,
-             raw_comment, raw_description, created_at, updated_at)
+             raw_comment, raw_description,
+             comment_author, comment_author_url, comment_id,
+             created_at, updated_at)
         VALUES
             (:video_id, :channel_id, :title, :date, :status, :source,
-             :raw_comment, :raw_description, :now, :now)
+             :raw_comment, :raw_description,
+             :comment_author, :comment_author_url, :comment_id,
+             :now, :now)
         ON CONFLICT(video_id) DO UPDATE SET
-            channel_id      = COALESCE(:channel_id, channel_id),
-            title           = COALESCE(:title, title),
-            date            = COALESCE(:date, date),
-            status          = :status,
-            source          = COALESCE(:source, source),
-            raw_comment     = COALESCE(:raw_comment, raw_comment),
-            raw_description = COALESCE(:raw_description, raw_description),
-            updated_at      = :now
+            channel_id         = COALESCE(:channel_id, channel_id),
+            title              = COALESCE(:title, title),
+            date               = COALESCE(:date, date),
+            status             = :status,
+            source             = COALESCE(:source, source),
+            raw_comment        = COALESCE(:raw_comment, raw_comment),
+            raw_description    = COALESCE(:raw_description, raw_description),
+            comment_author     = COALESCE(:comment_author, comment_author),
+            comment_author_url = COALESCE(:comment_author_url, comment_author_url),
+            comment_id         = COALESCE(:comment_id, comment_id),
+            updated_at         = :now
         """,
         {
-            "video_id":        video_id,
-            "channel_id":      channel_id,
-            "title":           title,
-            "date":            date,
-            "status":          status,
-            "source":          source,
-            "raw_comment":     raw_comment,
-            "raw_description": raw_description,
-            "now":             now,
+            "video_id":           video_id,
+            "channel_id":         channel_id,
+            "title":              title,
+            "date":               date,
+            "status":             status,
+            "source":             source,
+            "raw_comment":        raw_comment,
+            "raw_description":    raw_description,
+            "comment_author":     comment_author,
+            "comment_author_url": comment_author_url,
+            "comment_id":         comment_id,
+            "now":                now,
         },
     )
     conn.commit()

@@ -58,6 +58,9 @@ class ExtractionResult:
     raw_comment: str | None = None
     raw_description: str | None = None
     suspicious_timestamps: list[int] = field(default_factory=list)
+    comment_author: str | None = None
+    comment_author_url: str | None = None
+    comment_id: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -452,7 +455,15 @@ def extract_timestamps(
         # Any other error — treat comments as unavailable
         comments_disabled = True
 
+    # Extract author attribution from the selected comment (if any)
+    comment_author: str | None = None
+    comment_author_url: str | None = None
+    comment_id: str | None = None
+
     if selected_comment is not None:
+        comment_author = selected_comment.get("author") or None
+        comment_author_url = selected_comment.get("channel") or None
+        comment_id = selected_comment.get("cid") or None
         raw_comment_text = selected_comment.get("text", "")
         songs = parse_text_to_songs(raw_comment_text)
 
@@ -460,12 +471,15 @@ def extract_timestamps(
             # --- Successful comment extraction ---
             suspicious = [s["start_seconds"] for s in songs if s["suspicious"]]
 
-            # Save raw comment text & update status
+            # Save raw comment text & author attribution & update status
             upsert_stream(
                 conn,
                 video_id=video_id,
                 status=stream["status"],  # keep existing for upsert
                 raw_comment=raw_comment_text,
+                comment_author=comment_author,
+                comment_author_url=comment_author_url,
+                comment_id=comment_id,
             )
 
             # Transition status: discovered → extracted (or pending → extracted)
@@ -483,6 +497,9 @@ def extract_timestamps(
                 raw_comment=raw_comment_text,
                 raw_description=raw_description,
                 suspicious_timestamps=suspicious,
+                comment_author=comment_author,
+                comment_author_url=comment_author_url,
+                comment_id=comment_id,
             )
         else:
             # Comment found but unparseable — save raw, fall through to description

@@ -815,3 +815,79 @@ class TestExportCli:
             result = runner.invoke(main, ["export", "--stream", "videoABC"])
 
         assert captured_stream.get("stream_id") == "videoABC"
+
+
+# ===========================================================================
+# SECTION: commentCredit in export (LENS-008)
+# ===========================================================================
+
+
+class TestCommentCreditExport:
+    """Tests for comment author attribution in export JSON."""
+
+    def test_comment_credit_included_when_author_present(self, db: sqlite3.Connection) -> None:
+        """Stream with comment author data should include commentCredit."""
+        upsert_stream(
+            db,
+            video_id="credit01",
+            channel_id="UCtest",
+            title="歌回 Vol.1",
+            date="2024-03-15",
+            status="approved",
+            source="comment",
+            comment_author="TimestampHero",
+            comment_author_url="https://www.youtube.com/channel/UC123",
+            comment_id="Ugxyz123",
+        )
+        upsert_parsed_songs(db, "credit01", [_SONG_A])
+
+        streams = [get_stream(db, "credit01")]
+        payload = build_export_payload(db, streams=streams, channel_id="UCtest")
+
+        stream_entity = payload["data"]["streams"][0]
+        assert "commentCredit" in stream_entity
+        credit = stream_entity["commentCredit"]
+        assert credit["author"] == "TimestampHero"
+        assert credit["authorUrl"] == "https://www.youtube.com/channel/UC123"
+        assert credit["commentUrl"] == "https://www.youtube.com/watch?v=credit01&lc=Ugxyz123"
+
+    def test_no_comment_credit_when_author_null(self, db: sqlite3.Connection) -> None:
+        """Stream without author data should NOT include commentCredit."""
+        upsert_stream(
+            db,
+            video_id="credit02",
+            channel_id="UCtest",
+            title="歌回 Vol.2",
+            date="2024-03-15",
+            status="approved",
+            source="description",
+        )
+        upsert_parsed_songs(db, "credit02", [_SONG_A])
+
+        streams = [get_stream(db, "credit02")]
+        payload = build_export_payload(db, streams=streams, channel_id="UCtest")
+
+        stream_entity = payload["data"]["streams"][0]
+        assert "commentCredit" not in stream_entity
+
+    def test_comment_credit_partial_author_only(self, db: sqlite3.Connection) -> None:
+        """Stream with only author name (no URL, no cid) should include partial credit."""
+        upsert_stream(
+            db,
+            video_id="credit03",
+            channel_id="UCtest",
+            title="歌回 Vol.3",
+            date="2024-03-15",
+            status="approved",
+            source="comment",
+            comment_author="SomeUser",
+        )
+        upsert_parsed_songs(db, "credit03", [_SONG_A])
+
+        streams = [get_stream(db, "credit03")]
+        payload = build_export_payload(db, streams=streams, channel_id="UCtest")
+
+        credit = payload["data"]["streams"][0]["commentCredit"]
+        assert credit["author"] == "SomeUser"
+        assert "authorUrl" not in credit
+        assert "commentUrl" not in credit
