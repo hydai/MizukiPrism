@@ -313,7 +313,7 @@ def review_cmd(show_all: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
-# export  (stub)
+# export  (implemented)
 # ---------------------------------------------------------------------------
 
 @main.command("export")
@@ -322,9 +322,40 @@ def review_cmd(show_all: bool) -> None:
 @click.option("--stream", "stream_id", type=str, default=None, metavar="VIDEO_ID",
               help="Only export the specified stream.")
 def export_cmd(since: str | None, stream_id: str | None) -> None:
-    """Export approved data to MizukiPrism JSON format. (not yet implemented)"""
-    console.print("[yellow]export コマンドはまだ実装されていません（stub）。[/yellow]")
-    console.print("LENS-006 で実装予定です。")
+    """Export approved data to MizukiPrism JSON format."""
+    import sys
+    from mizukilens.cache import open_db
+    from mizukilens.export import export_approved_streams
+    from mizukilens.discovery import get_active_channel_info
+
+    # Resolve channel ID for JSON header (best effort; empty string if unconfigured)
+    channel_id = ""
+    try:
+        channel_id, _ = get_active_channel_info()
+    except RuntimeError:
+        pass
+
+    conn = open_db()
+    try:
+        result = export_approved_streams(
+            conn,
+            since=since,
+            stream_id=stream_id,
+            channel_id=channel_id,
+        )
+    except ValueError as exc:
+        if "no_approved_streams" in str(exc):
+            console.print("無可匯出的資料，請先完成審核")
+            sys.exit(0)
+        raise
+    finally:
+        conn.close()
+
+    console.print(f"[bold green]匯出完成！[/bold green]")
+    console.print(f"  ファイル: [cyan]{result.output_path}[/cyan]")
+    console.print(f"  場次 (Streams): [bold]{result.stream_count}[/bold]")
+    console.print(f"  歌曲 (Songs):   [bold]{result.song_count}[/bold]")
+    console.print(f"  版本 (Versions):[bold]{result.version_count}[/bold]")
 
 
 # ---------------------------------------------------------------------------
