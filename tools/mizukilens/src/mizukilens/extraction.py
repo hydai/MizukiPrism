@@ -194,7 +194,7 @@ def parse_song_line(line: str) -> dict[str, Any] | None:
         return None
 
     # Strip common numbering prefixes: "01. ", "1) ", "#3 "
-    line = re.sub(r"^(?:\d+[.)]\s+|#\d+\s+)", "", line)
+    line = re.sub(r"^(?:\d+\.\s*|\d+\)\s+|#\d+\s+)", "", line)
 
     # Find leading timestamp
     ts_match = _LINE_TS_RE.match(line)
