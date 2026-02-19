@@ -160,6 +160,17 @@ class TestSplitArtist:
         assert name == "Song Name"
         assert artist == "Artist Name"
 
+    def test_bare_slash_no_spaces(self):
+        name, artist = _split_artist("ロミオとシンデレラ/doriko")
+        assert name == "ロミオとシンデレラ"
+        assert artist == "doriko"
+
+    def test_spaced_slash_preferred_over_bare_slash(self):
+        # Spaced slash still takes priority over bare slash
+        name, artist = _split_artist("A/B / C")
+        assert name == "A/B"
+        assert artist == "C"
+
     def test_empty_string(self):
         name, artist = _split_artist("")
         assert name == ""
@@ -233,6 +244,31 @@ class TestParseSongLine:
         result = parse_song_line("  3:45  Song Title  ")
         assert result is not None
         assert result["start_seconds"] == 225
+
+    def test_numbered_prefix_dot(self):
+        result = parse_song_line("01. 0:05:41 ロミオとシンデレラ/doriko")
+        assert result is not None
+        assert result["start_seconds"] == 341
+        assert result["song_name"] == "ロミオとシンデレラ"
+        assert result["artist"] == "doriko"
+
+    def test_numbered_prefix_paren(self):
+        result = parse_song_line("1) 0:05:41 Song Name")
+        assert result is not None
+        assert result["start_seconds"] == 341
+        assert result["song_name"] == "Song Name"
+
+    def test_numbered_prefix_hash(self):
+        result = parse_song_line("#3 0:05:41 Song Name")
+        assert result is not None
+        assert result["start_seconds"] == 341
+        assert result["song_name"] == "Song Name"
+
+    def test_numbered_prefix_large_number(self):
+        result = parse_song_line("15. 1:23:45 Some Song")
+        assert result is not None
+        assert result["start_seconds"] == 5025
+        assert result["song_name"] == "Some Song"
 
 
 class TestParseTextToSongs:
@@ -532,6 +568,27 @@ class TestExtractTimestampsFromComment:
         result = extract_timestamps(db, "vid008", comment_generator=iter(comments))
 
         assert result.songs[0]["song_name"] == "Pinned A"
+
+    def test_numbered_prefix_comment_extracts_end_to_end(self, db):
+        """Full integration: numbered-prefix comment with bare-slash artists."""
+        _add_stream(db, "vid_numbered")
+        text = (
+            "01. 0:05:41   ロミオとシンデレラ/doriko     ʚ♡⃛ɞ\n"
+            "02. 0:14:54   一心不乱/梅とら     ʚ♡⃛ɞ\n"
+            "03. 0:19:45   六兆年と一夜物語/kemu\n"
+        )
+        comments = [_make_comment_dict(text, votes="100")]
+
+        result = extract_timestamps(db, "vid_numbered", comment_generator=iter(comments))
+
+        assert result.status == "extracted"
+        assert result.source == "comment"
+        assert len(result.songs) == 3
+        assert result.songs[0]["song_name"] == "ロミオとシンデレラ"
+        assert result.songs[0]["artist"] == "doriko     ʚ♡⃛ɞ"
+        assert result.songs[1]["song_name"] == "一心不乱"
+        assert result.songs[1]["artist"] == "梅とら     ʚ♡⃛ɞ"
+        assert result.songs[2]["start_seconds"] == 1185  # 19*60 + 45
 
     def test_video_id_not_in_cache_raises_keyerror(self, db):
         with pytest.raises(KeyError, match="not found"):
