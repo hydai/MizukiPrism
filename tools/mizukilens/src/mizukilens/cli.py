@@ -359,15 +359,211 @@ def export_cmd(since: str | None, stream_id: str | None) -> None:
 
 
 # ---------------------------------------------------------------------------
-# import  (stub)
+# import  (implemented)
 # ---------------------------------------------------------------------------
 
 @main.command("import")
 @click.argument("file", type=click.Path(exists=True, dir_okay=False), required=False)
-def import_cmd(file: str | None) -> None:
-    """Import exported JSON into MizukiPrism. (not yet implemented)"""
-    console.print("[yellow]import コマンドはまだ実装されていません（stub）。[/yellow]")
-    console.print("LENS-007 で実装予定です。")
+@click.option(
+    "--songs-file",
+    "songs_file",
+    type=click.Path(dir_okay=False),
+    default=None,
+    help="Path to MizukiPrism data/songs.json (auto-detected if not specified).",
+)
+@click.option(
+    "--streams-file",
+    "streams_file",
+    type=click.Path(dir_okay=False),
+    default=None,
+    help="Path to MizukiPrism data/streams.json (auto-detected if not specified).",
+)
+def import_cmd(file: str | None, songs_file: str | None, streams_file: str | None) -> None:
+    """Import exported JSON into MizukiPrism data files.
+
+    \b
+    Reads a MizukiLens export JSON, compares against existing MizukiPrism data,
+    shows a change summary, asks for confirmation, then writes the updated files.
+
+    \b
+    Field mappings applied:
+      name         → title
+      artist       → originalArtist
+      startTimestamp (H:MM:SS) → timestamp (seconds)
+      endTimestamp  (H:MM:SS)  → endTimestamp (number | null)
+      versions[]   → embedded performances[] in Song
+    """
+    import sys
+    import json
+    from pathlib import Path
+
+    from mizukilens.importer import (
+        validate_export_json,
+        load_mizukiprism_data,
+        compute_import_plan,
+        execute_import,
+    )
+
+    if file is None:
+        console.print("[red]エラー:[/red] インポートするファイルを指定してください。")
+        console.print("  使用方法: [bold]mizukilens import FILE[/bold]")
+        sys.exit(1)
+
+    # --- Resolve MizukiPrism data file paths --------------------------------
+    file_path = Path(file).resolve()
+
+    def _find_prism_root() -> Path | None:
+        """Walk up from the export file to find the MizukiPrism repo root."""
+        # Try common relative locations
+        candidate = file_path
+        for _ in range(10):
+            candidate = candidate.parent
+            if (candidate / "data" / "songs.json").exists():
+                return candidate
+        return None
+
+    if songs_file is None or streams_file is None:
+        prism_root = _find_prism_root()
+        if prism_root is None:
+            console.print(
+                "[red]エラー:[/red] MizukiPrism の data ディレクトリが見つかりません。\n"
+                "  [bold]--songs-file[/bold] と [bold]--streams-file[/bold] を明示的に指定してください。"
+            )
+            sys.exit(1)
+        if songs_file is None:
+            songs_file = str(prism_root / "data" / "songs.json")
+        if streams_file is None:
+            streams_file = str(prism_root / "data" / "streams.json")
+
+    songs_path = Path(songs_file)
+    streams_path = Path(streams_file)
+
+    # --- Read and validate export JSON --------------------------------------
+    try:
+        raw = file_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        console.print(f"[red]エラー:[/red] ファイルを読み込めません: {exc}")
+        sys.exit(1)
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        console.print(f"[red]JSON 解析エラー:[/red] {exc}")
+        sys.exit(1)
+
+    try:
+        validate_export_json(payload)
+    except ValueError as exc:
+        console.print(f"[red]スキーマ検証エラー:[/red]\n{exc}")
+        sys.exit(1)
+
+    console.print(f"[cyan]インポートファイル:[/cyan] {file_path.name}")
+
+    # --- Load existing MizukiPrism data -------------------------------------
+    try:
+        existing_songs, existing_streams = load_mizukiprism_data(songs_path, streams_path)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]データ読み込みエラー:[/red] {exc}")
+        sys.exit(1)
+
+    console.print(
+        f"[dim]既存データ: {len(existing_songs)} 首歌曲、{len(existing_streams)} 場直播[/dim]"
+    )
+
+    # --- Compute import plan ------------------------------------------------
+    plan = compute_import_plan(payload, existing_songs, existing_streams)
+
+    # --- Show change summary ------------------------------------------------
+    console.print()
+    console.print("[bold]変更サマリー:[/bold]")
+    console.print(
+        f"  新增 [bold]{plan.new_song_count}[/bold] 首歌曲、"
+        f"新增 [bold]{plan.new_version_count}[/bold] 個版本、"
+        f"新增 [bold]{plan.new_stream_count}[/bold] 場直播"
+    )
+
+    if plan.new_songs:
+        console.print("\n[bold]新增歌曲:[/bold]")
+        for song in plan.new_songs:
+            artist = song.get("originalArtist", "")
+            perf_count = len(song.get("performances", []))
+            console.print(f"  + {song['title']}  ({artist})  [{perf_count} 個版本]")
+
+    if plan.updated_songs:
+        console.print("\n[bold]更新歌曲（新增版本）:[/bold]")
+        for song in plan.updated_songs:
+            n = song.get("_new_perf_count", 0)
+            console.print(f"  ~ {song['title']}  (+{n} 個版本)")
+
+    if plan.new_streams:
+        console.print("\n[bold]新增直播:[/bold]")
+        for stream in plan.new_streams:
+            console.print(f"  + [{stream['id']}] {stream['title']}  ({stream['date']})")
+
+    # --- Handle conflicts ---------------------------------------------------
+    overwrite_ids: set[str] = set()
+    skip_ids: set[str] = set()
+
+    if plan.conflicts:
+        console.print()
+        console.print(f"[yellow]⚠ 衝突:[/yellow]  {len(plan.conflicts)} 場直播已存在於 MizukiPrism。")
+        for conflict in plan.conflicts:
+            console.print(
+                f"  [bold]{conflict.video_id}[/bold]  "
+                f"既存: [{conflict.existing_stream_id}] {conflict.existing_stream_title}"
+            )
+            choice = click.prompt(
+                "    上書き (overwrite) / スキップ (skip)?",
+                type=click.Choice(["overwrite", "skip", "o", "s"], case_sensitive=False),
+                default="skip",
+            )
+            if choice in ("overwrite", "o"):
+                overwrite_ids.add(conflict.video_id)
+            else:
+                skip_ids.add(conflict.video_id)
+
+    # --- Confirm and execute ------------------------------------------------
+    if plan.new_song_count == 0 and plan.new_version_count == 0 and plan.new_stream_count == 0 and not overwrite_ids:
+        console.print("\n[dim]インポートするデータがありません。[/dim]")
+        return
+
+    console.print()
+    confirmed = click.confirm("MizukiPrism のデータファイルに書き込みますか？", default=True)
+    if not confirmed:
+        console.print("[dim]キャンセルしました。[/dim]")
+        return
+
+    from mizukilens.cache import open_db
+    conn = None
+    try:
+        conn = open_db()
+    except Exception:  # noqa: BLE001
+        pass
+
+    try:
+        result = execute_import(
+            plan,
+            songs_path=songs_path,
+            streams_path=streams_path,
+            conn=conn,
+            overwrite_video_ids=overwrite_ids,
+            skip_video_ids=skip_ids,
+            payload=payload,
+        )
+    finally:
+        if conn is not None:
+            conn.close()
+
+    console.print()
+    console.print("[bold green]匯入完成！[/bold green]")
+    console.print(f"  新增 [bold]{result.new_song_count}[/bold] 首歌曲")
+    console.print(f"  新增 [bold]{result.new_version_count}[/bold] 個版本")
+    console.print(f"  新增 [bold]{result.new_stream_count}[/bold] 場直播")
+    if result.overwritten_count:
+        console.print(f"  上書き: [bold]{result.overwritten_count}[/bold] 場直播")
+    if result.skipped_count:
+        console.print(f"  スキップ: [bold]{result.skipped_count}[/bold] 場直播")
+    console.print(f"\n  [dim]バックアップ: {songs_path}.bak, {streams_path}.bak[/dim]")
 
 
 # ---------------------------------------------------------------------------
