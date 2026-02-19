@@ -17,7 +17,7 @@ Layout:
   │   歌回 Vol.10    │                          │
   │                  │                          │
   ├──────────────────┴──────────────────────────┤
-  │ [a]確認 [s]跳過 [x]排除 [e]編輯 [r]重新擷取 │
+  │ [a]確認 [s]跳過 [x]排除 [e]編輯 [r]再擷取 [u]URL │
   └─────────────────────────────────────────────┘
 """
 
@@ -302,6 +302,7 @@ class HelpDialog(ModalScreen[None]):
   [x]  排除 (Exclude) — ストリームを対象外にする
   [r]  再擷取 (Re-fetch) — コメント/説明を再取得して再解析
   [c]  候選留言 (Candidates) — キーワード一致コメントを表示
+  [u]  URL複製 (Copy URL) — VODのYouTube URLをクリップボードにコピー
 
 [bold cyan]歌曲操作 / Song actions:[/bold cyan]
   [e]  編輯 (Edit) — 選択した曲を編集
@@ -563,6 +564,7 @@ class ReviewApp(App[None]):
         Binding("d", "delete_song", "刪除", show=True),
         Binding("r", "refetch_stream", "再擷取", show=True),
         Binding("c", "show_candidates", "候選留言", show=True),
+        Binding("u", "copy_vod_url", "複製URL", show=True),
         Binding("question_mark", "show_help", "幫助", show=True),
         Binding("q", "quit", "終了", show=True),
     ]
@@ -1120,6 +1122,15 @@ class ReviewApp(App[None]):
                 )
         except (KeyError, ValueError) as exc:
             self.notify(f"エラー: {exc}", severity="error")
+
+    def action_copy_vod_url(self) -> None:
+        """Copy the YouTube VOD URL for the current stream to clipboard."""
+        if self._current_stream_idx < 0:
+            return
+        video_id = self._streams[self._current_stream_idx]["video_id"]
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        self.copy_to_clipboard(url)
+        self.notify(f"URLをコピーしました: {url}")
 
     def action_show_help(self) -> None:
         """Show the help dialog."""

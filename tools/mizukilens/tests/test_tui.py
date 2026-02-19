@@ -960,3 +960,77 @@ class TestCandidatesTUI:
         """Verify help text mentions the [c] keybinding for candidates."""
         assert "[c]" in HelpDialog.HELP_TEXT
         assert "候選留言" in HelpDialog.HELP_TEXT
+
+
+# ===========================================================================
+# SECTION: Copy VOD URL keybinding (u)
+# ===========================================================================
+
+
+class TestCopyVodUrl:
+    """Tests for the copy VOD URL keybinding."""
+
+    def test_copy_vod_url_binding_exists(self, db: sqlite3.Connection) -> None:
+        """Verify the 'u' keybinding is registered for copy_vod_url."""
+        app = ReviewApp(conn=db)
+        binding_keys = [b.key for b in app.BINDINGS]
+        assert "u" in binding_keys
+
+    def test_copy_vod_url_action_method_exists(self, db: sqlite3.Connection) -> None:
+        """Verify ReviewApp has the action_copy_vod_url method."""
+        app = ReviewApp(conn=db)
+        assert hasattr(app, "action_copy_vod_url")
+        assert callable(app.action_copy_vod_url)
+
+    def test_copy_vod_url_builds_correct_url(self, db: sqlite3.Connection) -> None:
+        """Verify the URL is built correctly from the video_id."""
+        _add_stream(db, "dQw4w9WgXcQ", status="extracted", title="Test Stream")
+
+        app = ReviewApp(conn=db)
+        app._conn = db
+        app._streams = list(list_streams(db))
+        app._current_stream_idx = 0
+
+        video_id = app._streams[0]["video_id"]
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        assert url == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
+    def test_copy_vod_url_no_stream_selected(self, db: sqlite3.Connection) -> None:
+        """action_copy_vod_url returns early when no stream is selected."""
+        app = ReviewApp(conn=db)
+        app._conn = db
+        app._streams = []
+        app._current_stream_idx = -1
+
+        # Should not raise
+        with patch.object(app, "copy_to_clipboard") as mock_copy:
+            with patch.object(app, "notify") as mock_notify:
+                app.action_copy_vod_url()
+                mock_copy.assert_not_called()
+                mock_notify.assert_not_called()
+
+    def test_copy_vod_url_calls_clipboard_and_notify(
+        self, db: sqlite3.Connection
+    ) -> None:
+        """Verify copy_to_clipboard and notify are called with correct args."""
+        _add_stream(db, "abc123", status="extracted", title="Test")
+
+        app = ReviewApp(conn=db)
+        app._conn = db
+        app._streams = list(list_streams(db))
+        app._current_stream_idx = 0
+
+        with patch.object(app, "copy_to_clipboard") as mock_copy:
+            with patch.object(app, "notify") as mock_notify:
+                app.action_copy_vod_url()
+                mock_copy.assert_called_once_with(
+                    "https://www.youtube.com/watch?v=abc123"
+                )
+                mock_notify.assert_called_once()
+                notify_msg = mock_notify.call_args[0][0]
+                assert "abc123" in notify_msg
+
+    def test_help_text_includes_copy_url(self) -> None:
+        """Verify help text mentions the [u] keybinding for URL copy."""
+        assert "[u]" in HelpDialog.HELP_TEXT
+        assert "URL" in HelpDialog.HELP_TEXT
