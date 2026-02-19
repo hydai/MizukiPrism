@@ -32,7 +32,7 @@ VALID_STATUSES: tuple[str, ...] = (
 VALID_TRANSITIONS: dict[str | None, set[str]] = {
     None:          {"discovered"},
     "discovered":  {"extracted", "pending", "excluded"},
-    "extracted":   {"pending", "approved"},
+    "extracted":   {"pending", "approved", "excluded"},
     "pending":     {"extracted", "approved", "excluded"},
     "approved":    {"exported", "extracted"},   # re-review goes back to extracted
     "exported":    {"imported", "approved"},

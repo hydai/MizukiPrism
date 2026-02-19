@@ -37,10 +37,23 @@ class TestStubCommands:
         # exits with non-zero (sys.exit(1)) and shows mode requirement
         assert result.exit_code != 0 or "モード" in result.output or "エラー" in result.output
 
-    def test_review_stub(self) -> None:
+    def test_review_launches_tui(self, tmp_path: Path) -> None:
+        from mizukilens.cache import open_db
+        db_path = tmp_path / "review_test.db"
+        conn = open_db(db_path)
+        conn.close()
+
+        def mock_open_db(*args, **kwargs):
+            return open_db(db_path)
+
         runner = CliRunner()
-        result = runner.invoke(main, ["review"])
+        with (
+            patch("mizukilens.cache.open_db", side_effect=mock_open_db),
+            patch("mizukilens.tui.launch_review_tui") as mock_tui,
+        ):
+            result = runner.invoke(main, ["review"])
         assert result.exit_code == 0
+        mock_tui.assert_called_once()
 
     def test_export_stub(self) -> None:
         runner = CliRunner()
