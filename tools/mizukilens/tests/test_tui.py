@@ -24,6 +24,7 @@ from mizukilens.cache import (
     upsert_stream,
 )
 from mizukilens.tui import (
+    CandidateListDialog,
     ConfirmDialog,
     EditSongDialog,
     HelpDialog,
@@ -905,3 +906,54 @@ class TestTuiCommentAttribution:
         # Smoke test: ReviewApp should instantiate without error
         app = ReviewApp(conn=db, show_all=False)
         assert app is not None
+
+
+# ===========================================================================
+# SECTION: Candidate comments TUI (show_candidates keybinding)
+# ===========================================================================
+
+
+class TestCandidatesTUI:
+    """Tests for the candidate comments TUI keybinding and dialog."""
+
+    def test_show_candidates_binding_exists(self, db: sqlite3.Connection) -> None:
+        """Verify the 'c' keybinding is registered for show_candidates."""
+        app = ReviewApp(conn=db)
+        binding_keys = [b.key for b in app.BINDINGS]
+        assert "c" in binding_keys
+
+    def test_show_candidates_action_method_exists(self, db: sqlite3.Connection) -> None:
+        """Verify ReviewApp has the action_show_candidates method."""
+        app = ReviewApp(conn=db)
+        assert hasattr(app, "action_show_candidates")
+        assert callable(app.action_show_candidates)
+
+    def test_candidate_list_dialog_instantiation(self) -> None:
+        """CandidateListDialog can be instantiated with candidate data."""
+        candidates = [
+            {
+                "id": 1,
+                "comment_author": "歌單bot",
+                "keywords_matched": "歌單",
+                "status": "pending",
+                "comment_text": "歌單：\n0:00 Song A\n1:30 Song B",
+            },
+        ]
+        dialog = CandidateListDialog(candidates)
+        assert dialog._candidates == candidates
+
+    def test_candidate_list_dialog_empty(self) -> None:
+        """CandidateListDialog with empty candidates list."""
+        dialog = CandidateListDialog([])
+        assert dialog._candidates == []
+
+    def test_do_approve_candidate_method_exists(self, db: sqlite3.Connection) -> None:
+        """Verify ReviewApp has the _do_approve_candidate method."""
+        app = ReviewApp(conn=db)
+        assert hasattr(app, "_do_approve_candidate")
+        assert callable(app._do_approve_candidate)
+
+    def test_help_text_includes_candidates(self, db: sqlite3.Connection) -> None:
+        """Verify help text mentions the [c] keybinding for candidates."""
+        assert "[c]" in HelpDialog.HELP_TEXT
+        assert "候選留言" in HelpDialog.HELP_TEXT

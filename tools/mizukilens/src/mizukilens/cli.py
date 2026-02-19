@@ -647,6 +647,180 @@ def status_cmd(detail: bool) -> None:
 # cache  (implemented)
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# candidates  (implemented)
+# ---------------------------------------------------------------------------
+
+@main.group("candidates", invoke_without_command=True)
+@click.option("--video", "video_id", type=str, default=None, metavar="VIDEO_ID",
+              help="Filter candidates by video ID.")
+@click.option("--status", "status", type=click.Choice(["pending", "approved", "rejected"]),
+              default=None, help="Filter candidates by status.")
+@click.pass_context
+def candidates_group(ctx: click.Context, video_id: str | None, status: str | None) -> None:
+    """View and manage songlist keyword candidate comments.
+
+    \b
+    Without a subcommand, lists all candidates matching the filters.
+    Subcommands: show, approve, reject
+    """
+    ctx.ensure_object(dict)
+    ctx.obj["video_id"] = video_id
+    ctx.obj["status"] = status
+
+    if ctx.invoked_subcommand is not None:
+        return
+
+    # Default behavior: list candidates
+    from mizukilens.cache import open_db, list_candidate_comments
+    from rich.table import Table
+    from rich import box
+
+    conn = open_db()
+    try:
+        rows = list_candidate_comments(conn, video_id=video_id, status=status)
+        if not rows:
+            console.print("[dim]候補留言がありません。[/dim]")
+            return
+
+        tbl = Table(
+            title="候選留言 (Candidate Comments)",
+            box=box.ROUNDED,
+            show_header=True,
+            header_style="bold cyan",
+        )
+        tbl.add_column("ID", justify="right", style="bold")
+        tbl.add_column("Video ID", style="cyan", no_wrap=True)
+        tbl.add_column("Author")
+        tbl.add_column("Keywords", style="yellow")
+        tbl.add_column("Status")
+        tbl.add_column("Preview")
+
+        status_styles = {
+            "pending":  "[yellow]pending[/yellow]",
+            "approved": "[green]approved[/green]",
+            "rejected": "[red]rejected[/red]",
+        }
+
+        for row in rows:
+            text_preview = (row["comment_text"] or "")[:60]
+            text_preview = text_preview.replace("\n", " ")
+            if len(row["comment_text"] or "") > 60:
+                text_preview += "..."
+            tbl.add_row(
+                str(row["id"]),
+                row["video_id"],
+                row["comment_author"] or "",
+                row["keywords_matched"] or "",
+                status_styles.get(row["status"], row["status"]),
+                text_preview,
+            )
+
+        console.print(tbl)
+    finally:
+        conn.close()
+
+
+@candidates_group.command("show")
+@click.argument("candidate_id", type=int)
+def candidates_show_cmd(candidate_id: int) -> None:
+    """Show the full text of a candidate comment."""
+    import sys
+    from mizukilens.cache import open_db, get_candidate_comment
+    from rich.panel import Panel
+
+    conn = open_db()
+    try:
+        row = get_candidate_comment(conn, candidate_id)
+        if row is None:
+            console.print(f"[red]エラー:[/red] 候補留言 ID={candidate_id} が見つかりません。")
+            sys.exit(1)
+
+        status_styles = {
+            "pending":  "[yellow]pending[/yellow]",
+            "approved": "[green]approved[/green]",
+            "rejected": "[red]rejected[/red]",
+        }
+
+        console.print()
+        console.print(f"[bold cyan]候補留言 #{candidate_id}[/bold cyan]")
+        console.print(f"  Video:    [cyan]{row['video_id']}[/cyan]")
+        console.print(f"  Author:   {row['comment_author'] or '(不明)'}")
+        console.print(f"  Keywords: [yellow]{row['keywords_matched'] or ''}[/yellow]")
+        console.print(f"  Status:   {status_styles.get(row['status'], row['status'])}")
+        console.print(f"  Created:  {row['created_at']}")
+        console.print()
+        console.print(Panel(
+            row["comment_text"],
+            title="コメント全文",
+            border_style="cyan",
+        ))
+    finally:
+        conn.close()
+
+
+@candidates_group.command("approve")
+@click.argument("candidate_id", type=int)
+def candidates_approve_cmd(candidate_id: int) -> None:
+    """Approve a candidate comment and re-extract timestamps from it."""
+    import sys
+    from mizukilens.cache import open_db, get_candidate_comment
+    from mizukilens.extraction import extract_from_candidate
+
+    conn = open_db()
+    try:
+        row = get_candidate_comment(conn, candidate_id)
+        if row is None:
+            console.print(f"[red]エラー:[/red] 候補留言 ID={candidate_id} が見つかりません。")
+            sys.exit(1)
+
+        video_id = row["video_id"]
+        console.print(f"[cyan]候補留言 #{candidate_id}[/cyan] から再抽出中...")
+
+        result = extract_from_candidate(conn, video_id, candidate_id)
+
+        if result.songs:
+            console.print(
+                f"[green]完了![/green]  {len(result.songs)} 曲を抽出しました。"
+            )
+            if result.suspicious_timestamps:
+                console.print(
+                    f"[yellow]警告:[/yellow] 疑わしいタイムスタンプが "
+                    f"{len(result.suspicious_timestamps)} 件あります。"
+                )
+        else:
+            console.print(
+                "[yellow]注意:[/yellow] このコメントからタイムスタンプを抽出できませんでした。"
+            )
+    except (KeyError, ValueError) as exc:
+        console.print(f"[red]エラー:[/red] {exc}")
+        sys.exit(1)
+    finally:
+        conn.close()
+
+
+@candidates_group.command("reject")
+@click.argument("candidate_id", type=int)
+def candidates_reject_cmd(candidate_id: int) -> None:
+    """Mark a candidate comment as rejected."""
+    import sys
+    from mizukilens.cache import open_db, update_candidate_status
+
+    conn = open_db()
+    try:
+        update_candidate_status(conn, candidate_id, "rejected")
+        console.print(f"[dim]候補留言 #{candidate_id} を却下しました。[/dim]")
+    except KeyError:
+        console.print(f"[red]エラー:[/red] 候補留言 ID={candidate_id} が見つかりません。")
+        sys.exit(1)
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# cache  (implemented)
+# ---------------------------------------------------------------------------
+
 @main.group("cache")
 def cache_group() -> None:
     """Manage the local SQLite cache."""

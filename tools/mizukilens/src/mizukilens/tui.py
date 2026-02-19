@@ -142,6 +142,129 @@ class ConfirmDialog(ModalScreen[bool]):
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Candidate list dialog
+# ---------------------------------------------------------------------------
+
+
+class CandidateListDialog(ModalScreen[int | None]):
+    """A modal showing keyword-matched candidate comments for a stream.
+
+    Returns the candidate ID if approved, or None if dismissed.
+    """
+
+    DEFAULT_CSS = """
+    CandidateListDialog {
+        align: center middle;
+    }
+    CandidateListDialog > Vertical {
+        background: $surface;
+        border: tall $primary;
+        padding: 1 2;
+        width: 80;
+        height: 20;
+    }
+    CandidateListDialog Label#cand-title {
+        text-align: center;
+        text-style: bold;
+        margin-bottom: 1;
+    }
+    CandidateListDialog DataTable {
+        height: 1fr;
+    }
+    CandidateListDialog #cand-hint {
+        margin-top: 1;
+    }
+    """
+
+    def __init__(self, candidates: list[dict], **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._candidates = candidates
+
+    def compose(self) -> ComposeResult:
+        with Vertical():
+            yield Label("候選留言 (Candidate Comments)", id="cand-title")
+            yield DataTable(id="cand-table", cursor_type="row")
+            yield Label(
+                "[a] 承認 (Approve)  [x] 却下 (Reject)  [Esc] 閉じる",
+                id="cand-hint",
+            )
+
+    def on_mount(self) -> None:
+        table = self.query_one("#cand-table", DataTable)
+        table.add_columns("ID", "著者", "キーワード", "状態", "プレビュー")
+        for c in self._candidates:
+            text_preview = (c.get("comment_text") or "")[:50].replace("\n", " ")
+            if len(c.get("comment_text") or "") > 50:
+                text_preview += "..."
+            table.add_row(
+                str(c["id"]),
+                c.get("comment_author") or "",
+                c.get("keywords_matched") or "",
+                c.get("status", "pending"),
+                text_preview,
+            )
+
+    def on_key(self, event: Any) -> None:
+        if event.key == "escape":
+            self.dismiss(None)
+        elif event.key == "a":
+            self._approve_selected()
+        elif event.key == "x":
+            self._reject_selected()
+
+    def _get_selected_candidate_id(self) -> int | None:
+        table = self.query_one("#cand-table", DataTable)
+        if not self._candidates:
+            return None
+        row_idx = table.cursor_row
+        if row_idx is not None and 0 <= row_idx < len(self._candidates):
+            return self._candidates[row_idx]["id"]
+        return None
+
+    def _approve_selected(self) -> None:
+        cand_id = self._get_selected_candidate_id()
+        if cand_id is not None:
+            self.dismiss(cand_id)
+
+    def _reject_selected(self) -> None:
+        from mizukilens.cache import update_candidate_status
+
+        cand_id = self._get_selected_candidate_id()
+        if cand_id is None:
+            return
+        # Find the connection from the parent app
+        app = self.app
+        if hasattr(app, "_conn"):
+            try:
+                update_candidate_status(app._conn, cand_id, "rejected")
+                # Remove from display and refresh
+                self._candidates = [
+                    c for c in self._candidates if c["id"] != cand_id
+                ]
+                table = self.query_one("#cand-table", DataTable)
+                table.clear()
+                for c in self._candidates:
+                    text_preview = (c.get("comment_text") or "")[:50].replace("\n", " ")
+                    if len(c.get("comment_text") or "") > 50:
+                        text_preview += "..."
+                    table.add_row(
+                        str(c["id"]),
+                        c.get("comment_author") or "",
+                        c.get("keywords_matched") or "",
+                        c.get("status", "pending"),
+                        text_preview,
+                    )
+                self.notify("候補留言を却下しました")
+            except (ValueError, KeyError) as exc:
+                self.notify(f"エラー: {exc}", severity="error")
+
+
+# ---------------------------------------------------------------------------
+# Help dialog
+# ---------------------------------------------------------------------------
+
+
 class HelpDialog(ModalScreen[None]):
     """A modal screen showing keybinding help."""
 
@@ -178,6 +301,7 @@ class HelpDialog(ModalScreen[None]):
   [s]  スキップ (Skip) — 現在のステータスを維持
   [x]  排除 (Exclude) — ストリームを対象外にする
   [r]  再擷取 (Re-fetch) — コメント/説明を再取得して再解析
+  [c]  候選留言 (Candidates) — キーワード一致コメントを表示
 
 [bold cyan]歌曲操作 / Song actions:[/bold cyan]
   [e]  編輯 (Edit) — 選択した曲を編集
@@ -438,6 +562,7 @@ class ReviewApp(App[None]):
         Binding("n", "new_song", "新增", show=True),
         Binding("d", "delete_song", "刪除", show=True),
         Binding("r", "refetch_stream", "再擷取", show=True),
+        Binding("c", "show_candidates", "候選留言", show=True),
         Binding("question_mark", "show_help", "幫助", show=True),
         Binding("q", "quit", "終了", show=True),
     ]
@@ -597,7 +722,7 @@ class ReviewApp(App[None]):
             title = title[:37] + "..."
         bar.update(
             f"{icon} {title}  |  状態: {status_label}  |  "
-            f"[dim]a:確認 s:スキップ x:排除 e:編輯 n:新增 d:刪除 r:再擷取 ?:幫助[/dim]"
+            f"[dim]a:確認 s:スキップ x:排除 e:編輯 n:新増 d:刪除 r:再擷取 c:候選 ?:幫助[/dim]"
         )
 
     # -----------------------------------------------------------------------
@@ -950,6 +1075,51 @@ class ReviewApp(App[None]):
             self.notify(f"再取得エラー: {exc}", severity="error")
         except Exception as exc:  # noqa: BLE001
             self.notify(f"再取得エラー: {exc}", severity="error")
+
+    def action_show_candidates(self) -> None:
+        """Show candidate comments for the current stream."""
+        if self._current_stream_idx < 0:
+            self.notify("場次が選択されていません")
+            return
+
+        from mizukilens.cache import list_candidate_comments
+
+        stream = self._streams[self._current_stream_idx]
+        video_id = stream["video_id"]
+
+        rows = list_candidate_comments(self._conn, video_id=video_id)
+        if not rows:
+            self.notify("この場次の候補留言はありません")
+            return
+
+        candidates = [dict(r) for r in rows]
+
+        def _candidate_callback(candidate_id: int | None) -> None:
+            if candidate_id is not None:
+                self._do_approve_candidate(video_id, candidate_id)
+
+        self.push_screen(CandidateListDialog(candidates), _candidate_callback)
+
+    def _do_approve_candidate(self, video_id: str, candidate_id: int) -> None:
+        """Re-extract from the approved candidate and refresh."""
+        from mizukilens.extraction import extract_from_candidate
+
+        try:
+            result = extract_from_candidate(self._conn, video_id, candidate_id)
+            if result.songs:
+                self.notify(
+                    f"候補留言から {len(result.songs)} 曲を抽出しました",
+                    severity="information",
+                )
+                self._load_streams_preserving_selection()
+                self._load_songs(self._current_stream_idx)
+            else:
+                self.notify(
+                    "この候補留言からタイムスタンプを抽出できませんでした",
+                    severity="warning",
+                )
+        except (KeyError, ValueError) as exc:
+            self.notify(f"エラー: {exc}", severity="error")
 
     def action_show_help(self) -> None:
         """Show the help dialog."""

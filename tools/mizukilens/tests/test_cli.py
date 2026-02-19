@@ -310,3 +310,143 @@ class TestConfigCommand:
         assert "path" in saved["cache"]
         assert "export" in saved
         assert "output_dir" in saved["export"]
+
+
+# ===========================================================================
+# Candidates CLI commands
+# ===========================================================================
+
+
+class TestCandidatesCLI:
+    """Tests for the ``mizukilens candidates`` command group."""
+
+    def _make_db_with_candidates(self, tmp_path: Path) -> Path:
+        from mizukilens.cache import open_db, upsert_stream, save_candidate_comments
+
+        db_path = tmp_path / "cand_test.db"
+        conn = open_db(db_path)
+        upsert_stream(conn, video_id="cv1", status="discovered", title="Test Stream")
+        save_candidate_comments(conn, "cv1", [
+            {
+                "comment_cid": "cid_001",
+                "comment_author": "歌單bot",
+                "comment_author_url": None,
+                "comment_text": "歌單：\n0:00 Song A\n2:00 Song B\n4:00 Song C",
+                "keywords_matched": ["歌單"],
+            },
+            {
+                "comment_cid": "cid_002",
+                "comment_author": "SetlistFan",
+                "comment_author_url": None,
+                "comment_text": "Songlist coming soon",
+                "keywords_matched": ["Songlist"],
+            },
+        ])
+        conn.close()
+        return db_path
+
+    def test_candidates_list_empty(self, tmp_path: Path) -> None:
+        from mizukilens.cache import open_db
+
+        db_path = tmp_path / "empty_cand.db"
+        conn = open_db(db_path)
+        conn.close()
+
+        runner = CliRunner()
+        with patch("mizukilens.cache._resolve_cache_path", return_value=db_path):
+            result = runner.invoke(main, ["candidates"], catch_exceptions=False)
+        assert result.exit_code == 0
+        assert "ありません" in result.output
+
+    def test_candidates_list_shows_results(self, tmp_path: Path) -> None:
+        db_path = self._make_db_with_candidates(tmp_path)
+
+        runner = CliRunner()
+        with patch("mizukilens.cache._resolve_cache_path", return_value=db_path):
+            result = runner.invoke(main, ["candidates"], catch_exceptions=False)
+        assert result.exit_code == 0
+        assert "歌單bot" in result.output
+        assert "SetlistFan" in result.output
+
+    def test_candidates_list_filter_by_video(self, tmp_path: Path) -> None:
+        db_path = self._make_db_with_candidates(tmp_path)
+
+        runner = CliRunner()
+        with patch("mizukilens.cache._resolve_cache_path", return_value=db_path):
+            result = runner.invoke(
+                main, ["candidates", "--video", "cv1"], catch_exceptions=False
+            )
+        assert result.exit_code == 0
+        assert "歌單bot" in result.output
+
+    def test_candidates_show(self, tmp_path: Path) -> None:
+        db_path = self._make_db_with_candidates(tmp_path)
+
+        # Get the candidate ID
+        from mizukilens.cache import open_db, list_candidate_comments
+        conn = open_db(db_path)
+        rows = list_candidate_comments(conn, video_id="cv1")
+        cand_id = rows[0]["id"]
+        conn.close()
+
+        runner = CliRunner()
+        with patch("mizukilens.cache._resolve_cache_path", return_value=db_path):
+            result = runner.invoke(
+                main, ["candidates", "show", str(cand_id)], catch_exceptions=False
+            )
+        assert result.exit_code == 0
+        assert "Song A" in result.output
+
+    def test_candidates_approve(self, tmp_path: Path) -> None:
+        db_path = self._make_db_with_candidates(tmp_path)
+
+        from mizukilens.cache import open_db, list_candidate_comments
+        conn = open_db(db_path)
+        rows = list_candidate_comments(conn, video_id="cv1")
+        cand_id = rows[0]["id"]
+        conn.close()
+
+        runner = CliRunner()
+        with patch("mizukilens.cache._resolve_cache_path", return_value=db_path):
+            result = runner.invoke(
+                main, ["candidates", "approve", str(cand_id)], catch_exceptions=False
+            )
+        assert result.exit_code == 0
+        assert "完了" in result.output or "曲" in result.output
+
+        # Verify candidate is now approved
+        conn = open_db(db_path)
+        from mizukilens.cache import get_candidate_comment
+        cand = get_candidate_comment(conn, cand_id)
+        assert cand["status"] == "approved"
+        conn.close()
+
+    def test_candidates_reject(self, tmp_path: Path) -> None:
+        db_path = self._make_db_with_candidates(tmp_path)
+
+        from mizukilens.cache import open_db, list_candidate_comments
+        conn = open_db(db_path)
+        rows = list_candidate_comments(conn, video_id="cv1")
+        cand_id = rows[1]["id"]
+        conn.close()
+
+        runner = CliRunner()
+        with patch("mizukilens.cache._resolve_cache_path", return_value=db_path):
+            result = runner.invoke(
+                main, ["candidates", "reject", str(cand_id)], catch_exceptions=False
+            )
+        assert result.exit_code == 0
+        assert "却下" in result.output
+
+        # Verify candidate is now rejected
+        conn = open_db(db_path)
+        from mizukilens.cache import get_candidate_comment
+        cand = get_candidate_comment(conn, cand_id)
+        assert cand["status"] == "rejected"
+        conn.close()
+
+    def test_candidates_command_in_help(self) -> None:
+        """Verify the candidates command is registered in the CLI."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["--help"])
+        assert "candidates" in result.output
