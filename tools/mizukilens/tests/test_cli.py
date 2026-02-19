@@ -60,10 +60,11 @@ class TestStubCommands:
         result = runner.invoke(main, ["export"])
         assert result.exit_code == 0
 
-    def test_import_stub_no_args(self) -> None:
+    def test_import_no_file_shows_error(self) -> None:
         runner = CliRunner()
         result = runner.invoke(main, ["import"])
-        assert result.exit_code == 0
+        # No FILE argument: should show an error (non-zero exit) or error message
+        assert result.exit_code != 0 or "エラー" in result.output or "FILE" in result.output
 
     def test_status_stub(self) -> None:
         runner = CliRunner()
