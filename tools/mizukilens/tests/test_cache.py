@@ -11,18 +11,24 @@ import pytest
 from click.testing import CliRunner
 
 from mizukilens.cache import (
+    VALID_CANDIDATE_STATUSES,
     VALID_STATUSES,
     VALID_TRANSITIONS,
     clear_all,
+    clear_candidates,
     clear_stream,
     delete_stream,
+    get_candidate_comment,
     get_db_path,
     get_parsed_songs,
     get_status_counts,
     get_stream,
     is_valid_transition,
+    list_candidate_comments,
     list_streams,
     open_db,
+    save_candidate_comments,
+    update_candidate_status,
     update_stream_status,
     upsert_parsed_songs,
     upsert_stream,
@@ -743,3 +749,134 @@ class TestCommentAuthorColumns:
         assert stream["comment_author_url"] is None
         assert stream["comment_id"] is None
         conn2.close()
+
+
+# ===========================================================================
+# SECTION: Candidate comments CRUD
+# ===========================================================================
+
+
+class TestCandidateComments:
+    """Tests for the candidate_comments table and CRUD operations."""
+
+    def _sample_candidates(self) -> list[dict]:
+        return [
+            {
+                "comment_cid": "cid_001",
+                "comment_author": "歌單bot",
+                "comment_author_url": "https://youtube.com/channel/UC001",
+                "comment_text": "歌單：\n0:00 Song A\n1:30 Song B",
+                "keywords_matched": ["歌單"],
+            },
+            {
+                "comment_cid": "cid_002",
+                "comment_author": "SetlistFan",
+                "comment_author_url": "https://youtube.com/channel/UC002",
+                "comment_text": "Songlist for today's stream",
+                "keywords_matched": ["Songlist"],
+            },
+        ]
+
+    def test_candidate_comments_table_exists(self, db: sqlite3.Connection) -> None:
+        cur = db.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='candidate_comments'"
+        )
+        assert cur.fetchone() is not None
+
+    def test_save_and_list_candidates(self, db: sqlite3.Connection) -> None:
+        _add_stream(db, "cv1")
+        count = save_candidate_comments(db, "cv1", self._sample_candidates())
+        assert count == 2
+        rows = list_candidate_comments(db, video_id="cv1")
+        assert len(rows) == 2
+
+    def test_dedup_by_comment_cid(self, db: sqlite3.Connection) -> None:
+        _add_stream(db, "cv2")
+        candidates = self._sample_candidates()
+        save_candidate_comments(db, "cv2", candidates)
+        # Insert same candidates again — should be deduped
+        count = save_candidate_comments(db, "cv2", candidates)
+        assert count == 0
+        rows = list_candidate_comments(db, video_id="cv2")
+        assert len(rows) == 2
+
+    def test_update_candidate_status(self, db: sqlite3.Connection) -> None:
+        _add_stream(db, "cv3")
+        save_candidate_comments(db, "cv3", self._sample_candidates()[:1])
+        rows = list_candidate_comments(db, video_id="cv3")
+        cand_id = rows[0]["id"]
+
+        update_candidate_status(db, cand_id, "approved")
+        row = get_candidate_comment(db, cand_id)
+        assert row["status"] == "approved"
+
+    def test_update_candidate_status_invalid_raises(self, db: sqlite3.Connection) -> None:
+        _add_stream(db, "cv3b")
+        save_candidate_comments(db, "cv3b", self._sample_candidates()[:1])
+        rows = list_candidate_comments(db, video_id="cv3b")
+        cand_id = rows[0]["id"]
+
+        with pytest.raises(ValueError, match="Invalid candidate status"):
+            update_candidate_status(db, cand_id, "invalid_status")
+
+    def test_update_candidate_status_missing_raises(self, db: sqlite3.Connection) -> None:
+        with pytest.raises(KeyError, match="not found"):
+            update_candidate_status(db, 99999, "approved")
+
+    def test_clear_candidates_by_video(self, db: sqlite3.Connection) -> None:
+        _add_stream(db, "cv4a")
+        _add_stream(db, "cv4b")
+        save_candidate_comments(db, "cv4a", self._sample_candidates())
+        save_candidate_comments(db, "cv4b", self._sample_candidates()[:1])
+
+        deleted = clear_candidates(db, video_id="cv4a")
+        assert deleted == 2
+        assert list_candidate_comments(db, video_id="cv4a") == []
+        assert len(list_candidate_comments(db, video_id="cv4b")) == 1
+
+    def test_clear_candidates_all(self, db: sqlite3.Connection) -> None:
+        _add_stream(db, "cv5a")
+        _add_stream(db, "cv5b")
+        save_candidate_comments(db, "cv5a", self._sample_candidates())
+        save_candidate_comments(db, "cv5b", self._sample_candidates()[:1])
+
+        deleted = clear_candidates(db)
+        assert deleted == 3
+        assert list_candidate_comments(db) == []
+
+    def test_cascade_delete_with_stream(self, db: sqlite3.Connection) -> None:
+        _add_stream(db, "cv6")
+        save_candidate_comments(db, "cv6", self._sample_candidates())
+        assert len(list_candidate_comments(db, video_id="cv6")) == 2
+
+        # Deleting the stream should cascade to candidate_comments
+        delete_stream(db, "cv6")
+        assert list_candidate_comments(db, video_id="cv6") == []
+
+    def test_list_candidates_filter_by_status(self, db: sqlite3.Connection) -> None:
+        _add_stream(db, "cv7")
+        save_candidate_comments(db, "cv7", self._sample_candidates())
+        rows = list_candidate_comments(db, video_id="cv7")
+        # Update one to approved
+        update_candidate_status(db, rows[0]["id"], "approved")
+
+        pending = list_candidate_comments(db, video_id="cv7", status="pending")
+        approved = list_candidate_comments(db, video_id="cv7", status="approved")
+        assert len(pending) == 1
+        assert len(approved) == 1
+
+    def test_get_candidate_comment_returns_none_for_missing(self, db: sqlite3.Connection) -> None:
+        assert get_candidate_comment(db, 99999) is None
+
+    def test_keywords_matched_stored_as_csv(self, db: sqlite3.Connection) -> None:
+        _add_stream(db, "cv8")
+        candidates = [{
+            "comment_cid": "cid_multi",
+            "comment_author": "MultiUser",
+            "comment_author_url": None,
+            "comment_text": "歌單 Songlist here",
+            "keywords_matched": ["歌單", "Songlist"],
+        }]
+        save_candidate_comments(db, "cv8", candidates)
+        row = list_candidate_comments(db, video_id="cv8")[0]
+        assert row["keywords_matched"] == "歌單,Songlist"

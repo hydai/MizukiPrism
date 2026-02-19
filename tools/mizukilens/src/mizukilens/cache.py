@@ -113,9 +113,27 @@ CREATE TABLE IF NOT EXISTS parsed_songs (
 );
 """
 
+_CREATE_CANDIDATE_COMMENTS = """
+CREATE TABLE IF NOT EXISTS candidate_comments (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_id           TEXT NOT NULL REFERENCES streams(video_id) ON DELETE CASCADE,
+    comment_cid        TEXT,
+    comment_author     TEXT,
+    comment_author_url TEXT,
+    comment_text       TEXT NOT NULL,
+    keywords_matched   TEXT,
+    status             TEXT NOT NULL DEFAULT 'pending',
+    created_at         TEXT NOT NULL,
+    updated_at         TEXT NOT NULL
+);
+"""
+
+VALID_CANDIDATE_STATUSES: tuple[str, ...] = ("pending", "approved", "rejected")
+
 _CREATE_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_streams_status ON streams(status);",
     "CREATE INDEX IF NOT EXISTS idx_parsed_songs_video_id ON parsed_songs(video_id);",
+    "CREATE INDEX IF NOT EXISTS idx_candidate_comments_video_id ON candidate_comments(video_id);",
 ]
 
 
@@ -155,6 +173,7 @@ def _init_schema(conn: sqlite3.Connection) -> None:
     """Create tables and indexes if they do not exist."""
     conn.execute(_CREATE_STREAMS)
     conn.execute(_CREATE_PARSED_SONGS)
+    conn.execute(_CREATE_CANDIDATE_COMMENTS)
     for idx in _CREATE_INDEXES:
         conn.execute(idx)
 
@@ -433,3 +452,145 @@ def clear_stream(conn: sqlite3.Connection, video_id: str) -> bool:
         True if the stream was found and deleted, False otherwise.
     """
     return delete_stream(conn, video_id)
+
+
+# ---------------------------------------------------------------------------
+# Candidate comments CRUD
+# ---------------------------------------------------------------------------
+
+def save_candidate_comments(
+    conn: sqlite3.Connection,
+    video_id: str,
+    candidates: list[dict[str, Any]],
+) -> int:
+    """Bulk-insert candidate comments, deduplicating by ``comment_cid``.
+
+    Each item in *candidates* should have keys:
+      - ``comment_cid`` (str | None)
+      - ``comment_author`` (str | None)
+      - ``comment_author_url`` (str | None)
+      - ``comment_text`` (str)
+      - ``keywords_matched`` (list[str])
+
+    Returns:
+        Number of new candidates inserted (after dedup).
+    """
+    # Fetch existing cids for this video
+    cur = conn.execute(
+        "SELECT comment_cid FROM candidate_comments WHERE video_id = ?",
+        (video_id,),
+    )
+    existing_cids: set[str | None] = {row["comment_cid"] for row in cur.fetchall()}
+
+    now = _now_iso()
+    inserted = 0
+    for c in candidates:
+        cid = c.get("comment_cid")
+        # Skip if this cid is already stored (dedup)
+        if cid is not None and cid in existing_cids:
+            continue
+        keywords = c.get("keywords_matched", [])
+        keywords_str = ",".join(keywords) if keywords else None
+        conn.execute(
+            """
+            INSERT INTO candidate_comments
+                (video_id, comment_cid, comment_author, comment_author_url,
+                 comment_text, keywords_matched, status, created_at, updated_at)
+            VALUES
+                (:video_id, :comment_cid, :comment_author, :comment_author_url,
+                 :comment_text, :keywords_matched, 'pending', :now, :now)
+            """,
+            {
+                "video_id":           video_id,
+                "comment_cid":        cid,
+                "comment_author":     c.get("comment_author"),
+                "comment_author_url": c.get("comment_author_url"),
+                "comment_text":       c["comment_text"],
+                "keywords_matched":   keywords_str,
+                "now":                now,
+            },
+        )
+        if cid is not None:
+            existing_cids.add(cid)
+        inserted += 1
+
+    conn.commit()
+    return inserted
+
+
+def list_candidate_comments(
+    conn: sqlite3.Connection,
+    video_id: str | None = None,
+    status: str | None = None,
+) -> list[sqlite3.Row]:
+    """Return candidate comment rows, optionally filtered by *video_id* and/or *status*."""
+    query = "SELECT * FROM candidate_comments WHERE 1=1"
+    params: list[Any] = []
+    if video_id is not None:
+        query += " AND video_id = ?"
+        params.append(video_id)
+    if status is not None:
+        query += " AND status = ?"
+        params.append(status)
+    query += " ORDER BY created_at DESC"
+    cur = conn.execute(query, params)
+    return cur.fetchall()
+
+
+def get_candidate_comment(
+    conn: sqlite3.Connection,
+    candidate_id: int,
+) -> sqlite3.Row | None:
+    """Fetch a single candidate comment row by *candidate_id*, or None if not found."""
+    cur = conn.execute(
+        "SELECT * FROM candidate_comments WHERE id = ?",
+        (candidate_id,),
+    )
+    return cur.fetchone()
+
+
+def update_candidate_status(
+    conn: sqlite3.Connection,
+    candidate_id: int,
+    status: str,
+) -> None:
+    """Update the status of a candidate comment.
+
+    Raises:
+        ValueError: If *status* is not in ``("pending", "approved", "rejected")``.
+        KeyError: If *candidate_id* is not found.
+    """
+    if status not in VALID_CANDIDATE_STATUSES:
+        raise ValueError(
+            f"Invalid candidate status {status!r}. "
+            f"Must be one of {VALID_CANDIDATE_STATUSES}"
+        )
+    row = get_candidate_comment(conn, candidate_id)
+    if row is None:
+        raise KeyError(f"Candidate comment {candidate_id} not found.")
+
+    conn.execute(
+        "UPDATE candidate_comments SET status = ?, updated_at = ? WHERE id = ?",
+        (status, _now_iso(), candidate_id),
+    )
+    conn.commit()
+
+
+def clear_candidates(
+    conn: sqlite3.Connection,
+    video_id: str | None = None,
+) -> int:
+    """Delete candidate comments, optionally filtered by *video_id*.
+
+    Returns:
+        Number of rows deleted.
+    """
+    if video_id is not None:
+        cur = conn.execute(
+            "DELETE FROM candidate_comments WHERE video_id = ?",
+            (video_id,),
+        )
+    else:
+        cur = conn.execute("DELETE FROM candidate_comments")
+    conn.commit()
+    return cur.rowcount

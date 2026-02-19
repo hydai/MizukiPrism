@@ -23,6 +23,9 @@ CONFIG_DIR = Path.home() / ".config" / "mizukilens"
 CONFIG_PATH = CONFIG_DIR / "config.toml"
 
 DEFAULT_KEYWORDS: list[str] = ["歌回", "歌枠", "唱歌", "singing", "karaoke"]
+DEFAULT_SONGLIST_KEYWORDS: list[str] = [
+    "歌單", "歌单", "Songlist", "songlist", "setlist", "Setlist",
+]
 DEFAULT_CACHE_PATH = "~/.local/share/mizukilens/cache.db"
 DEFAULT_EXPORT_DIR = "~/.local/share/mizukilens/exports"
 
@@ -102,7 +105,23 @@ def _default_config(channel_key: str, channel_id_or_handle: str, channel_name: s
         "export": {
             "output_dir": DEFAULT_EXPORT_DIR,
         },
+        "extraction": {
+            "songlist_keywords": list(DEFAULT_SONGLIST_KEYWORDS),
+        },
     }
+
+
+def get_songlist_keywords() -> list[str]:
+    """Return the configured songlist keywords, falling back to defaults.
+
+    Checks ``[extraction] songlist_keywords`` in the config file.
+    """
+    cfg = load_config()
+    if cfg:
+        keywords = cfg.get("extraction", {}).get("songlist_keywords")
+        if isinstance(keywords, list) and keywords:
+            return keywords
+    return list(DEFAULT_SONGLIST_KEYWORDS)
 
 
 def load_config() -> dict[str, Any] | None:
