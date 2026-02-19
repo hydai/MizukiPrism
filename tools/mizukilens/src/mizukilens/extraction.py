@@ -158,6 +158,14 @@ def _split_artist(song_info: str) -> tuple[str, str]:
         artist = song_info[m.end() :].strip()
         return name, artist
 
+    # Try bare "/" (no spaces required) — common in JP/CN song listings
+    m = re.search(r"/", song_info)
+    if m:
+        name = song_info[: m.start()].strip()
+        artist = song_info[m.end() :].strip()
+        if name and artist:
+            return name, artist
+
     return song_info.strip(), ""
 
 
@@ -184,6 +192,9 @@ def parse_song_line(line: str) -> dict[str, Any] | None:
     line = line.strip()
     if not line:
         return None
+
+    # Strip common numbering prefixes: "01. ", "1) ", "#3 "
+    line = re.sub(r"^(?:\d+[.)]\s+|#\d+\s+)", "", line)
 
     # Find leading timestamp
     ts_match = _LINE_TS_RE.match(line)
