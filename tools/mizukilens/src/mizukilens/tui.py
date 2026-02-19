@@ -1129,7 +1129,20 @@ class ReviewApp(App[None]):
             return
         video_id = self._streams[self._current_stream_idx]["video_id"]
         url = f"https://www.youtube.com/watch?v={video_id}"
-        self.copy_to_clipboard(url)
+        import sys
+        if sys.platform == "darwin":
+            import subprocess
+            try:
+                subprocess.run(
+                    ["pbcopy"],
+                    input=url.encode(),
+                    check=True,
+                    timeout=2,
+                )
+            except (subprocess.SubprocessError, FileNotFoundError, OSError):
+                self.copy_to_clipboard(url)  # fallback to OSC 52
+        else:
+            self.copy_to_clipboard(url)
         self.notify(f"URLをコピーしました: {url}")
 
     def action_show_help(self) -> None:
