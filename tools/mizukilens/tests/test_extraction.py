@@ -272,6 +272,39 @@ class TestParseSongLine:
         assert result["start_seconds"] == 5025
         assert result["song_name"] == "Some Song"
 
+    def test_numbered_prefix_dot_no_space(self):
+        """NN.MM:SS format where dot-prefix has no space before timestamp."""
+        result = parse_song_line("01.04:58 Golden / HUNTR/X")
+        assert result is not None
+        assert result["start_seconds"] == 298  # 4*60 + 58
+        assert result["song_name"] == "Golden"
+        assert result["artist"] == "HUNTR/X"
+
+    def test_numbered_prefix_dot_no_space_integration(self, db):
+        """End-to-end: full VOD comment in NN.MM:SS format (Ii-726U2ASY)."""
+        _add_stream(db, "vid_dotprefix")
+        text = (
+            "01.04:58 Golden / HUNTR/X\n"
+            "02.09:19 Cure For Me / AURORA\n"
+            "03.14:26 ヨルシカ - 花に亡霊\n"
+            "04.19:12 Merry-Go-Round / 久石譲\n"
+            "05.23:44 未来へ / Kiroro\n"
+            "06.29:02 粉雪 / レミオロメン\n"
+        )
+        comments = [_make_comment_dict(text, votes="50")]
+
+        result = extract_timestamps(db, "vid_dotprefix", comment_generator=iter(comments))
+
+        assert result.status == "extracted"
+        assert result.source == "comment"
+        assert len(result.songs) == 6
+        assert result.songs[0]["song_name"] == "Golden"
+        assert result.songs[0]["artist"] == "HUNTR/X"
+        assert result.songs[0]["start_seconds"] == 298  # 4:58
+        assert result.songs[1]["start_seconds"] == 559  # 9:19
+        assert result.songs[2]["song_name"] == "ヨルシカ"
+        assert result.songs[2]["artist"] == "花に亡霊"
+
 
 class TestParseTextToSongs:
     """Tests for :func:`parse_text_to_songs`."""
