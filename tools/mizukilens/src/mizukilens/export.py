@@ -166,14 +166,26 @@ def build_export_payload(
         title: str = stream_row["title"] or ""
         date: str = stream_row["date"] or ""
 
-        stream_entities.append(
-            {
-                "id": video_id,
-                "youtubeUrl": _youtube_url(video_id),
-                "date": date,
-                "title": title,
-            }
-        )
+        stream_entity: dict[str, Any] = {
+            "id": video_id,
+            "youtubeUrl": _youtube_url(video_id),
+            "date": date,
+            "title": title,
+        }
+
+        # Add comment credit when source is "comment" and author info is available
+        _comment_author = stream_row["comment_author"] if stream_row["comment_author"] else None
+        if _comment_author:
+            credit: dict[str, Any] = {"author": _comment_author}
+            _author_url = stream_row["comment_author_url"] if stream_row["comment_author_url"] else None
+            if _author_url:
+                credit["authorUrl"] = _author_url
+            _cid = stream_row["comment_id"] if stream_row["comment_id"] else None
+            if _cid:
+                credit["commentUrl"] = f"https://www.youtube.com/watch?v={video_id}&lc={_cid}"
+            stream_entity["commentCredit"] = credit
+
+        stream_entities.append(stream_entity)
 
         songs_rows = get_parsed_songs(conn, video_id)
         for song_row in songs_rows:

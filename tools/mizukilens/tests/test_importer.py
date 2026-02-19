@@ -1361,3 +1361,176 @@ class TestImportCli:
 
         assert songs_path.with_suffix(".json.bak").exists()
         assert streams_path.with_suffix(".json.bak").exists()
+
+
+# ===========================================================================
+# SECTION: commentCredit → credit mapping (LENS-008)
+# ===========================================================================
+
+
+class TestCommentCreditImport:
+    """Tests for commentCredit → credit field mapping on MizukiPrism streams."""
+
+    def test_credit_mapped_from_comment_credit(self, tmp_path: Path) -> None:
+        """commentCredit in export should become credit on MizukiPrism stream."""
+        payload = _make_export_payload(
+            streams=[{
+                "id": "newVid1",
+                "date": "2024-06-01",
+                "title": "Attribution Test",
+                "commentCredit": {
+                    "author": "TimestampHero",
+                    "authorUrl": "https://www.youtube.com/channel/UC123",
+                    "commentUrl": "https://www.youtube.com/watch?v=newVid1&lc=Ugxyz",
+                },
+            }],
+            songs=[{"id": "s1", "name": "TestSong", "artist": "TestArtist", "tags": []}],
+            versions=[{
+                "id": "v1",
+                "songId": "s1",
+                "streamId": "newVid1",
+                "startTimestamp": "0:03:00",
+            }],
+        )
+
+        plan = compute_import_plan(payload, deepcopy(_EXISTING_SONGS), deepcopy(_EXISTING_STREAMS))
+
+        assert len(plan.new_streams) == 1
+        new_stream = plan.new_streams[0]
+        assert "credit" in new_stream
+        assert new_stream["credit"]["author"] == "TimestampHero"
+        assert new_stream["credit"]["authorUrl"] == "https://www.youtube.com/channel/UC123"
+        assert new_stream["credit"]["commentUrl"] == "https://www.youtube.com/watch?v=newVid1&lc=Ugxyz"
+
+    def test_no_credit_when_comment_credit_absent(self, tmp_path: Path) -> None:
+        """Streams without commentCredit should have no credit field."""
+        payload = _make_export_payload(
+            streams=[{"id": "newVid2", "date": "2024-06-01", "title": "No Credit"}],
+            songs=[{"id": "s1", "name": "TestSong", "artist": "TestArtist", "tags": []}],
+            versions=[{
+                "id": "v1",
+                "songId": "s1",
+                "streamId": "newVid2",
+                "startTimestamp": "0:03:00",
+            }],
+        )
+
+        plan = compute_import_plan(payload, deepcopy(_EXISTING_SONGS), deepcopy(_EXISTING_STREAMS))
+
+        assert len(plan.new_streams) == 1
+        assert "credit" not in plan.new_streams[0]
+
+    def test_credit_partial_author_only(self) -> None:
+        """commentCredit with only author (no URLs) should map correctly."""
+        payload = _make_export_payload(
+            streams=[{
+                "id": "newVid3",
+                "date": "2024-06-01",
+                "title": "Partial Credit",
+                "commentCredit": {"author": "JustAName"},
+            }],
+            songs=[{"id": "s1", "name": "TestSong", "artist": "TestArtist", "tags": []}],
+            versions=[{
+                "id": "v1",
+                "songId": "s1",
+                "streamId": "newVid3",
+                "startTimestamp": "0:03:00",
+            }],
+        )
+
+        plan = compute_import_plan(payload, deepcopy(_EXISTING_SONGS), deepcopy(_EXISTING_STREAMS))
+
+        credit = plan.new_streams[0]["credit"]
+        assert credit["author"] == "JustAName"
+        assert "authorUrl" not in credit
+        assert "commentUrl" not in credit
+
+    def test_credit_written_to_file(self, tmp_path: Path) -> None:
+        """Credit should persist through execute_import into streams.json."""
+        payload = _make_export_payload(
+            streams=[{
+                "id": "newVid4",
+                "date": "2024-06-01",
+                "title": "File Credit",
+                "commentCredit": {
+                    "author": "FileHero",
+                    "authorUrl": "https://www.youtube.com/channel/UC456",
+                    "commentUrl": "https://www.youtube.com/watch?v=newVid4&lc=Ugabc",
+                },
+            }],
+            songs=[{"id": "s1", "name": "TestSong", "artist": "TestArtist", "tags": []}],
+            versions=[{
+                "id": "v1",
+                "songId": "s1",
+                "streamId": "newVid4",
+                "startTimestamp": "0:03:00",
+            }],
+        )
+
+        songs_path = tmp_path / "songs.json"
+        streams_path = tmp_path / "streams.json"
+        _write_json(songs_path, deepcopy(_EXISTING_SONGS))
+        _write_json(streams_path, deepcopy(_EXISTING_STREAMS))
+
+        plan = compute_import_plan(payload, deepcopy(_EXISTING_SONGS), deepcopy(_EXISTING_STREAMS))
+        execute_import(plan, songs_path, streams_path, payload=payload)
+
+        written_streams = json.loads(streams_path.read_text(encoding="utf-8"))
+        # Find the new stream
+        new_stream = next(s for s in written_streams if s.get("videoId") == "newVid4")
+        assert new_stream["credit"]["author"] == "FileHero"
+
+    def test_validate_accepts_comment_credit(self) -> None:
+        """Validator should not reject a payload with commentCredit."""
+        payload = _make_export_payload(
+            streams=[{
+                "id": "vid1",
+                "date": "2024-06-01",
+                "title": "With Credit",
+                "commentCredit": {
+                    "author": "ValidUser",
+                    "authorUrl": "https://youtube.com/channel/UC789",
+                },
+            }],
+        )
+        validate_export_json(payload)  # Should not raise
+
+    def test_validate_rejects_invalid_comment_credit(self) -> None:
+        """Validator should reject commentCredit without author."""
+        payload = _make_export_payload(
+            streams=[{
+                "id": "vid1",
+                "date": "2024-06-01",
+                "title": "Bad Credit",
+                "commentCredit": {"authorUrl": "https://youtube.com/channel/UC789"},
+            }],
+        )
+        with pytest.raises(ValueError, match="commentCredit.author"):
+            validate_export_json(payload)
+
+    def test_old_export_without_comment_credit_imports_fine(self, tmp_path: Path) -> None:
+        """Old export JSON without commentCredit should import without issues."""
+        payload = _make_export_payload(
+            streams=[{"id": "oldVid1", "date": "2024-01-01", "title": "Legacy Stream"}],
+            songs=[{"id": "s1", "name": "OldSong", "artist": "OldArtist", "tags": []}],
+            versions=[{
+                "id": "v1",
+                "songId": "s1",
+                "streamId": "oldVid1",
+                "startTimestamp": "0:01:00",
+            }],
+        )
+
+        songs_path = tmp_path / "songs.json"
+        streams_path = tmp_path / "streams.json"
+        _write_json(songs_path, deepcopy(_EXISTING_SONGS))
+        _write_json(streams_path, deepcopy(_EXISTING_STREAMS))
+
+        validate_export_json(payload)  # Should not raise
+        plan = compute_import_plan(payload, deepcopy(_EXISTING_SONGS), deepcopy(_EXISTING_STREAMS))
+        result = execute_import(plan, songs_path, streams_path, payload=payload)
+
+        assert result.new_stream_count == 1
+        written_streams = json.loads(streams_path.read_text(encoding="utf-8"))
+        new_stream = next(s for s in written_streams if s.get("videoId") == "oldVid1")
+        assert "credit" not in new_stream

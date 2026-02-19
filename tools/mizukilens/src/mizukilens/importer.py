@@ -97,6 +97,13 @@ def validate_export_json(payload: Any) -> None:
                 errors.append(f"data.streams[{i}] missing required field '{key}'")
             elif not isinstance(stream[key], str):
                 errors.append(f"data.streams[{i}].{key} must be a string")
+        # commentCredit is optional; validate structure if present
+        if "commentCredit" in stream:
+            cc = stream["commentCredit"]
+            if not isinstance(cc, dict):
+                errors.append(f"data.streams[{i}].commentCredit must be an object")
+            elif "author" not in cc or not isinstance(cc.get("author"), str):
+                errors.append(f"data.streams[{i}].commentCredit.author must be a string")
 
     # Validate each song
     for i, song in enumerate(data["songs"]):
@@ -343,6 +350,17 @@ def compute_import_plan(
                 "videoId": mlens_video_id,
                 "youtubeUrl": f"https://www.youtube.com/watch?v={mlens_video_id}",
             }
+
+            # Map commentCredit → credit on the MizukiPrism stream
+            comment_credit = export_stream.get("commentCredit")
+            if isinstance(comment_credit, dict) and comment_credit.get("author"):
+                credit: dict[str, Any] = {"author": comment_credit["author"]}
+                if comment_credit.get("authorUrl"):
+                    credit["authorUrl"] = comment_credit["authorUrl"]
+                if comment_credit.get("commentUrl"):
+                    credit["commentUrl"] = comment_credit["commentUrl"]
+                new_stream["credit"] = credit
+
             merged_streams.append(new_stream)
             existing_video_ids[mlens_video_id] = new_stream  # prevent duplicate if same video_id appears twice
             mlens_stream_to_prism[mlens_video_id] = new_stream

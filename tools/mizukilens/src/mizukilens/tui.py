@@ -547,7 +547,7 @@ class ReviewApp(App[None]):
         stream = self._streams[stream_idx]
         self._songs = list(get_parsed_songs(self._conn, stream["video_id"]))
 
-        # Update song header with extraction source
+        # Update song header with extraction source and attribution
         source = stream["source"] or "未設定"
         source_label_map = {
             "comment": "留言区",
@@ -555,7 +555,16 @@ class ReviewApp(App[None]):
         }
         source_display = source_label_map.get(source, source)
         header = self.query_one("#song-header", Static)
-        header.update(f"歌曲明細 — ソース: {source_display} — {len(self._songs)} 曲")
+
+        # Show comment author attribution when available
+        comment_author = stream["comment_author"] if source == "comment" else None
+        if comment_author:
+            header.update(
+                f"歌曲明細 — ソース: {source_display} — {len(self._songs)} 曲\n"
+                f"  Timestamps by: {comment_author}"
+            )
+        else:
+            header.update(f"歌曲明細 — ソース: {source_display} — {len(self._songs)} 曲")
 
         for song in self._songs:
             row_idx = song["order_index"] + 1

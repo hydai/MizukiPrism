@@ -92,7 +92,9 @@ class TestDatabaseCreation:
         columns = {row["name"] for row in cur.fetchall()}
         expected = {
             "video_id", "channel_id", "title", "date", "status",
-            "source", "raw_comment", "raw_description", "created_at", "updated_at",
+            "source", "raw_comment", "raw_description",
+            "comment_author", "comment_author_url", "comment_id",
+            "created_at", "updated_at",
         }
         assert expected == columns
 
@@ -630,3 +632,114 @@ class TestCacheClearCLICommand:
             )
         # A confirmation question should be present in output
         assert "?" in result.output or "confirm" in result.output.lower() or "削除" in result.output
+
+
+# ===========================================================================
+# SECTION: Comment author attribution columns (LENS-008)
+# ===========================================================================
+
+
+class TestCommentAuthorColumns:
+    """Tests for comment_author, comment_author_url, comment_id columns."""
+
+    def test_new_db_has_comment_author_columns(self, db: sqlite3.Connection) -> None:
+        cur = db.execute("PRAGMA table_info(streams)")
+        columns = {row["name"] for row in cur.fetchall()}
+        assert "comment_author" in columns
+        assert "comment_author_url" in columns
+        assert "comment_id" in columns
+
+    def test_upsert_stream_stores_author_fields(self, db: sqlite3.Connection) -> None:
+        upsert_stream(
+            db,
+            video_id="auth01",
+            status="discovered",
+            comment_author="TimestampHero",
+            comment_author_url="https://www.youtube.com/channel/UC123",
+            comment_id="Ugxyz",
+        )
+        stream = get_stream(db, "auth01")
+        assert stream["comment_author"] == "TimestampHero"
+        assert stream["comment_author_url"] == "https://www.youtube.com/channel/UC123"
+        assert stream["comment_id"] == "Ugxyz"
+
+    def test_upsert_stream_author_fields_default_null(self, db: sqlite3.Connection) -> None:
+        upsert_stream(db, video_id="auth02", status="discovered")
+        stream = get_stream(db, "auth02")
+        assert stream["comment_author"] is None
+        assert stream["comment_author_url"] is None
+        assert stream["comment_id"] is None
+
+    def test_upsert_stream_coalesce_preserves_author(self, db: sqlite3.Connection) -> None:
+        """On conflict update, COALESCE should not overwrite with NULL."""
+        upsert_stream(
+            db,
+            video_id="auth03",
+            status="discovered",
+            comment_author="OrigUser",
+            comment_author_url="https://youtube.com/channel/UCoriginal",
+            comment_id="cmt_orig",
+        )
+        # Re-upsert without author fields (None) — should keep originals
+        upsert_stream(db, video_id="auth03", status="discovered")
+        stream = get_stream(db, "auth03")
+        assert stream["comment_author"] == "OrigUser"
+        assert stream["comment_author_url"] == "https://youtube.com/channel/UCoriginal"
+        assert stream["comment_id"] == "cmt_orig"
+
+    def test_migration_adds_columns_to_old_db(self, tmp_path: Path) -> None:
+        """Simulate an old DB without the new columns, then reopen."""
+        db_path = tmp_path / "old_style.db"
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON;")
+        # Create the old schema (without comment_author columns)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS streams (
+                video_id         TEXT PRIMARY KEY,
+                channel_id       TEXT,
+                title            TEXT,
+                date             TEXT,
+                status           TEXT NOT NULL,
+                source           TEXT,
+                raw_comment      TEXT,
+                raw_description  TEXT,
+                created_at       TEXT NOT NULL,
+                updated_at       TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS parsed_songs (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                video_id         TEXT NOT NULL REFERENCES streams(video_id) ON DELETE CASCADE,
+                order_index      INTEGER NOT NULL,
+                song_name        TEXT NOT NULL,
+                artist           TEXT,
+                start_timestamp  TEXT NOT NULL,
+                end_timestamp    TEXT,
+                note             TEXT
+            )
+        """)
+        conn.commit()
+        # Insert a row to the old schema
+        conn.execute(
+            "INSERT INTO streams (video_id, status, created_at, updated_at) VALUES (?, ?, ?, ?)",
+            ("old_vid", "discovered", "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z"),
+        )
+        conn.commit()
+        conn.close()
+
+        # Reopen with open_db, which should run migration
+        conn2 = open_db(db_path)
+        cur = conn2.execute("PRAGMA table_info(streams)")
+        columns = {row["name"] for row in cur.fetchall()}
+        assert "comment_author" in columns
+        assert "comment_author_url" in columns
+        assert "comment_id" in columns
+
+        # Existing row should have NULL for new columns
+        stream = get_stream(conn2, "old_vid")
+        assert stream["comment_author"] is None
+        assert stream["comment_author_url"] is None
+        assert stream["comment_id"] is None
+        conn2.close()

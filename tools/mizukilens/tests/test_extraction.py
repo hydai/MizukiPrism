@@ -951,3 +951,125 @@ class TestCacheFormat:
         songs = get_parsed_songs(db, "vid082")
         last = songs[-1]
         assert last["end_timestamp"] is None
+
+
+# ===========================================================================
+# §8  Comment author attribution (LENS-008)
+# ===========================================================================
+
+
+class TestCommentAuthorAttribution:
+    """Tests for comment author fields on ExtractionResult."""
+
+    def test_comment_extraction_captures_author(self, db):
+        _add_stream(db, "vid_auth1")
+        comments = [_make_comment_dict(_GOOD_COMMENT_TEXT, cid="cmt_abc")]
+
+        result = extract_timestamps(db, "vid_auth1", comment_generator=iter(comments))
+
+        assert result.comment_author == "test_user"
+        assert result.comment_author_url == "UC_test"
+        assert result.comment_id == "cmt_abc"
+
+    def test_author_fields_saved_to_cache(self, db):
+        _add_stream(db, "vid_auth2")
+        comments = [_make_comment_dict(_GOOD_COMMENT_TEXT, cid="cmt_xyz")]
+
+        extract_timestamps(db, "vid_auth2", comment_generator=iter(comments))
+
+        stream = get_stream(db, "vid_auth2")
+        assert stream["comment_author"] == "test_user"
+        assert stream["comment_author_url"] == "UC_test"
+        assert stream["comment_id"] == "cmt_xyz"
+
+    def test_description_source_has_null_author(self, db):
+        _add_stream(db, "vid_auth3")
+        # No valid comment candidate
+        comments = [_make_comment_dict("no timestamps here")]
+
+        result = extract_timestamps(
+            db, "vid_auth3",
+            comment_generator=iter(comments),
+            raw_description=_GOOD_COMMENT_TEXT,
+        )
+
+        assert result.source == "description"
+        assert result.comment_author is None
+        assert result.comment_author_url is None
+        assert result.comment_id is None
+
+    def test_pending_has_null_author(self, db):
+        _add_stream(db, "vid_auth4")
+        # No timestamps anywhere
+        comments = [_make_comment_dict("just chatting")]
+
+        result = extract_timestamps(
+            db, "vid_auth4",
+            comment_generator=iter(comments),
+            raw_description="no timestamps",
+        )
+
+        assert result.status == "pending"
+        assert result.comment_author is None
+
+    def test_missing_author_key_yields_none(self, db):
+        _add_stream(db, "vid_auth5")
+        # Build a comment dict with author key missing
+        comment = {
+            "cid": "c1",
+            "text": _GOOD_COMMENT_TEXT,
+            "votes": "10",
+            "is_pinned": False,
+            "channel": "UC_test",
+            "replies": "0",
+            "photo": "",
+            "heart": False,
+            "reply": False,
+        }
+        # No "author" key
+
+        result = extract_timestamps(db, "vid_auth5", comment_generator=iter([comment]))
+
+        assert result.comment_author is None
+        assert result.comment_author_url == "UC_test"
+        assert result.comment_id == "c1"
+
+    def test_missing_channel_key_yields_none(self, db):
+        _add_stream(db, "vid_auth6")
+        comment = {
+            "cid": "c2",
+            "text": _GOOD_COMMENT_TEXT,
+            "votes": "10",
+            "is_pinned": False,
+            "author": "SomeUser",
+            "replies": "0",
+            "photo": "",
+            "heart": False,
+            "reply": False,
+        }
+        # No "channel" key
+
+        result = extract_timestamps(db, "vid_auth6", comment_generator=iter([comment]))
+
+        assert result.comment_author == "SomeUser"
+        assert result.comment_author_url is None
+
+    def test_missing_cid_key_yields_none(self, db):
+        _add_stream(db, "vid_auth7")
+        comment = {
+            "text": _GOOD_COMMENT_TEXT,
+            "votes": "10",
+            "is_pinned": False,
+            "author": "SomeUser",
+            "channel": "UC_test",
+            "replies": "0",
+            "photo": "",
+            "heart": False,
+            "reply": False,
+        }
+        # No "cid" key
+
+        result = extract_timestamps(db, "vid_auth7", comment_generator=iter([comment]))
+
+        assert result.comment_author == "SomeUser"
+        assert result.comment_id is None

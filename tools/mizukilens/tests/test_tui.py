@@ -845,3 +845,63 @@ class TestPendingStreamWorkflow:
 
         stream = get_stream(db, "vid001")
         assert stream["status"] == "approved"
+
+
+# ===========================================================================
+# SECTION: Comment author attribution in TUI (LENS-008)
+# ===========================================================================
+
+
+class TestTuiCommentAttribution:
+    """Tests for comment author display in the review TUI."""
+
+    def test_comment_author_stored_in_stream(self, db: sqlite3.Connection) -> None:
+        """Verify the DB stream row has comment_author when set."""
+        upsert_stream(
+            db,
+            video_id="tui_auth1",
+            channel_id="UCtest",
+            title="Author Stream",
+            date="2024-03-15",
+            status="extracted",
+            source="comment",
+            comment_author="TimestampHero",
+            comment_author_url="https://youtube.com/channel/UC123",
+            comment_id="Ugxyz",
+        )
+        stream = get_stream(db, "tui_auth1")
+        assert stream["comment_author"] == "TimestampHero"
+
+    def test_description_source_has_no_author(self, db: sqlite3.Connection) -> None:
+        """Description-sourced streams should have NULL comment_author."""
+        upsert_stream(
+            db,
+            video_id="tui_auth2",
+            channel_id="UCtest",
+            title="Description Stream",
+            date="2024-03-15",
+            status="extracted",
+            source="description",
+        )
+        stream = get_stream(db, "tui_auth2")
+        assert stream["comment_author"] is None
+
+    def test_review_app_instantiates_with_author_streams(
+        self, db: sqlite3.Connection
+    ) -> None:
+        """ReviewApp should create without errors even with author attribution data."""
+        upsert_stream(
+            db,
+            video_id="tui_auth3",
+            channel_id="UCtest",
+            title="TUI Author Stream",
+            date="2024-03-15",
+            status="extracted",
+            source="comment",
+            comment_author="TestAuthor",
+        )
+        _add_songs(db, "tui_auth3", count=2)
+
+        # Smoke test: ReviewApp should instantiate without error
+        app = ReviewApp(conn=db, show_all=False)
+        assert app is not None
