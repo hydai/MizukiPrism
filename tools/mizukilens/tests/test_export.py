@@ -586,6 +586,36 @@ class TestStreamFilter:
                 db, stream_id="pending_vid", output_dir=tmp_path, channel_id="UCtest"
             )
 
+    def test_re_export_already_exported_stream(
+        self, db: sqlite3.Connection, tmp_path: Path
+    ) -> None:
+        """An already-exported stream can be re-exported with --stream."""
+        upsert_stream(
+            db,
+            video_id="exported_vid",
+            channel_id="UCtest",
+            title="Exported Stream",
+            date="2024-03-15",
+            status="approved",
+        )
+        upsert_parsed_songs(db, "exported_vid", [_SONG_A])
+        # First export transitions to "exported"
+        export_approved_streams(
+            db, stream_id="exported_vid", output_dir=tmp_path, channel_id="UCtest"
+        )
+        row = get_stream(db, "exported_vid")
+        assert row["status"] == "exported"
+
+        # Re-export with explicit --stream should succeed
+        result = export_approved_streams(
+            db, stream_id="exported_vid", output_dir=tmp_path, channel_id="UCtest"
+        )
+        assert result.stream_count == 1
+        assert result.song_count == 1
+        # Status should remain "exported"
+        row = get_stream(db, "exported_vid")
+        assert row["status"] == "exported"
+
 
 # ===========================================================================
 # SECTION 9: Empty approved list

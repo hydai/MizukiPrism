@@ -68,7 +68,7 @@ STATUS_LABELS: dict[str, str] = {
 }
 
 # Statuses shown by default in the stream list (reviewable)
-REVIEWABLE_STATUSES = {"extracted", "pending", "approved"}
+REVIEWABLE_STATUSES = {"extracted", "pending", "approved", "exported"}
 
 # ---------------------------------------------------------------------------
 # Timestamp validation
