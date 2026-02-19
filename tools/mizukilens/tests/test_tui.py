@@ -1009,10 +1009,10 @@ class TestCopyVodUrl:
                 mock_copy.assert_not_called()
                 mock_notify.assert_not_called()
 
-    def test_copy_vod_url_calls_clipboard_and_notify(
+    def test_copy_vod_url_uses_pbcopy_on_macos(
         self, db: sqlite3.Connection
     ) -> None:
-        """Verify copy_to_clipboard and notify are called with correct args."""
+        """On macOS, pbcopy is called to copy the URL to clipboard."""
         _add_stream(db, "abc123", status="extracted", title="Test")
 
         app = ReviewApp(conn=db)
@@ -1020,15 +1020,59 @@ class TestCopyVodUrl:
         app._streams = list(list_streams(db))
         app._current_stream_idx = 0
 
-        with patch.object(app, "copy_to_clipboard") as mock_copy:
-            with patch.object(app, "notify") as mock_notify:
-                app.action_copy_vod_url()
-                mock_copy.assert_called_once_with(
-                    "https://www.youtube.com/watch?v=abc123"
-                )
-                mock_notify.assert_called_once()
-                notify_msg = mock_notify.call_args[0][0]
-                assert "abc123" in notify_msg
+        with patch("sys.platform", "darwin"):
+            with patch("subprocess.run") as mock_run:
+                with patch.object(app, "notify") as mock_notify:
+                    app.action_copy_vod_url()
+                    mock_run.assert_called_once_with(
+                        ["pbcopy"],
+                        input=b"https://www.youtube.com/watch?v=abc123",
+                        check=True,
+                        timeout=2,
+                    )
+                    mock_notify.assert_called_once()
+                    assert "abc123" in mock_notify.call_args[0][0]
+
+    def test_copy_vod_url_falls_back_to_osc52_on_pbcopy_failure(
+        self, db: sqlite3.Connection
+    ) -> None:
+        """When pbcopy fails on macOS, fall back to Textual's OSC 52."""
+        _add_stream(db, "abc123", status="extracted", title="Test")
+
+        app = ReviewApp(conn=db)
+        app._conn = db
+        app._streams = list(list_streams(db))
+        app._current_stream_idx = 0
+
+        with patch("sys.platform", "darwin"):
+            with patch("subprocess.run", side_effect=FileNotFoundError):
+                with patch.object(app, "copy_to_clipboard") as mock_copy:
+                    with patch.object(app, "notify") as mock_notify:
+                        app.action_copy_vod_url()
+                        mock_copy.assert_called_once_with(
+                            "https://www.youtube.com/watch?v=abc123"
+                        )
+                        mock_notify.assert_called_once()
+
+    def test_copy_vod_url_uses_osc52_on_non_macos(
+        self, db: sqlite3.Connection
+    ) -> None:
+        """On non-macOS platforms, Textual's copy_to_clipboard is used."""
+        _add_stream(db, "abc123", status="extracted", title="Test")
+
+        app = ReviewApp(conn=db)
+        app._conn = db
+        app._streams = list(list_streams(db))
+        app._current_stream_idx = 0
+
+        with patch("sys.platform", "linux"):
+            with patch.object(app, "copy_to_clipboard") as mock_copy:
+                with patch.object(app, "notify") as mock_notify:
+                    app.action_copy_vod_url()
+                    mock_copy.assert_called_once_with(
+                        "https://www.youtube.com/watch?v=abc123"
+                    )
+                    mock_notify.assert_called_once()
 
     def test_help_text_includes_copy_url(self) -> None:
         """Verify help text mentions the [u] keybinding for URL copy."""
