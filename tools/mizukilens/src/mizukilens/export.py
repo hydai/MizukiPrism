@@ -105,7 +105,7 @@ def _load_approved_streams(
     """
     if stream_id is not None:
         cur = conn.execute(
-            "SELECT * FROM streams WHERE video_id = ? AND status = 'approved'",
+            "SELECT * FROM streams WHERE video_id = ? AND status IN ('approved', 'exported')",
             (stream_id,),
         )
         return cur.fetchall()
@@ -280,9 +280,10 @@ def export_approved_streams(
     with output_path.open("w", encoding="utf-8") as fh:
         json.dump(payload, fh, ensure_ascii=False, indent=2)
 
-    # Update each stream status to "exported"
+    # Update each stream status to "exported" (skip if already exported)
     for stream_row in streams:
-        update_stream_status(conn, stream_row["video_id"], "exported")
+        if stream_row["status"] != "exported":
+            update_stream_status(conn, stream_row["video_id"], "exported")
 
     return ExportResult(
         output_path=output_path,

@@ -150,6 +150,9 @@ class TestReviewableStatuses:
     def test_approved_reviewable(self) -> None:
         assert "approved" in REVIEWABLE_STATUSES
 
+    def test_exported_reviewable(self) -> None:
+        assert "exported" in REVIEWABLE_STATUSES
+
     def test_excluded_not_reviewable(self) -> None:
         assert "excluded" not in REVIEWABLE_STATUSES
 
