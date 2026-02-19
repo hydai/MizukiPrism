@@ -268,14 +268,48 @@ def extract_cmd(stream_id: str | None, extract_all: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
-# review  (stub)
+# review  (TUI)
 # ---------------------------------------------------------------------------
 
 @main.command("review")
-def review_cmd() -> None:
-    """Launch the TUI curation interface. (not yet implemented)"""
-    console.print("[yellow]review コマンドはまだ実装されていません（stub）。[/yellow]")
-    console.print("LENS-005 で実装予定です。")
+@click.option("--all", "show_all", is_flag=True, default=False,
+              help="Show all streams (including excluded/imported) instead of only reviewable ones.")
+def review_cmd(show_all: bool) -> None:
+    """Launch the interactive TUI curation interface.
+
+    \b
+    Displays a split-pane terminal UI:
+      Left  — Stream list with status indicators
+      Right — Song details for the selected stream
+
+    \b
+    Keyboard shortcuts:
+      a  Approve stream        s  Skip (no change)
+      x  Exclude stream        e  Edit selected song
+      n  Add new song          d  Delete selected song
+      r  Re-fetch timestamps   ?  Help
+      q  Quit
+    """
+    import shutil
+    import sys
+    from mizukilens.cache import open_db
+    from mizukilens.tui import launch_review_tui
+
+    # Warn if terminal is too small (< 80×24)
+    term_size = shutil.get_terminal_size(fallback=(0, 0))
+    if term_size.columns > 0 and term_size.lines > 0:
+        if term_size.columns < 80 or term_size.lines < 24:
+            console.print(
+                f"[yellow]警告:[/yellow] ターミナルが小さすぎます "
+                f"({term_size.columns}×{term_size.lines})。"
+                "最低 80×24 が必要です。表示が崩れる可能性があります。"
+            )
+
+    conn = open_db()
+    try:
+        launch_review_tui(conn, show_all=show_all)
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
