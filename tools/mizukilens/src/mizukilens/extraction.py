@@ -295,6 +295,79 @@ def _seconds_to_timestamp(seconds: int) -> str:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Keyword candidate detection
+# ---------------------------------------------------------------------------
+
+
+def find_keyword_comments(
+    comments: list[dict[str, Any]],
+    keywords: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Find comments whose text contains any of the songlist keywords.
+
+    Matching is case-insensitive for ASCII keywords and exact for CJK.
+
+    Returns list of dicts with keys from the comment dict plus
+    ``'keywords_matched'`` (a list of matched keyword strings).
+    """
+    if keywords is None:
+        from mizukilens.config import get_songlist_keywords
+        keywords = get_songlist_keywords()
+
+    results: list[dict[str, Any]] = []
+    for comment in comments:
+        text = comment.get("text", "")
+        matched: list[str] = []
+        for kw in keywords:
+            # Case-insensitive check for ASCII keywords
+            if kw.isascii():
+                if kw.lower() in text.lower():
+                    matched.append(kw)
+            else:
+                if kw in text:
+                    matched.append(kw)
+        if matched:
+            result = dict(comment)
+            result["keywords_matched"] = matched
+            results.append(result)
+
+    return results
+
+
+def _cache_keyword_candidates(
+    conn: sqlite3.Connection,
+    video_id: str,
+    comments: list[dict[str, Any]],
+) -> int:
+    """Scan comments for songlist keywords and save matches to candidate_comments.
+
+    Returns the number of candidates saved.
+    """
+    from mizukilens.cache import save_candidate_comments
+
+    keyword_comments = find_keyword_comments(comments)
+    if not keyword_comments:
+        return 0
+
+    candidates = [
+        {
+            "comment_cid":        c.get("cid"),
+            "comment_author":     c.get("author"),
+            "comment_author_url": c.get("channel"),
+            "comment_text":       c.get("text", ""),
+            "keywords_matched":   c.get("keywords_matched", []),
+        }
+        for c in keyword_comments
+    ]
+    return save_candidate_comments(conn, video_id, candidates)
+
+
+# ---------------------------------------------------------------------------
+# Candidate comment selection
+# ---------------------------------------------------------------------------
+
+
 def find_candidate_comment(
     comments: list[dict[str, Any]],
 ) -> dict[str, Any] | None:
@@ -457,6 +530,10 @@ def extract_timestamps(
             comments_disabled = True
         else:
             comments: list[dict[str, Any]] = list(comment_gen)
+
+            # Cache keyword-matched comments as candidates for manual review
+            _cache_keyword_candidates(conn, video_id, comments)
+
             selected_comment = find_candidate_comment(comments)
 
     except RuntimeError:
@@ -617,6 +694,86 @@ def _songs_to_cache_format(
 # ---------------------------------------------------------------------------
 # Batch extraction helper
 # ---------------------------------------------------------------------------
+
+
+def extract_from_candidate(
+    conn: sqlite3.Connection,
+    video_id: str,
+    candidate_id: int,
+) -> ExtractionResult:
+    """Re-extract timestamps using a specific candidate comment.
+
+    Reads the candidate's comment_text, runs :func:`parse_text_to_songs`,
+    saves results, and updates both stream and candidate status.
+
+    Raises:
+        KeyError: If *video_id* or *candidate_id* is not found.
+        ValueError: If the candidate belongs to a different video.
+    """
+    from mizukilens.cache import (
+        get_candidate_comment,
+        get_stream,
+        update_candidate_status,
+        upsert_parsed_songs,
+        upsert_stream,
+    )
+
+    stream = get_stream(conn, video_id)
+    if stream is None:
+        raise KeyError(f"Stream {video_id!r} not found in cache.")
+
+    candidate = get_candidate_comment(conn, candidate_id)
+    if candidate is None:
+        raise KeyError(f"Candidate comment {candidate_id} not found.")
+    if candidate["video_id"] != video_id:
+        raise ValueError(
+            f"Candidate {candidate_id} belongs to video "
+            f"{candidate['video_id']!r}, not {video_id!r}."
+        )
+
+    text = candidate["comment_text"]
+    songs = parse_text_to_songs(text)
+
+    if songs:
+        suspicious = [s["start_seconds"] for s in songs if s["suspicious"]]
+
+        upsert_stream(
+            conn,
+            video_id=video_id,
+            status=stream["status"],
+            raw_comment=text,
+            comment_author=candidate["comment_author"],
+            comment_author_url=candidate["comment_author_url"],
+            comment_id=candidate["comment_cid"],
+        )
+
+        _safe_transition(conn, video_id, "extracted")
+
+        song_rows = _songs_to_cache_format(songs, video_id)
+        upsert_parsed_songs(conn, video_id, song_rows)
+
+        update_candidate_status(conn, candidate_id, "approved")
+
+        return ExtractionResult(
+            video_id=video_id,
+            status="extracted",
+            source="comment",
+            songs=songs,
+            raw_comment=text,
+            suspicious_timestamps=suspicious,
+            comment_author=candidate["comment_author"],
+            comment_author_url=candidate["comment_author_url"],
+            comment_id=candidate["comment_cid"],
+        )
+
+    # No songs parsed from the candidate
+    return ExtractionResult(
+        video_id=video_id,
+        status=stream["status"],
+        source=None,
+        songs=[],
+        raw_comment=text,
+    )
 
 
 def extract_all_discovered(

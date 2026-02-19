@@ -21,8 +21,10 @@ from mizukilens.extraction import (
     ExtractionResult,
     ExtractionError,
     count_timestamps,
+    extract_from_candidate,
     extract_timestamps,
     find_candidate_comment,
+    find_keyword_comments,
     is_suspicious_timestamp,
     parse_song_line,
     parse_text_to_songs,
@@ -1130,3 +1132,164 @@ class TestCommentAuthorAttribution:
 
         assert result.comment_author == "SomeUser"
         assert result.comment_id is None
+
+
+# ---------------------------------------------------------------------------
+# §9  Keyword candidate detection + caching
+# ---------------------------------------------------------------------------
+
+
+class TestKeywordCandidates:
+    """Tests for keyword-based candidate comment detection."""
+
+    def test_find_keyword_comments_basic(self):
+        """Comment with '歌單' should be matched."""
+        comments = [
+            {"cid": "c1", "text": "歌單：\n0:00 Song A\n1:30 Song B"},
+            {"cid": "c2", "text": "Great stream!"},
+        ]
+        results = find_keyword_comments(comments, keywords=["歌單"])
+        assert len(results) == 1
+        assert results[0]["cid"] == "c1"
+        assert "歌單" in results[0]["keywords_matched"]
+
+    def test_find_keyword_comments_case_insensitive_english(self):
+        """English keywords should match case-insensitively."""
+        comments = [
+            {"cid": "c1", "text": "Here is the SONGLIST for today"},
+        ]
+        results = find_keyword_comments(comments, keywords=["songlist", "Songlist"])
+        assert len(results) == 1
+        # Both "songlist" and "Songlist" should match (case-insensitive)
+        assert len(results[0]["keywords_matched"]) == 2
+
+    def test_find_keyword_comments_no_match(self):
+        """Comments without keywords should not be matched."""
+        comments = [
+            {"cid": "c1", "text": "Nice singing!"},
+            {"cid": "c2", "text": "My favourite stream"},
+        ]
+        results = find_keyword_comments(comments, keywords=["歌單", "Songlist"])
+        assert len(results) == 0
+
+    def test_find_keyword_comments_multiple_keywords(self):
+        """A comment matching multiple keywords returns all of them."""
+        comments = [
+            {"cid": "c1", "text": "歌單 (Songlist):\n0:00 A\n1:00 B"},
+        ]
+        results = find_keyword_comments(comments, keywords=["歌單", "Songlist"])
+        assert len(results) == 1
+        assert set(results[0]["keywords_matched"]) == {"歌單", "Songlist"}
+
+    def test_candidates_cached_during_extraction(self, db):
+        """Integration: extraction saves keyword candidates to DB."""
+        from mizukilens.cache import list_candidate_comments
+
+        _add_stream(db, "kw_vid1")
+        # Comment with keyword but also with timestamps
+        keyword_comment = _make_comment_dict(
+            "歌單：\n0:00 Song A\n1:30 Song B\n3:00 Song C\n5:00 Song D",
+            cid="kw_cmt1",
+        )
+
+        extract_timestamps(db, "kw_vid1", comment_generator=iter([keyword_comment]))
+
+        candidates = list_candidate_comments(db, video_id="kw_vid1")
+        assert len(candidates) >= 1
+        # The keyword comment should be cached
+        cids = [c["comment_cid"] for c in candidates]
+        assert "kw_cmt1" in cids
+
+    def test_candidates_cached_even_when_extraction_succeeds(self, db):
+        """Candidates are saved regardless of extraction outcome."""
+        from mizukilens.cache import list_candidate_comments
+
+        _add_stream(db, "kw_vid2")
+        good_comment = _make_comment_dict(_GOOD_COMMENT_TEXT, cid="good_cmt")
+        keyword_comment = _make_comment_dict(
+            "歌單 for today!", cid="kw_cmt2",
+        )
+
+        extract_timestamps(
+            db, "kw_vid2",
+            comment_generator=iter([good_comment, keyword_comment]),
+        )
+
+        # Extraction should succeed from the good comment
+        stream = get_stream(db, "kw_vid2")
+        assert stream["status"] == "extracted"
+
+        # But the keyword comment should also be cached
+        candidates = list_candidate_comments(db, video_id="kw_vid2")
+        kw_cids = [c["comment_cid"] for c in candidates]
+        assert "kw_cmt2" in kw_cids
+
+    def test_extract_from_candidate(self, db):
+        """Re-extraction using a specific candidate comment."""
+        from mizukilens.cache import save_candidate_comments, list_candidate_comments
+
+        _add_stream(db, "cand_vid1")
+        # Save a candidate with parseable timestamps
+        save_candidate_comments(db, "cand_vid1", [{
+            "comment_cid": "cand_cmt1",
+            "comment_author": "SongLister",
+            "comment_author_url": "https://youtube.com/channel/UC999",
+            "comment_text": "0:00 Song A\n2:00 Song B\n4:00 Song C",
+            "keywords_matched": ["歌單"],
+        }])
+
+        candidates = list_candidate_comments(db, video_id="cand_vid1")
+        cand_id = candidates[0]["id"]
+
+        result = extract_from_candidate(db, "cand_vid1", cand_id)
+
+        assert result.status == "extracted"
+        assert result.source == "comment"
+        assert len(result.songs) == 3
+        assert result.comment_author == "SongLister"
+
+        # Candidate should be marked as approved
+        from mizukilens.cache import get_candidate_comment
+        cand = get_candidate_comment(db, cand_id)
+        assert cand["status"] == "approved"
+
+    def test_extract_from_candidate_no_songs(self, db):
+        """Re-extraction with unparseable candidate returns no songs."""
+        from mizukilens.cache import save_candidate_comments, list_candidate_comments
+
+        _add_stream(db, "cand_vid2")
+        save_candidate_comments(db, "cand_vid2", [{
+            "comment_cid": "cand_cmt2",
+            "comment_author": "NoSongs",
+            "comment_author_url": None,
+            "comment_text": "歌單 coming soon!",
+            "keywords_matched": ["歌單"],
+        }])
+
+        candidates = list_candidate_comments(db, video_id="cand_vid2")
+        cand_id = candidates[0]["id"]
+
+        result = extract_from_candidate(db, "cand_vid2", cand_id)
+
+        assert result.songs == []
+        assert result.source is None
+
+    def test_extract_from_candidate_wrong_video_raises(self, db):
+        """Candidate belonging to a different video should raise ValueError."""
+        from mizukilens.cache import save_candidate_comments, list_candidate_comments
+
+        _add_stream(db, "cand_vid3a")
+        _add_stream(db, "cand_vid3b")
+        save_candidate_comments(db, "cand_vid3a", [{
+            "comment_cid": "cand_cmt3",
+            "comment_author": "Mismatch",
+            "comment_author_url": None,
+            "comment_text": "0:00 A\n1:00 B\n2:00 C",
+            "keywords_matched": ["歌單"],
+        }])
+
+        candidates = list_candidate_comments(db, video_id="cand_vid3a")
+        cand_id = candidates[0]["id"]
+
+        with pytest.raises(ValueError, match="belongs to video"):
+            extract_from_candidate(db, "cand_vid3b", cand_id)
