@@ -1136,8 +1136,9 @@ class ReviewApp(App[None]):
     def _load_streams_preserving_selection(self) -> None:
         """Reload stream list, trying to keep the current selection."""
         current_video_id: str | None = None
-        if self._current_stream_idx >= 0 and self._streams:
-            current_video_id = self._streams[self._current_stream_idx]["video_id"]
+        old_index = self._current_stream_idx
+        if old_index >= 0 and self._streams:
+            current_video_id = self._streams[old_index]["video_id"]
 
         self._load_streams()
 
@@ -1149,7 +1150,14 @@ class ReviewApp(App[None]):
                     lv = self.query_one("#stream-list", ListView)
                     lv.index = i
                     self._load_songs(i)
-                    break
+                    return
+            # Stream no longer in list (e.g. excluded) — select nearest item
+            if self._streams:
+                new_idx = min(old_index, len(self._streams) - 1)
+                self._current_stream_idx = new_idx
+                lv = self.query_one("#stream-list", ListView)
+                lv.index = new_idx
+                self._load_songs(new_idx)
 
 
 # ---------------------------------------------------------------------------
