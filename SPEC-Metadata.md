@@ -4,14 +4,14 @@
 
 ### 1.1 Purpose
 
-MizukiPrism Metadata Integration 透過外部 API（Deezer、LRCLIB）自動為歌曲目錄補充專輯封面、同步歌詞與原唱者資訊，提升粉絲的視覺體驗與互動參與感。所有外部 API 呼叫在伺服器端完成並快取為 JSON 檔案，粉絲端完全離線消費快取資料，不直接存取外部 API。
+MizukiPrism Metadata Integration 透過外部 API（Deezer、LRCLIB）自動為歌曲目錄補充專輯封面、同步歌詞與原唱者資訊，提升粉絲的視覺體驗與互動參與感。所有外部 API 呼叫由 MizukiLens CLI 於本地擷取並寫入靜態 JSON 檔案，隨原始碼提交並部署為靜態資產；粉絲端完全離線消費靜態資料，不直接存取外部 API。
 
 ### 1.2 Users
 
 | 角色 | 描述 | 核心任務 |
 |------|------|----------|
 | 粉絲（Fan） | 被動消費後設資料 | 瀏覽帶專輯封面的歌曲目錄、在播放時觀看同步歌詞 |
-| 策展人（Curator） | 管理後設資料的取得與校正 | 觸發後設資料擷取、檢視匹配狀態、手動覆寫不正確的資料 |
+| 策展人（Curator） | 管理後設資料的取得與校正 | 透過 CLI 執行擷取、檢視狀態、手動覆寫，提交後部署 |
 
 ### 1.3 Impacts
 
@@ -20,21 +20,22 @@ MizukiPrism Metadata Integration 透過外部 API（Deezer、LRCLIB）自動為�
 | 視覺豐富度 | 歌曲目錄、迷你播放器、正在播放模態框、播放佇列全面顯示專輯封面 |
 | 粉絲參與度 | 播放時提供卡拉 OK 風格同步歌詞，提升跟唱體驗 |
 | 歌曲發現 | 原唱者圖片與簡介增強瀏覽探索感 |
-| 策展人效率 | 後設資料自動擷取，策展人僅需處理例外情況 |
+| 策展人效率 | CLI 批量擷取搭配 Rich 進度條，策展人僅需處理例外情況 |
 
 ### 1.4 Success Criteria
 
-- [ ] 已快取後設資料的歌曲在所有 UI 位置（歌曲列表、迷你播放器、正在播放模態框、播放佇列）顯示專輯封面
+- [ ] 已有後設資料的歌曲在所有 UI 位置（歌曲列表、迷你播放器、正在播放模態框、播放佇列）顯示專輯封面
 - [ ] 有同步歌詞的歌曲在正在播放模態框中顯示卡拉 OK 風格歌詞滾動
-- [ ] 新歌曲建立時自動觸發後台後設資料擷取
-- [ ] 策展人可在管理介面檢視匹配狀態、手動觸發重新擷取、手動覆寫 URL 或歌詞
+- [ ] 策展人可透過 CLI 批量擷取新歌曲的後設資料
+- [ ] 策展人可透過 CLI 檢視匹配狀態、手動觸發重新擷取、手動覆寫 URL 或歌詞
 - [ ] 外部 API 不可用時，現有功能完全不受影響（專輯封面降級為漸層佔位圖、歌詞區顯示佔位文字）
 
 ### 1.5 Non-goals
 
 - **非通用音樂資料庫**：僅為 MizukiPrism 目錄中的歌曲擷取後設資料，不建立獨立的音樂資料庫
 - **非取代策展人資料**：外部 API 的歌名、原唱者不覆寫策展人手動維護的 `title` 與 `originalArtist`
-- **非粉絲端直接 API 呼叫**：所有外部 API 呼叫在伺服器端完成，粉絲端僅讀取快取
+- **非粉絲端直接 API 呼叫**：所有外部 API 呼叫由 CLI 離線完成，粉絲端僅讀取靜態檔案
+- **非伺服器端後設資料管理**：所有擷取與管理操作透過 CLI 離線完成，部署後為純靜態站
 - **非即時串流歌詞**：不提供 Mizuki 直播中的即時歌詞，僅為 VOD 回放提供原曲歌詞
 - **非歌曲辨識**：不使用音訊指紋辨識歌曲，依賴策展人已維護的 `originalArtist` + `title` 進行 API 比對
 
@@ -44,12 +45,12 @@ MizukiPrism Metadata Integration 透過外部 API（Deezer、LRCLIB）自動為�
 
 | 功能 | 描述 | 使用者 |
 |------|------|--------|
-| Deezer 後設資料擷取（Deezer Metadata Fetch） | 以 `originalArtist` + `title` 搜尋 Deezer API，取得專輯封面 URL、曲目資訊與原唱者資訊 | 策展人（觸發）、系統（自動） |
-| LRCLIB 歌詞擷取（LRCLIB Lyrics Fetch） | 以 `originalArtist` + `title` 搜尋 LRCLIB API，取得同步歌詞（LRC 格式）或純文字歌詞 | 策展人（觸發）、系統（自動） |
-| 伺服器端後設資料快取（Server-side Metadata Cache） | 將擷取結果儲存為 `data/metadata/` 目錄下的 JSON 檔案，遵循現有檔案式資料層模式 | 系統 |
+| Deezer 後設資料擷取（Deezer Metadata Fetch） | 以 `originalArtist` + `title` 搜尋 Deezer API，取得專輯封面 URL、曲目資訊與原唱者資訊 | 策展人（CLI 觸發） |
+| LRCLIB 歌詞擷取（LRCLIB Lyrics Fetch） | 以 `originalArtist` + `title` 搜尋 LRCLIB API，取得同步歌詞（LRC 格式）或純文字歌詞 | 策展人（CLI 觸發） |
+| 靜態後設資料檔案（Static Metadata Files） | 將擷取結果儲存為 `data/metadata/` 目錄下的 JSON 檔案，隨原始碼提交並部署為靜態資產 | 系統 |
 | 專輯封面顯示（Album Art Display） | 可重用的 `<AlbumArt>` 元件，在歌曲列表、迷你播放器、正在播放模態框、播放佇列中顯示專輯封面 | 粉絲 |
 | 同步歌詞顯示（Synced Lyrics Display） | 正在播放模態框中顯示卡拉 OK 風格歌詞，隨播放進度自動滾動並高亮當前歌詞行 | 粉絲 |
-| 策展人後設資料管理（Curator Metadata Management） | 管理介面中的後設資料狀態表、逐首重新擷取、批量重新擷取、手動覆寫 | 策展人 |
+| CLI 後設資料管理（CLI Metadata Management） | MizukiLens CLI 的後設資料子命令：擷取、狀態檢視、手動覆寫、清除 | 策展人 |
 
 ### 2.2 User Journeys
 
@@ -61,21 +62,21 @@ MizukiPrism Metadata Integration 透過外部 API（Deezer、LRCLIB）自動為�
 | 行動（Action） | 點擊播放按鈕 |
 | 結果（Outcome） | 迷你播放器顯示專輯封面縮圖；展開正在播放模態框後，歌詞區顯示同步歌詞，隨播放進度自動滾動高亮 |
 
-#### Journey 2：策展人新增歌曲——後設資料自動擷取
+#### Journey 2：策展人匯入歌曲後——透過 CLI 擷取後設資料
 
 | 階段 | 內容 |
 |------|------|
-| 情境（Context） | 策展人在管理介面新增一首新歌曲版本 |
-| 行動（Action） | 填寫歌名、原唱者並提交 |
-| 結果（Outcome） | 系統在後台自動向 Deezer 與 LRCLIB 擷取後設資料；擷取完成後快取結果；下次粉絲載入頁面時即可看到專輯封面與歌詞 |
+| 情境（Context） | 策展人透過 `mizukilens import` 匯入了新歌曲 |
+| 行動（Action） | 執行 `mizukilens metadata fetch --missing` |
+| 結果（Outcome） | CLI 以 Rich 進度條顯示擷取進度，向 Deezer 與 LRCLIB 擷取後設資料並寫入 `data/metadata/*.json`；策展人確認結果後 commit 並 push，下次部署後粉絲即可看到專輯封面與歌詞 |
 
 #### Journey 3：策展人處理缺失的後設資料
 
 | 階段 | 內容 |
 |------|------|
-| 情境（Context） | 策展人在管理介面的後設資料分頁發現某首歌曲的擷取狀態為「未匹配」 |
-| 行動（Action） | 手動貼上正確的專輯封面 URL，或手動觸發重新擷取 |
-| 結果（Outcome） | 後設資料更新，粉絲端下次載入時顯示正確的專輯封面 |
+| 情境（Context） | 策展人執行 `mizukilens metadata status`，發現某首歌曲的擷取狀態為 `no_match` |
+| 行動（Action） | 執行 `mizukilens metadata override <song-id> --album-art-url <URL>` 手動指定封面 |
+| 結果（Outcome） | 後設資料 JSON 更新為 `manual` 狀態；策展人 commit 並 push，部署後粉絲端顯示正確的專輯封面 |
 
 #### Journey 4：粉絲瀏覽歌曲目錄——看到專輯封面縮圖
 
@@ -114,7 +115,7 @@ MizukiPrism Metadata Integration 透過外部 API（Deezer、LRCLIB）自動為�
 | 曲目時長 | `track.duration` | 參考資訊 |
 | 專輯名稱 | `track.album.title` | 參考資訊 |
 | 原唱者圖片 | `track.artist.picture_xl`（1000px）+ `picture_big`（500px）+ `picture_medium`（250px） | Hero Section 原唱者資訊 |
-| 原唱者 ID | `track.artist.id` | 建立 ArtistInfo 快取鍵 |
+| 原唱者 ID | `track.artist.id` | 建立 ArtistInfo 查詢鍵 |
 
 ##### 速率限制
 
@@ -126,7 +127,7 @@ MizukiPrism Metadata Integration 透過外部 API（Deezer、LRCLIB）自動為�
 
 | 狀態 | 操作 | 結果 |
 |------|------|------|
-| 歌曲無後設資料 | 系統或策展人觸發擷取 | 依序嘗試搜尋策略，取得結果後儲存至快取 |
+| 歌曲無後設資料 | 策展人透過 CLI 觸發擷取 | 依序嘗試搜尋策略，取得結果後儲存至靜態 JSON |
 | 搜尋有結果 | — | 儲存 SongMetadata 與 ArtistInfo，標記 `fetchStatus: 'matched'` |
 | 所有策略皆無結果 | — | 標記 `fetchStatus: 'no_match'`，UI 保持漸層佔位圖 |
 | API 回傳 HTTP 錯誤 | — | 標記 `fetchStatus: 'error'`，記錄錯誤訊息，下次觸發時重試 |
@@ -137,8 +138,8 @@ MizukiPrism Metadata Integration 透過外部 API（Deezer、LRCLIB）自動為�
 
 | 狀態 | 操作 | 結果 |
 |------|------|------|
-| 歌曲無歌詞 | 系統或策展人觸發擷取 | 以 `artist_name=${originalArtist}&track_name=${title}` 搜尋 LRCLIB `/api/search` |
-| 搜尋有結果 | — | 優先取 `syncedLyrics` 不為空的結果；若無同步歌詞，取 `plainLyrics`；儲存至快取 |
+| 歌曲無歌詞 | 策展人透過 CLI 觸發擷取 | 以 `artist_name=${originalArtist}&track_name=${title}` 搜尋 LRCLIB `/api/search` |
+| 搜尋有結果 | — | 優先取 `syncedLyrics` 不為空的結果；若無同步歌詞，取 `plainLyrics`；儲存至靜態 JSON |
 | 搜尋無結果 | — | 標記 `fetchStatus: 'no_match'`，歌詞區顯示佔位文字 |
 | API 錯誤 | — | 標記 `fetchStatus: 'error'`，下次觸發時重試 |
 | 策展人手動覆寫 | 貼上自訂歌詞文字 | 標記 `fetchStatus: 'manual'`，不再自動覆寫 |
@@ -157,7 +158,7 @@ MizukiPrism Metadata Integration 透過外部 API（Deezer、LRCLIB）自動為�
 - 忽略不含時間戳的行
 - 空文字行（間奏）保留為 `text: ""`
 
-#### 3.1.3 伺服器端後設資料快取（Server-side Metadata Cache）
+#### 3.1.3 靜態後設資料檔案（Static Metadata Files）
 
 ##### 檔案結構
 
@@ -171,22 +172,30 @@ data/
     └── artist-info.json      ─ ArtistInfo[]
 ```
 
-##### 快取行為
+##### CLI 寫入行為
 
-| 狀態 | 操作 | 結果 |
-|------|------|------|
-| 歌曲建立 | 策展人新增歌曲版本 | 系統自動在後台觸發 Deezer + LRCLIB 擷取，結果寫入快取檔案 |
-| 策展人手動觸發 | 點擊「重新擷取」按鈕 | 重新呼叫 API 並覆寫快取（`fetchStatus: 'manual'` 的條目除外，需先清除才能重新擷取） |
-| 批量重新擷取 | 點擊「重新擷取全部」或「重新擷取過期」 | 依序處理所有目標歌曲，遵守速率限制 |
-| 快取條目已過期 | 條目 `fetchedAt` 超過 90 天 | 標記為過期（stale），策展人可選擇批量重新擷取 |
-| 讀取路徑 | 粉絲端載入 `/api/songs` | API 回應中合併 SongMetadata 的 `albumArtUrl`；歌詞不包含在歌曲列表中 |
-| 讀取路徑 | 粉絲端請求 `/api/songs/[id]/lyrics` | 回傳該歌曲的 SongLyrics |
-| 快取檔案不存在 | 系統首次啟動 | 建立空陣列 JSON 檔案 |
+| 觸發情境 | CLI 指令 | 結果 |
+|----------|----------|------|
+| 匯入後擷取 | `metadata fetch --missing` | 為尚無後設資料的歌曲擷取 |
+| 過期重新擷取 | `metadata fetch --stale` | 重新擷取 `fetchedAt` 超過 90 天的條目 |
+| 單首擷取 | `metadata fetch --song <id>` | 擷取指定歌曲 |
+| 全量重新擷取 | `metadata fetch --all` | 重新擷取所有歌曲（跳過 `manual` 狀態） |
+| 手動覆寫 | `metadata override <id>` | 標記為 `manual` 狀態 |
+| 清除條目 | `metadata clear <id>` | 移除條目，允許重新擷取 |
 
-##### 快取一致性
+##### 前端讀取行為
 
-- 刪除歌曲時，對應的 SongMetadata 與 SongLyrics 條目一併移除
-- 歌曲的 `originalArtist` 或 `title` 被策展人修改時，現有後設資料**不自動更新**（避免覆寫手動覆寫的資料），策展人可手動觸發重新擷取
+| 動作 | 行為 |
+|------|------|
+| 頁面載入 | 前端 fetch `/data/metadata/song-metadata.json`，將 `albumArtUrl` 客戶端合併至歌曲列表 |
+| 歌曲播放 | 前端 fetch `/data/metadata/song-lyrics.json`（延遲載入，首次開啟歌詞面板時觸發），以 songId 查詢歌詞 |
+
+> **歌詞檔案策略**：使用單一 `song-lyrics.json` 而非逐首歌曲建立檔案。預估 ~2000 首歌曲 × ~3KB 平均 ≈ 3–5MB，僅在歌詞面板開啟時延遲載入。逐首建立檔案會在 git 中產生數千個檔案。
+
+##### 資料一致性
+
+- 刪除歌曲時，策展人應透過 `metadata clear <id>` 移除對應的 SongMetadata 與 SongLyrics 條目
+- 歌曲的 `originalArtist` 或 `title` 被策展人修改時，現有後設資料**不自動更新**（避免覆寫手動覆寫的資料），策展人可透過 CLI 手動觸發重新擷取
 
 #### 3.1.4 專輯封面顯示（Album Art Display）
 
@@ -254,40 +263,69 @@ data/
 4. 若無任何行的 time <= currentTime，則所有行皆為 upcoming
 ```
 
-#### 3.1.6 策展人後設資料管理（Curator Metadata Management）
+#### 3.1.6 CLI 後設資料管理（CLI Metadata Management）
 
-在管理介面（`/admin`）新增「後設資料」分頁，與現有的「直播場次」和「歌曲目錄」分頁並列。
+策展人透過 MizukiLens CLI 的 `metadata` 子命令群組管理後設資料，遵循既有 CLI 模式（Rich 進度條、表格輸出）。
 
-##### 後設資料狀態表
+##### 指令一覽
 
-| 欄位 | 說明 |
+**`mizukilens metadata fetch`** — 擷取後設資料
+
+```
+mizukilens metadata fetch [--all|--missing|--stale|--song ID] [--force] [--lyrics-only|--art-only]
+```
+
+| 選項 | 說明 |
 |------|------|
-| 歌名 | 歌曲 `title` |
-| 原唱者 | 歌曲 `originalArtist` |
-| 封面狀態 | matched / no_match / error / manual / pending（尚未擷取） |
-| 歌詞狀態 | matched / no_match / error / manual / pending |
-| 匹配信心度 | exact / fuzzy / manual / —（無資料） |
-| 上次擷取 | `fetchedAt` 日期 |
+| `--missing`（預設） | 僅擷取尚無後設資料的歌曲 |
+| `--stale` | 僅重新擷取 `fetchedAt` 超過 90 天的條目 |
+| `--all` | 重新擷取所有歌曲（跳過 `manual` 狀態，除非搭配 `--force`） |
+| `--song ID` | 擷取指定歌曲 |
+| `--force` | 強制覆寫 `manual` 狀態的條目 |
+| `--lyrics-only` | 僅擷取歌詞（LRCLIB） |
+| `--art-only` | 僅擷取封面（Deezer） |
 
-##### 操作
+輸出：Rich 進度條顯示擷取進度，完成後顯示摘要表格（成功 N 筆、失敗 N 筆、跳過 N 筆）。
 
-| 狀態 | 操作 | 結果 |
-|------|------|------|
-| 任意 | 點擊單首歌曲「重新擷取」 | 重新呼叫 Deezer + LRCLIB API，更新快取（`manual` 狀態的條目需先清除） |
-| 任意 | 點擊「重新擷取全部」 | 對所有非 `manual` 狀態的歌曲逐首擷取，遵守速率限制 |
-| 任意 | 點擊「重新擷取過期」 | 僅對 `fetchedAt` 超過 90 天的歌曲重新擷取 |
-| 任意 | 點擊「清除」 | 移除該歌曲的快取條目，恢復為 pending 狀態 |
-| 任意 | 手動覆寫封面 URL | 策展人貼上 URL → 標記 `fetchStatus: 'manual'`，`matchConfidence: 'manual'` |
-| 任意 | 手動覆寫歌詞 | 策展人貼上歌詞文字 → 標記 `fetchStatus: 'manual'` |
+**`mizukilens metadata status`** — 檢視後設資料狀態
 
-##### 擷取進行中的 UI 行為
+```
+mizukilens metadata status [--detail] [--filter STATUS]
+```
 
-| 狀態 | 操作 | 結果 |
-|------|------|------|
-| 單首擷取中 | 策展人點擊「重新擷取」 | 該列顯示 spinner 取代狀態文字；按鈕停用（disabled）；同步等待 `POST /api/metadata/refresh` 回應後自動更新狀態 |
-| 批量擷取中 | 策展人點擊「重新擷取全部」或「重新擷取過期」 | 發送 `POST` 取得 `batchId` 後，每 2 秒輪詢 `GET /api/metadata/batch/[batchId]`；頂部顯示進度列與計數（例：「擷取中 23/150」）；輪詢回應中 `completed` 數變化時重新載入歌曲列表以更新個別狀態列 |
-| 批量擷取中 | 策展人點擊「停止」 | 發送 `POST /api/metadata/batch/[batchId]/cancel`；取消剩餘擷取，已完成的結果保留；顯示摘要（成功 N 筆、失敗 N 筆、已取消 N 筆） |
-| 批量擷取中 | 策展人離開後設資料分頁 | 擷取在後台繼續；返回分頁時以 `batchId`（儲存於元件狀態）輪詢最新進度 |
+| 選項 | 說明 |
+|------|------|
+| `--detail` | 顯示完整資訊（包含 URL、匹配信心度、擷取時間） |
+| `--filter STATUS` | 篩選指定狀態（`matched` / `no_match` / `error` / `manual` / `pending`） |
+
+輸出：Rich 表格顯示歌名、原唱者、封面狀態、歌詞狀態、匹配信心度、上次擷取時間。
+
+**`mizukilens metadata override`** — 手動覆寫後設資料
+
+```
+mizukilens metadata override SONG_ID [--album-art-url URL] [--lyrics FILE]
+```
+
+| 選項 | 說明 |
+|------|------|
+| `--album-art-url URL` | 手動指定專輯封面 URL |
+| `--lyrics FILE` | 手動指定歌詞檔案（LRC 或純文字） |
+
+結果：標記 `fetchStatus: 'manual'`，`matchConfidence: 'manual'`，後續自動擷取不覆寫。
+
+**`mizukilens metadata clear`** — 清除後設資料
+
+```
+mizukilens metadata clear SONG_ID [--all] [--force]
+```
+
+| 選項 | 說明 |
+|------|------|
+| `SONG_ID` | 清除指定歌曲的後設資料 |
+| `--all` | 清除所有歌曲的後設資料 |
+| `--force` | 跳過確認提示 |
+
+結果：移除對應的 SongMetadata 與 SongLyrics 條目，恢復為可重新擷取的狀態。
 
 ### 3.2 Error Scenarios
 
@@ -300,17 +338,17 @@ data/
 | LRCLIB 擷取 | API 回傳 HTTP 錯誤 | `fetchStatus: 'error'`，記錄錯誤訊息 |
 | 專輯封面顯示 | 圖片 URL 載入失敗（404、網路錯誤） | `<AlbumArt>` 元件 `onError` 降級為漸層佔位圖 |
 | 歌詞顯示 | LRC 格式解析失敗（格式異常） | 將原始文字視為純文字歌詞顯示 |
-| 快取 | 快取 JSON 檔案損毀 | 建立空陣列並記錄警告；不影響核心歌曲目錄功能 |
-| 網路 | 伺服器端無法連線至外部 API | 僅影響擷取功能；既有快取資料不受影響，粉絲端正常運作 |
-| 批量擷取 | 中途發生錯誤 | 記錄失敗的歌曲，繼續處理剩餘歌曲；完成後顯示摘要 |
+| 靜態檔案 | 後設資料 JSON 檔案損毀 | CLI 建立空陣列並記錄警告；不影響核心歌曲目錄功能 |
+| 網路 | CLI 無法連線至外部 API | 僅影響擷取功能；既有靜態資料不受影響，粉絲端正常運作 |
+| 批量擷取 | CLI 擷取中途發生錯誤 | 記錄失敗的歌曲，繼續處理剩餘歌曲；完成後顯示摘要 |
 
 ### 3.3 System Boundary
 
 | 類型 | MizukiPrism 控制 | MizukiPrism 依賴（外部） |
 |------|------------------|--------------------------|
-| 責任 | 後設資料的快取管理、UI 顯示、策展人管理介面、搜尋策略、速率限制 | 不負責外部 API 的可用性、資料正確性、圖片託管 |
-| 互動 | 提供歌詞 API、快取讀寫、專輯封面元件 | 輸入：Deezer Search API（`api.deezer.com/search`）、LRCLIB API（`lrclib.net/api`） |
-| 控制 | 搜尋策略順序、快取生命週期、歌詞顯示邏輯、速率限制參數 | Deezer API 可用性與速率限制、LRCLIB API 可用性與覆蓋率、CDN 圖片可用性 |
+| 責任 | 後設資料的靜態檔案管理、UI 顯示、MizukiLens CLI 擷取流程、搜尋策略、速率限制 | 不負責外部 API 的可用性、資料正確性、圖片託管 |
+| 互動 | 提供靜態 JSON 檔案、客戶端合併邏輯、專輯封面元件 | 輸入：Deezer Search API（`api.deezer.com/search`）、LRCLIB API（`lrclib.net/api`） |
+| 控制 | 搜尋策略順序、靜態檔案生命週期、歌詞顯示邏輯、速率限制參數 | Deezer API 可用性與速率限制、LRCLIB API 可用性與覆蓋率、CDN 圖片可用性 |
 
 ### 3.4 Assumptions & Constraints
 
@@ -321,9 +359,11 @@ data/
 | J-POP 覆蓋率 | Deezer 的日本音樂覆蓋率高但非 100%；部分獨立或同人曲目可能無法匹配 |
 | 原唱者一致性 | 搜尋以策展人維護的 `originalArtist` 為準，拼寫差異可能影響匹配率 |
 | 圖片 URL 有效性 | Deezer 提供的圖片 URL 長期有效，但不保證永久；90 天過期重新擷取可緩解此風險 |
-| 快取規模 | 預期歌曲數量在 ~2000 首以內，三個 JSON 快取檔案總大小預估 <5 MB |
-| 伺服器端擷取 | 所有 API 呼叫在 Next.js API route 或伺服器動作中執行，不在客戶端瀏覽器中執行 |
-| 檔案系統可寫 | 部署環境的 `data/` 目錄在執行時可寫入（與既有 `songs.json`、`streams.json` 一致），不適用於唯讀檔案系統的 Serverless 部署 |
+| 檔案規模 | 預期歌曲數量在 ~2000 首以內，三個 JSON 靜態檔案總大小預估 <5 MB |
+| 靜態部署 | 部署至 GitHub Pages，完全靜態，執行時無寫入能力 |
+| Git 版本控制資料 | 後設資料 JSON 檔案與 `songs.json` 一同納入版本控制，隨原始碼提交 |
+| 部署延遲 | 後設資料變更需經 commit → push → deploy 流程後，粉絲端才可見 |
+| MizukiLens 依賴 | 後設資料擷取與管理需安裝 MizukiLens Python CLI 工具 |
 
 ## 4. Refinement
 
@@ -337,7 +377,8 @@ data/
 | 歌詞行 | LyricLine | 同步歌詞中的一行，包含時間戳（秒）與歌詞文字。 |
 | 擷取狀態 | fetchStatus | 後設資料的擷取結果狀態：`matched`（已匹配）、`no_match`（無匹配）、`error`（擷取失敗）、`manual`（手動覆寫）、`pending`（尚未擷取）。 |
 | 匹配信心度 | matchConfidence | 搜尋結果與原曲的匹配程度：`exact`（結構化搜尋命中）、`fuzzy`（回退策略命中）、`manual`（手動覆寫）。 |
-| 過期 | stale | 快取條目的 `fetchedAt` 距今超過 90 天，建議重新擷取。 |
+| 過期 | stale | 靜態檔案條目的 `fetchedAt` 距今超過 90 天，建議重新擷取。 |
+| 靜態合併 | static merge | 前端在客戶端將 `song-metadata.json` 的資料合併至歌曲列表，不依賴伺服器端合併。 |
 
 ### 4.2 Patterns
 
@@ -356,15 +397,16 @@ Song (*) ────→ (0..1) ArtistInfo       by normalizedArtist
 
 #### 4.2.2 擷取觸發時機
 
-| 觸發時機 | 觸發方式 | 說明 |
+| 觸發時機 | CLI 指令 | 說明 |
 |----------|----------|------|
-| 歌曲建立 | 自動 | 策展人新增歌曲版本時，系統自動在後台擷取（不阻塞 API 回應） |
-| 策展人手動觸發 | 手動 | 管理介面逐首或批量觸發 |
-| 批量重新擷取過期 | 手動 | 管理介面按鈕，僅處理 `fetchedAt` 超過 90 天的條目 |
+| 匯入後擷取 | `metadata fetch --missing` | 策展人匯入新歌曲後，擷取尚無後設資料的歌曲 |
+| 單首擷取 | `metadata fetch --song <id>` | 策展人手動擷取指定歌曲 |
+| 過期重新擷取 | `metadata fetch --stale` | 僅處理 `fetchedAt` 超過 90 天的條目 |
+| 全量重新擷取 | `metadata fetch --all` | 重新擷取所有歌曲（跳過 `manual` 狀態） |
 
 #### 4.2.3 正規化的原唱者名稱演算法
 
-用於 ArtistInfo 的快取鍵：
+用於 ArtistInfo 的查詢鍵：
 
 ```
 normalizeArtist(name: string): string
@@ -376,12 +418,21 @@ normalizeArtist(name: string): string
 
 範例：`"YOASOBI"` → `"yoasobi"`、`"  宇多田 光  "` → `"宇多田 光"`
 
-#### 4.2.4 API 回應合併策略
+#### 4.2.4 客戶端合併策略（Client-side Merge Strategy）
 
-`/api/songs` 端點在回傳歌曲列表時，將 SongMetadata 的 `albumArtUrl` 合併至每首歌曲的回應中：
+前端在客戶端將後設資料合併至歌曲列表，不依賴伺服器端合併：
 
 ```
-GET /api/songs 回應結構：
+客戶端合併演算法：
+1. Fetch songs.json → Song[]
+2. Fetch /data/metadata/song-metadata.json → SongMetadata[]
+3. 建立 Map<songId, SongMetadata>
+4. 遍歷 Song[]，為每首歌曲附加 albumArtUrl、matchConfidence
+5. 歌詞延遲載入：NowPlayingModal 開啟時才 fetch song-lyrics.json
+```
+
+```
+合併後結構（前端記憶體中）：
 [
   {
     ...Song,                    // 既有欄位
@@ -391,7 +442,7 @@ GET /api/songs 回應結構：
 ]
 ```
 
-歌詞資料不在歌曲列表中返回，由獨立端點提供以避免首頁載入過重。
+歌詞資料不在頁面初始載入時擷取，由歌詞面板開啟時延遲載入以避免首頁載入過重。
 
 ### 4.3 Data Contracts
 
@@ -432,7 +483,7 @@ GET /api/songs 回應結構：
 
 | 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
-| normalizedArtist | string | 是 | 正規化的原唱者名稱（快取鍵） |
+| normalizedArtist | string | 是 | 正規化的原唱者名稱（查詢鍵） |
 | originalName | string | 是 | 原始原唱者名稱（來自 Deezer） |
 | deezerArtistId | number | 是 | Deezer 原唱者 ID |
 | pictureUrls | `{ medium: string; big: string; xl: string }` | 否 | 各尺寸原唱者圖片 URL |
@@ -447,132 +498,73 @@ GET /api/songs 回應結構：
 | time | number | 是 | 時間戳（秒，含小數） |
 | text | string | 是 | 歌詞文字（空字串表示間奏） |
 
-> **注意**：LyricLine 不儲存於快取檔案，而是前端從 `SongLyrics.syncedLyrics` 的 LRC 文字動態解析。
+> **注意**：LyricLine 不儲存於靜態檔案，而是前端從 `SongLyrics.syncedLyrics` 的 LRC 文字動態解析。
 
-### 4.4 New API Routes
+### 4.4 靜態資料端點與 CLI 指令（Static Data Endpoints & CLI Commands）
 
-| 路由 | 方法 | 說明 | 使用者 |
-|------|------|------|--------|
-| `GET /api/songs` | GET | 既有端點，擴充回應以包含 `albumArtUrl` 與 `matchConfidence` | 粉絲 |
-| `GET /api/songs/[id]/lyrics` | GET | 回傳指定歌曲的歌詞（同步歌詞優先，回退至純文字） | 粉絲 |
-| `POST /api/metadata/refresh` | POST | 同步擷取指定歌曲的後設資料（等待 Deezer + LRCLIB 完成後回應） | 策展人 |
-| `POST /api/metadata/refresh-all` | POST | 啟動所有非 `manual` 狀態歌曲的批量重新擷取，立即回傳 `batchId` | 策展人 |
-| `POST /api/metadata/refresh-stale` | POST | 啟動所有過期（>90 天）歌曲的批量重新擷取，立即回傳 `batchId` | 策展人 |
-| `GET /api/metadata/batch/[batchId]` | GET | 查詢批量擷取進度（輪詢用） | 策展人 |
-| `POST /api/metadata/batch/[batchId]/cancel` | POST | 取消進行中的批量擷取 | 策展人 |
-| `PUT /api/metadata/[songId]` | PUT | 手動覆寫指定歌曲的後設資料（封面 URL 或歌詞） | 策展人 |
-| `DELETE /api/metadata/[songId]` | DELETE | 清除指定歌曲的後設資料快取 | 策展人 |
+#### 靜態檔案路徑
 
-> **策展人驗證**：所有 `POST /api/metadata/*`、`PUT /api/metadata/*`、`DELETE /api/metadata/*` 路由需經策展人驗證（與 SPEC.md §3.1.6 相同的共用密鑰機制，透過 `x-admin-key` 請求標頭傳遞）。粉絲端的 `GET` 路由不需驗證。
+前端讀取的靜態 JSON 檔案，部署於 GitHub Pages：
 
-##### 請求/回應格式
+| 路徑 | 內容 | 載入時機 |
+|------|------|----------|
+| `/data/metadata/song-metadata.json` | `SongMetadata[]` — 專輯封面 URL、匹配信心度、擷取狀態 | 頁面初始載入，與 `songs.json` 同時 fetch |
+| `/data/metadata/song-lyrics.json` | `SongLyrics[]` — 同步歌詞與純文字歌詞 | 延遲載入，首次開啟歌詞面板時 fetch |
+| `/data/metadata/artist-info.json` | `ArtistInfo[]` — 原唱者圖片 URL | 頁面初始載入 |
 
-**`POST /api/metadata/refresh`**（同步——等待擷取完成後回應）
+#### CLI 指令參考
 
-```json
-// Request body
-{ "songId": "song-123" }
+所有指令皆為 `mizukilens metadata` 子命令群組，寫入 `data/metadata/` 目錄下的 JSON 檔案。
 
-// Response 200
-{ "status": "ok", "songId": "song-123" }
-```
+**`metadata fetch`** — 從 Deezer / LRCLIB 擷取後設資料
 
-**`POST /api/metadata/refresh-all`** / **`POST /api/metadata/refresh-stale`**（非同步——立即回傳，背景執行）
+| 選項 | 說明 |
+|------|------|
+| `--missing`（預設） | 擷取尚無後設資料的歌曲 |
+| `--stale` | 重新擷取 `fetchedAt` 超過 90 天的條目 |
+| `--all` | 重新擷取所有歌曲（跳過 `manual`，除非搭配 `--force`） |
+| `--song ID` | 擷取指定歌曲 |
+| `--force` | 強制覆寫 `manual` 狀態 |
+| `--lyrics-only` / `--art-only` | 僅擷取歌詞或封面 |
 
-```json
-// Request body（無）
+行為：遵守速率限制（Deezer 8 req/sec、單筆間距 200ms），以 Rich 進度條顯示進度，完成後輸出摘要表格。
 
-// Response 202
-{ "batchId": "batch-abc123", "totalSongs": 150 }
-```
+**`metadata status`** — 檢視後設資料狀態
 
-**`GET /api/metadata/batch/[batchId]`**（輪詢進度，建議前端每 2 秒輪詢一次）
+| 選項 | 說明 |
+|------|------|
+| `--detail` | 顯示完整資訊（URL、信心度、擷取時間） |
+| `--filter STATUS` | 篩選狀態（`matched` / `no_match` / `error` / `manual` / `pending`） |
 
-```json
-// Response 200 — 進行中
-{
-  "batchId": "batch-abc123",
-  "status": "in_progress",
-  "total": 150,
-  "completed": 23,
-  "succeeded": 20,
-  "failed": 3
-}
+行為：以 Rich 表格輸出歌名、原唱者、封面狀態、歌詞狀態、匹配信心度、上次擷取時間。
 
-// Response 200 — 已完成
-{
-  "batchId": "batch-abc123",
-  "status": "completed",
-  "total": 150,
-  "completed": 150,
-  "succeeded": 142,
-  "failed": 8
-}
+**`metadata override`** — 手動覆寫
 
-// Response 200 — 已取消
-{
-  "batchId": "batch-abc123",
-  "status": "cancelled",
-  "total": 150,
-  "completed": 45,
-  "succeeded": 40,
-  "failed": 5
-}
-```
+| 選項 | 說明 |
+|------|------|
+| `SONG_ID` | 目標歌曲 ID（必填） |
+| `--album-art-url URL` | 手動封面 URL |
+| `--lyrics FILE` | 手動歌詞檔案（LRC 或純文字） |
 
-**`POST /api/metadata/batch/[batchId]/cancel`**
+行為：標記 `fetchStatus: 'manual'`，`matchConfidence: 'manual'`。
 
-```json
-// Request body（無）
+**`metadata clear`** — 清除後設資料
 
-// Response 200
-{ "status": "ok", "batchId": "batch-abc123" }
-```
+| 選項 | 說明 |
+|------|------|
+| `SONG_ID` | 目標歌曲 ID（必填，除非搭配 `--all`） |
+| `--all` | 清除所有後設資料 |
+| `--force` | 跳過確認提示 |
 
-**`PUT /api/metadata/[songId]`**（部分更新語義）
-
-```json
-// Request body — 所有欄位皆為選填，僅提供的欄位會被覆寫
-{
-  "albumArtUrl": "https://example.com/cover.jpg",  // 選填：手動覆寫封面
-  "syncedLyrics": "[00:05.00] 歌詞第一行...",        // 選填：手動覆寫同步歌詞
-  "plainLyrics": "歌詞全文..."                       // 選填：手動覆寫純文字歌詞
-}
-
-// Response 200
-{ "status": "ok", "songId": "song-123" }
-```
-
-##### 錯誤回應格式
-
-所有 API 端點的錯誤回應遵循統一格式：
-
-```json
-// Response 400（請求格式錯誤）
-{ "status": "error", "message": "Missing required field: songId" }
-
-// Response 401（未驗證）
-{ "status": "error", "message": "Unauthorized" }
-
-// Response 404（資源不存在）
-{ "status": "error", "message": "Song not found: song-123" }
-
-// Response 409（批量操作衝突）
-{ "status": "error", "message": "A batch operation is already in progress" }
-
-// Response 500（內部錯誤）
-{ "status": "error", "message": "Internal server error" }
-```
-
-##### 批量操作並行約束
-
-同一時間僅允許一個批量操作（`refresh-all` 或 `refresh-stale`）執行。若已有批量操作進行中，新的批量請求回傳 HTTP 409 Conflict。單首擷取（`POST /api/metadata/refresh`）不受此限制，可與批量操作同時執行；若該歌曲正在被批量操作處理，單首擷取的結果覆寫批量操作的結果。
+行為：移除 SongMetadata 與 SongLyrics 條目，恢復為可重新擷取狀態。
 
 ### 4.5 Constraints
 
 | 約束 | 說明 |
 |------|------|
-| 離線優先 | 粉絲端完全從伺服器快取讀取，不直接存取 Deezer 或 LRCLIB |
+| 離線優先 | 粉絲端完全從靜態 JSON 檔案讀取，不直接存取 Deezer 或 LRCLIB |
+| 無執行時寫入 | 部署後為純靜態站，所有資料變更必須透過 CLI → commit → deploy 流程 |
+| 部署延遲 | 後設資料更新需經 commit + push + GitHub Pages deploy 後粉絲端才可見 |
 | 優雅降級 | 任何後設資料缺失或錯誤不影響核心功能（歌曲瀏覽、播放、播放清單） |
 | J-POP 覆蓋缺口 | 部分獨立曲目可能在 Deezer 或 LRCLIB 中找不到；系統設計已預期此情況 |
 | 不自動覆寫策展人資料 | 外部 API 回傳的歌名/原唱者不覆寫 Song 實體的 `title` / `originalArtist`，僅儲存於 SongMetadata 供參考 |
