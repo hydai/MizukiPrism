@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { X, Play, Pause, SkipBack, SkipForward, ChevronDown } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import AlbumArt from './AlbumArt';
+import SyncedLyrics from './SyncedLyrics';
 
 export default function NowPlayingModal() {
   const [mounted, setMounted] = useState(false);
@@ -163,6 +164,17 @@ export default function NowPlayingModal() {
             >
               <SkipForward className="w-8 h-8" />
             </button>
+          </div>
+
+          {/* Synced Lyrics */}
+          <div className="mt-8 border-t border-slate-200/60 pt-6">
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3 px-4">
+              歌詞
+            </h4>
+            <SyncedLyrics
+              songId={currentTrack.songId}
+              currentTime={trackCurrentTime}
+            />
           </div>
         </div>
       </div>
