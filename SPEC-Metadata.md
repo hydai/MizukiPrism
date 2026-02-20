@@ -284,10 +284,10 @@ data/
 
 | 狀態 | 操作 | 結果 |
 |------|------|------|
-| 單首擷取中 | 策展人點擊「重新擷取」 | 該列顯示 spinner 取代狀態文字；按鈕停用（disabled）；擷取完成後自動更新狀態 |
-| 批量擷取中 | 策展人點擊「重新擷取全部」或「重新擷取過期」 | 頂部顯示進度列與計數（例：「擷取中 23/150」）；個別歌曲完成後即時更新其狀態列 |
-| 批量擷取中 | 策展人點擊「停止」 | 取消剩餘擷取，已完成的結果保留；顯示摘要（成功 N 筆、失敗 N 筆、已取消 N 筆） |
-| 批量擷取中 | 策展人離開後設資料分頁 | 擷取在後台繼續；返回分頁時顯示最新狀態 |
+| 單首擷取中 | 策展人點擊「重新擷取」 | 該列顯示 spinner 取代狀態文字；按鈕停用（disabled）；同步等待 `POST /api/metadata/refresh` 回應後自動更新狀態 |
+| 批量擷取中 | 策展人點擊「重新擷取全部」或「重新擷取過期」 | 發送 `POST` 取得 `batchId` 後，每 2 秒輪詢 `GET /api/metadata/batch/[batchId]`；頂部顯示進度列與計數（例：「擷取中 23/150」）；輪詢回應中 `completed` 數變化時重新載入歌曲列表以更新個別狀態列 |
+| 批量擷取中 | 策展人點擊「停止」 | 發送 `POST /api/metadata/batch/[batchId]/cancel`；取消剩餘擷取，已完成的結果保留；顯示摘要（成功 N 筆、失敗 N 筆、已取消 N 筆） |
+| 批量擷取中 | 策展人離開後設資料分頁 | 擷取在後台繼續；返回分頁時以 `batchId`（儲存於元件狀態）輪詢最新進度 |
 
 ### 3.2 Error Scenarios
 
@@ -455,17 +455,19 @@ GET /api/songs 回應結構：
 |------|------|------|--------|
 | `GET /api/songs` | GET | 既有端點，擴充回應以包含 `albumArtUrl` 與 `matchConfidence` | 粉絲 |
 | `GET /api/songs/[id]/lyrics` | GET | 回傳指定歌曲的歌詞（同步歌詞優先，回退至純文字） | 粉絲 |
-| `POST /api/metadata/refresh` | POST | 觸發指定歌曲的後設資料重新擷取 | 策展人 |
-| `POST /api/metadata/refresh-all` | POST | 觸發所有非 `manual` 狀態歌曲的批量重新擷取 | 策展人 |
-| `POST /api/metadata/refresh-stale` | POST | 觸發所有過期（>90 天）歌曲的批量重新擷取 | 策展人 |
+| `POST /api/metadata/refresh` | POST | 同步擷取指定歌曲的後設資料（等待 Deezer + LRCLIB 完成後回應） | 策展人 |
+| `POST /api/metadata/refresh-all` | POST | 啟動所有非 `manual` 狀態歌曲的批量重新擷取，立即回傳 `batchId` | 策展人 |
+| `POST /api/metadata/refresh-stale` | POST | 啟動所有過期（>90 天）歌曲的批量重新擷取，立即回傳 `batchId` | 策展人 |
+| `GET /api/metadata/batch/[batchId]` | GET | 查詢批量擷取進度（輪詢用） | 策展人 |
+| `POST /api/metadata/batch/[batchId]/cancel` | POST | 取消進行中的批量擷取 | 策展人 |
 | `PUT /api/metadata/[songId]` | PUT | 手動覆寫指定歌曲的後設資料（封面 URL 或歌詞） | 策展人 |
 | `DELETE /api/metadata/[songId]` | DELETE | 清除指定歌曲的後設資料快取 | 策展人 |
 
-> **策展人驗證**：所有 `POST /api/metadata/*`、`PUT /api/metadata/*`、`DELETE /api/metadata/*` 路由需經策展人驗證（與 SPEC.md §3.1.6 相同的共用密鑰機制）。粉絲端的 `GET` 路由不需驗證。
+> **策展人驗證**：所有 `POST /api/metadata/*`、`PUT /api/metadata/*`、`DELETE /api/metadata/*` 路由需經策展人驗證（與 SPEC.md §3.1.6 相同的共用密鑰機制，透過 `x-admin-key` 請求標頭傳遞）。粉絲端的 `GET` 路由不需驗證。
 
 ##### 請求/回應格式
 
-**`POST /api/metadata/refresh`**
+**`POST /api/metadata/refresh`**（同步——等待擷取完成後回應）
 
 ```json
 // Request body
@@ -473,6 +475,58 @@ GET /api/songs 回應結構：
 
 // Response 200
 { "status": "ok", "songId": "song-123" }
+```
+
+**`POST /api/metadata/refresh-all`** / **`POST /api/metadata/refresh-stale`**（非同步——立即回傳，背景執行）
+
+```json
+// Request body（無）
+
+// Response 202
+{ "batchId": "batch-abc123", "totalSongs": 150 }
+```
+
+**`GET /api/metadata/batch/[batchId]`**（輪詢進度，建議前端每 2 秒輪詢一次）
+
+```json
+// Response 200 — 進行中
+{
+  "batchId": "batch-abc123",
+  "status": "in_progress",
+  "total": 150,
+  "completed": 23,
+  "succeeded": 20,
+  "failed": 3
+}
+
+// Response 200 — 已完成
+{
+  "batchId": "batch-abc123",
+  "status": "completed",
+  "total": 150,
+  "completed": 150,
+  "succeeded": 142,
+  "failed": 8
+}
+
+// Response 200 — 已取消
+{
+  "batchId": "batch-abc123",
+  "status": "cancelled",
+  "total": 150,
+  "completed": 45,
+  "succeeded": 40,
+  "failed": 5
+}
+```
+
+**`POST /api/metadata/batch/[batchId]/cancel`**
+
+```json
+// Request body（無）
+
+// Response 200
+{ "status": "ok", "batchId": "batch-abc123" }
 ```
 
 **`PUT /api/metadata/[songId]`**（部分更新語義）
@@ -488,6 +542,31 @@ GET /api/songs 回應結構：
 // Response 200
 { "status": "ok", "songId": "song-123" }
 ```
+
+##### 錯誤回應格式
+
+所有 API 端點的錯誤回應遵循統一格式：
+
+```json
+// Response 400（請求格式錯誤）
+{ "status": "error", "message": "Missing required field: songId" }
+
+// Response 401（未驗證）
+{ "status": "error", "message": "Unauthorized" }
+
+// Response 404（資源不存在）
+{ "status": "error", "message": "Song not found: song-123" }
+
+// Response 409（批量操作衝突）
+{ "status": "error", "message": "A batch operation is already in progress" }
+
+// Response 500（內部錯誤）
+{ "status": "error", "message": "Internal server error" }
+```
+
+##### 批量操作並行約束
+
+同一時間僅允許一個批量操作（`refresh-all` 或 `refresh-stale`）執行。若已有批量操作進行中，新的批量請求回傳 HTTP 409 Conflict。單首擷取（`POST /api/metadata/refresh`）不受此限制，可與批量操作同時執行；若該歌曲正在被批量操作處理，單首擷取的結果覆寫批量操作的結果。
 
 ### 4.5 Constraints
 
