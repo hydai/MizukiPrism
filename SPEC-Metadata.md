@@ -121,7 +121,7 @@ MizukiPrism Metadata Integration 透過外部 API（Deezer、LRCLIB）自動為�
 | 參數 | 值 | 說明 |
 |------|-----|------|
 | 單筆擷取間距 | 200ms | 每次 API 呼叫之間的最小間隔 |
-| 批量擷取速率 | 8 req/sec | Token bucket 演算法，適用於批量重新擷取 |
+| 批量擷取速率 | 最多 8 req/sec | 適用於批量重新擷取 |
 | 逾時 | 5000ms | 單次 API 呼叫逾時，逾時後標記為錯誤 |
 
 | 狀態 | 操作 | 結果 |
@@ -199,7 +199,7 @@ data/
 | 迷你播放器（MiniPlayer）行動版 | 40×40 | `cover_small`（56px） | 內容列封面 |
 | 正在播放模態框（NowPlayingModal） | 300×300 | `cover_xl`（1000px） | 主視覺 |
 | 播放佇列項目（QueueItem） | 40×40 | `cover_small`（56px） | 佇列列表縮圖 |
-| Hero Section 原唱者頭像 | 180×180 | `artist.picture_big`（500px） | 原唱者資訊展示（未來擴充） |
+| Hero Section 原唱者頭像 | 180×180 | `artist.picture_big`（500px） | 原唱者資訊展示 |
 
 | 狀態 | 操作 | 結果 |
 |------|------|------|
@@ -232,7 +232,7 @@ data/
 
 | 狀態 | 操作 | 結果 |
 |------|------|------|
-| 有同步歌詞 | 播放進行中 | 以 binary search 根據 `PlayerContext.currentTime` 定位當前行；當前行高亮並自動捲動至容器中央 |
+| 有同步歌詞 | 播放進行中 | 根據 `PlayerContext.currentTime` 定位當前行（見當前行定位規則）；當前行高亮並自動捲動至容器中央 |
 | 有同步歌詞 | 使用者手動捲動歌詞區 | 暫停自動捲動 5 秒，之後恢復自動捲動 |
 | 僅有純文字歌詞 | 播放進行中 | 以靜態文字顯示歌詞全文，不高亮、不自動捲動 |
 | 無歌詞 | — | 歌詞區顯示佔位文字「目前沒有歌詞」 |
@@ -244,13 +244,14 @@ data/
 - 手動捲動偵測：監聽歌詞容器的捲動事件，觸發時設定 5 秒計時器，期間停止自動捲動
 - 計時器到期後恢復自動捲動
 
-##### 當前行定位演算法
+##### 當前行定位規則
 
 ```
 給定 currentTime 與 LyricLine[] lines：
-1. Binary search 找到最大的 i 使得 lines[i].time <= currentTime
-2. 該 i 即為當前行索引
+1. 找到最大的 i 使得 lines[i].time <= currentTime
+2. 該 i 即為當前行（active）
 3. i 之前的行為 past，i 之後的行為 upcoming
+4. 若無任何行的 time <= currentTime，則所有行皆為 upcoming
 ```
 
 #### 3.1.6 策展人後設資料管理（Curator Metadata Management）
@@ -278,6 +279,15 @@ data/
 | 任意 | 點擊「清除」 | 移除該歌曲的快取條目，恢復為 pending 狀態 |
 | 任意 | 手動覆寫封面 URL | 策展人貼上 URL → 標記 `fetchStatus: 'manual'`，`matchConfidence: 'manual'` |
 | 任意 | 手動覆寫歌詞 | 策展人貼上歌詞文字 → 標記 `fetchStatus: 'manual'` |
+
+##### 擷取進行中的 UI 行為
+
+| 狀態 | 操作 | 結果 |
+|------|------|------|
+| 單首擷取中 | 策展人點擊「重新擷取」 | 該列顯示 spinner 取代狀態文字；按鈕停用（disabled）；擷取完成後自動更新狀態 |
+| 批量擷取中 | 策展人點擊「重新擷取全部」或「重新擷取過期」 | 頂部顯示進度列與計數（例：「擷取中 23/150」）；個別歌曲完成後即時更新其狀態列 |
+| 批量擷取中 | 策展人點擊「停止」 | 取消剩餘擷取，已完成的結果保留；顯示摘要（成功 N 筆、失敗 N 筆、已取消 N 筆） |
+| 批量擷取中 | 策展人離開後設資料分頁 | 擷取在後台繼續；返回分頁時顯示最新狀態 |
 
 ### 3.2 Error Scenarios
 
@@ -385,9 +395,7 @@ GET /api/songs 回應結構：
 
 ### 4.3 Data Contracts
 
-以下為新增的資料實體定義。欄位名稱與既有 `lib/types.ts` 風格一致。
-
-> **欄位命名慣例**：本規格書的歌曲欄位名稱以 `lib/types.ts` 的實際實作為準（`title`、`originalArtist`、`performances: Performance[]`），而非 SPEC.md §4.3 的邏輯名稱（`name`、`artist`、`Version`）。實作中，SPEC.md 所稱的「版本（Version）」對應至 `lib/types.ts` 的 `Performance` 介面。
+以下為新增的資料實體定義。欄位名稱遵循 `lib/types.ts` 既有慣例（`title`、`originalArtist`、`performances: Performance[]`）。
 
 #### SongMetadata（歌曲後設資料）
 
