@@ -39,6 +39,7 @@ from mizukilens.metadata import (
     fetch_lrclib_lyrics,
     fetch_song_metadata,
     get_metadata_status,
+    is_lrc_format,
     is_stale,
     normalize_artist,
     read_metadata_file,
@@ -1610,3 +1611,538 @@ class TestCLIMetadataStatus:
         assert result.exit_code == 0
         # Summary should still reflect all 4 songs
         assert "Total: 4" in result.output
+
+
+# ---------------------------------------------------------------------------
+# is_lrc_format — unit tests
+# ---------------------------------------------------------------------------
+
+class TestIsLrcFormat:
+    """Unit tests for the is_lrc_format() utility function."""
+
+    def test_lrc_with_centiseconds(self):
+        assert is_lrc_format("[00:05.00] Test lyric line") is True
+
+    def test_lrc_with_milliseconds(self):
+        assert is_lrc_format("[01:23.456] Hello world") is True
+
+    def test_lrc_without_decimal(self):
+        assert is_lrc_format("[01:23] Hello world") is True
+
+    def test_plain_text_no_timestamps(self):
+        assert is_lrc_format("Just plain text\nNo timestamps here") is False
+
+    def test_empty_string(self):
+        assert is_lrc_format("") is False
+
+    def test_multiline_lrc_with_some_timestamps(self):
+        content = "Artist: YOASOBI\n[00:05.00] 夜に駆ける\n[00:10.00] 君の手"
+        assert is_lrc_format(content) is True
+
+    def test_multiline_plain_no_timestamps(self):
+        content = "Line one\nLine two\nLine three"
+        assert is_lrc_format(content) is False
+
+    def test_lrc_empty_timed_line(self):
+        """Empty timed line (interlude) is still LRC."""
+        assert is_lrc_format("[00:05.00]") is True
+
+    def test_bracket_without_timestamp_format(self):
+        """Square brackets without MM:SS pattern do not count."""
+        assert is_lrc_format("[Artist: YOASOBI]\nPlain text") is False
+
+    def test_only_one_lrc_line_among_many(self):
+        """A single matching line is sufficient."""
+        content = "Line without timestamp\n[00:01.00] Lyric\nAnother plain line"
+        assert is_lrc_format(content) is True
+
+
+# ---------------------------------------------------------------------------
+# CLI: metadata override
+# ---------------------------------------------------------------------------
+
+class TestCLIMetadataOverride:
+    """Tests for the `mizukilens metadata override` CLI command."""
+
+    @pytest.fixture()
+    def prism_root(self, tmp_path):
+        """Set up a minimal MizukiPrism project root with two songs."""
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        metadata_dir = data_dir / "metadata"
+        metadata_dir.mkdir()
+
+        songs = [
+            {"id": "song-1", "title": "First Love", "originalArtist": "宇多田光"},
+            {"id": "song-2", "title": "Idol", "originalArtist": "YOASOBI"},
+        ]
+        (data_dir / "songs.json").write_text(
+            json.dumps(songs, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        (metadata_dir / "song-metadata.json").write_text("[]", encoding="utf-8")
+        (metadata_dir / "song-lyrics.json").write_text("[]", encoding="utf-8")
+        (metadata_dir / "artist-info.json").write_text("[]", encoding="utf-8")
+        return tmp_path
+
+    def _run(self, args: list[str], prism_root: Path) -> "Result":
+        """Run CLI command from within the prism_root directory."""
+        runner = CliRunner()
+        import os
+        old_cwd = os.getcwd()
+        try:
+            os.chdir(str(prism_root))
+            return runner.invoke(main, args, catch_exceptions=False)
+        finally:
+            os.chdir(old_cwd)
+
+    # --- Album art override ---
+
+    def test_override_album_art_url_updates_metadata(self, prism_root):
+        """--album-art-url creates/updates song-metadata.json with manual status."""
+        url = "https://example.com/cover.jpg"
+        result = self._run(
+            ["metadata", "override", "song-1", "--album-art-url", url],
+            prism_root,
+        )
+        assert result.exit_code == 0
+
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert len(metadata) == 1
+        entry = metadata[0]
+        assert entry["songId"] == "song-1"
+        assert entry["fetchStatus"] == "manual"
+        assert entry["matchConfidence"] == "manual"
+        assert entry["albumArtUrl"] == url
+
+    def test_override_album_art_url_sets_all_sizes(self, prism_root):
+        """All album art URL sizes are set to the same provided URL."""
+        url = "https://example.com/cover.jpg"
+        self._run(
+            ["metadata", "override", "song-1", "--album-art-url", url],
+            prism_root,
+        )
+
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        entry = metadata[0]
+        assert entry["albumArtUrls"]["small"] == url
+        assert entry["albumArtUrls"]["medium"] == url
+        assert entry["albumArtUrls"]["big"] == url
+        assert entry["albumArtUrls"]["xl"] == url
+
+    def test_override_album_art_sets_fetched_at(self, prism_root):
+        """fetchedAt is set to a valid ISO 8601 timestamp."""
+        url = "https://example.com/cover.jpg"
+        self._run(
+            ["metadata", "override", "song-1", "--album-art-url", url],
+            prism_root,
+        )
+
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        entry = metadata[0]
+        assert entry.get("fetchedAt") is not None
+        datetime.fromisoformat(entry["fetchedAt"])  # should not raise
+
+    def test_override_album_art_clears_last_error(self, prism_root):
+        """lastError is set to null/None after manual override."""
+        url = "https://example.com/cover.jpg"
+        self._run(
+            ["metadata", "override", "song-1", "--album-art-url", url],
+            prism_root,
+        )
+
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert metadata[0]["lastError"] is None
+
+    def test_override_album_art_updates_existing_entry(self, prism_root):
+        """Overriding an existing entry replaces it rather than appending."""
+        # Pre-populate with a no_match entry
+        existing = [
+            {
+                "songId": "song-1",
+                "fetchStatus": "no_match",
+                "matchConfidence": None,
+                "albumArtUrl": None,
+                "albumArtUrls": None,
+                "fetchedAt": "2026-01-01T00:00:00+00:00",
+                "lastError": "some error",
+            }
+        ]
+        (prism_root / "data" / "metadata" / "song-metadata.json").write_text(
+            json.dumps(existing) + "\n", encoding="utf-8"
+        )
+
+        url = "https://example.com/new-cover.jpg"
+        result = self._run(
+            ["metadata", "override", "song-1", "--album-art-url", url],
+            prism_root,
+        )
+        assert result.exit_code == 0
+
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        # Should still have only one entry (upserted, not appended)
+        assert len(metadata) == 1
+        assert metadata[0]["fetchStatus"] == "manual"
+        assert metadata[0]["albumArtUrl"] == url
+        assert metadata[0]["lastError"] is None
+
+    # --- LRC lyrics override ---
+
+    def test_override_lrc_lyrics_sets_synced_lyrics(self, prism_root, tmp_path):
+        """LRC file populates syncedLyrics and leaves plainLyrics null."""
+        lrc_content = "[00:05.00] Test lyric line\n[00:10.00] Second line\n"
+        lrc_file = tmp_path / "test.lrc"
+        lrc_file.write_text(lrc_content, encoding="utf-8")
+
+        result = self._run(
+            ["metadata", "override", "song-1", "--lyrics", str(lrc_file)],
+            prism_root,
+        )
+        assert result.exit_code == 0
+
+        lyrics = json.loads(
+            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
+        )
+        assert len(lyrics) == 1
+        entry = lyrics[0]
+        assert entry["songId"] == "song-1"
+        assert entry["fetchStatus"] == "manual"
+        assert entry["syncedLyrics"] == lrc_content
+        assert entry["plainLyrics"] is None
+
+    def test_override_plain_lyrics_sets_plain_lyrics(self, prism_root, tmp_path):
+        """Plain text file populates plainLyrics and leaves syncedLyrics null."""
+        plain_content = "First verse\nSecond verse\nNo timestamps here\n"
+        plain_file = tmp_path / "plain.txt"
+        plain_file.write_text(plain_content, encoding="utf-8")
+
+        result = self._run(
+            ["metadata", "override", "song-1", "--lyrics", str(plain_file)],
+            prism_root,
+        )
+        assert result.exit_code == 0
+
+        lyrics = json.loads(
+            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
+        )
+        assert len(lyrics) == 1
+        entry = lyrics[0]
+        assert entry["songId"] == "song-1"
+        assert entry["fetchStatus"] == "manual"
+        assert entry["plainLyrics"] == plain_content
+        assert entry["syncedLyrics"] is None
+
+    def test_override_lyrics_sets_fetched_at(self, prism_root, tmp_path):
+        """fetchedAt is set to a valid ISO 8601 timestamp for lyrics override."""
+        lrc_file = tmp_path / "test.lrc"
+        lrc_file.write_text("[00:01.00] Line one\n", encoding="utf-8")
+
+        self._run(
+            ["metadata", "override", "song-1", "--lyrics", str(lrc_file)],
+            prism_root,
+        )
+
+        lyrics = json.loads(
+            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
+        )
+        entry = lyrics[0]
+        assert entry.get("fetchedAt") is not None
+        datetime.fromisoformat(entry["fetchedAt"])
+
+    def test_override_lyrics_clears_last_error(self, prism_root, tmp_path):
+        """lastError is null after lyrics manual override."""
+        lrc_file = tmp_path / "test.lrc"
+        lrc_file.write_text("[00:01.00] Line one\n", encoding="utf-8")
+
+        self._run(
+            ["metadata", "override", "song-1", "--lyrics", str(lrc_file)],
+            prism_root,
+        )
+
+        lyrics = json.loads(
+            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
+        )
+        assert lyrics[0]["lastError"] is None
+
+    def test_override_lyrics_updates_existing_entry(self, prism_root, tmp_path):
+        """Overriding lyrics replaces existing entry rather than appending."""
+        existing = [
+            {
+                "songId": "song-1",
+                "fetchStatus": "no_match",
+                "syncedLyrics": None,
+                "plainLyrics": None,
+                "fetchedAt": "2026-01-01T00:00:00+00:00",
+                "lastError": "timeout",
+            }
+        ]
+        (prism_root / "data" / "metadata" / "song-lyrics.json").write_text(
+            json.dumps(existing) + "\n", encoding="utf-8"
+        )
+
+        lrc_file = tmp_path / "test.lrc"
+        lrc_file.write_text("[00:01.00] New lyric\n", encoding="utf-8")
+
+        result = self._run(
+            ["metadata", "override", "song-1", "--lyrics", str(lrc_file)],
+            prism_root,
+        )
+        assert result.exit_code == 0
+
+        lyrics = json.loads(
+            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
+        )
+        assert len(lyrics) == 1
+        assert lyrics[0]["fetchStatus"] == "manual"
+        assert lyrics[0]["lastError"] is None
+
+    # --- Override both simultaneously ---
+
+    def test_override_both_album_art_and_lyrics(self, prism_root, tmp_path):
+        """Providing both --album-art-url and --lyrics updates both files."""
+        url = "https://example.com/cover.jpg"
+        lrc_file = tmp_path / "song.lrc"
+        lrc_file.write_text("[00:01.00] Hello\n", encoding="utf-8")
+
+        result = self._run(
+            [
+                "metadata", "override", "song-1",
+                "--album-art-url", url,
+                "--lyrics", str(lrc_file),
+            ],
+            prism_root,
+        )
+        assert result.exit_code == 0
+
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert metadata[0]["albumArtUrl"] == url
+        assert metadata[0]["fetchStatus"] == "manual"
+
+        lyrics = json.loads(
+            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
+        )
+        assert lyrics[0]["syncedLyrics"] is not None
+        assert lyrics[0]["fetchStatus"] == "manual"
+
+    # --- Non-existent song ID ---
+
+    def test_override_nonexistent_song_id_warns_but_succeeds(self, prism_root):
+        """Overriding an unknown song ID prints a warning but still writes the entry."""
+        url = "https://example.com/cover.jpg"
+        result = self._run(
+            ["metadata", "override", "song-999", "--album-art-url", url],
+            prism_root,
+        )
+        assert result.exit_code == 0
+        assert "Warning" in result.output or "warning" in result.output.lower()
+
+        # Entry should still be written
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert any(e["songId"] == "song-999" for e in metadata)
+
+    # --- Validation errors ---
+
+    def test_missing_required_options_fails(self, prism_root):
+        """Providing neither --album-art-url nor --lyrics exits with error."""
+        result = self._run(
+            ["metadata", "override", "song-1"],
+            prism_root,
+        )
+        assert result.exit_code != 0
+        output_lower = result.output.lower()
+        assert "album-art-url" in output_lower or "lyrics" in output_lower or "at least one" in output_lower
+
+    def test_nonexistent_lyrics_file_fails(self, prism_root):
+        """Specifying a lyrics file that doesn't exist exits with error."""
+        result = self._run(
+            ["metadata", "override", "song-1", "--lyrics", "/nonexistent/lyrics.lrc"],
+            prism_root,
+        )
+        assert result.exit_code != 0
+
+    # --- Manual status preserved against metadata fetch ---
+
+    def test_manual_status_not_overwritten_by_fetch_missing(self, prism_root):
+        """A manual entry is NOT overwritten by `metadata fetch --missing`."""
+        # First, set a manual override
+        url = "https://example.com/manual-cover.jpg"
+        self._run(
+            ["metadata", "override", "song-1", "--album-art-url", url],
+            prism_root,
+        )
+
+        # Verify manual status is set
+        metadata_before = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert metadata_before[0]["fetchStatus"] == "manual"
+
+        # Now run `metadata fetch --missing`
+        # song-1 already has an entry, so --missing should skip it
+        track = make_deezer_track()
+        with (
+            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._http_get_json", return_value=[]),
+        ):
+            fetch_result = self._run(
+                ["metadata", "fetch", "--missing"],
+                prism_root,
+            )
+        assert fetch_result.exit_code == 0
+
+        # song-1's manual entry should be unchanged
+        metadata_after = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        song1_after = next(e for e in metadata_after if e["songId"] == "song-1")
+        assert song1_after["fetchStatus"] == "manual"
+        assert song1_after["albumArtUrl"] == url
+
+    def test_manual_status_overwritten_by_fetch_all_force(self, prism_root):
+        """A manual entry IS overwritten by `metadata fetch --all --force`."""
+        # First, set a manual override
+        manual_url = "https://example.com/manual-cover.jpg"
+        self._run(
+            ["metadata", "override", "song-1", "--album-art-url", manual_url],
+            prism_root,
+        )
+
+        # Now run `metadata fetch --all --force`
+        track = make_deezer_track()
+        with (
+            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._http_get_json", return_value=[]),
+        ):
+            fetch_result = self._run(
+                ["metadata", "fetch", "--all", "--force"],
+                prism_root,
+            )
+        assert fetch_result.exit_code == 0
+
+        # song-1 should now be overwritten (fetchStatus != manual)
+        metadata_after = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        song1_after = next(e for e in metadata_after if e["songId"] == "song-1")
+        # After --force, should be 'matched' (from Deezer mock), not 'manual'
+        assert song1_after["fetchStatus"] == "matched"
+
+    # --- fetchStatus and matchConfidence verification ---
+
+    def test_fetch_status_is_manual(self, prism_root):
+        """After override, fetchStatus is exactly 'manual'."""
+        url = "https://example.com/cover.jpg"
+        self._run(
+            ["metadata", "override", "song-1", "--album-art-url", url],
+            prism_root,
+        )
+
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert metadata[0]["fetchStatus"] == "manual"
+
+    def test_match_confidence_is_manual(self, prism_root):
+        """After override, matchConfidence is exactly 'manual'."""
+        url = "https://example.com/cover.jpg"
+        self._run(
+            ["metadata", "override", "song-1", "--album-art-url", url],
+            prism_root,
+        )
+
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert metadata[0]["matchConfidence"] == "manual"
+
+    def test_lyrics_fetch_status_is_manual(self, prism_root, tmp_path):
+        """After lyrics override, fetchStatus is exactly 'manual'."""
+        lrc_file = tmp_path / "test.lrc"
+        lrc_file.write_text("[00:01.00] Line\n", encoding="utf-8")
+
+        self._run(
+            ["metadata", "override", "song-1", "--lyrics", str(lrc_file)],
+            prism_root,
+        )
+
+        lyrics = json.loads(
+            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
+        )
+        assert lyrics[0]["fetchStatus"] == "manual"
+
+    # --- Output confirmation messages ---
+
+    def test_output_shows_song_title(self, prism_root):
+        """Confirmation output includes song title."""
+        url = "https://example.com/cover.jpg"
+        result = self._run(
+            ["metadata", "override", "song-1", "--album-art-url", url],
+            prism_root,
+        )
+        assert result.exit_code == 0
+        assert "First Love" in result.output
+
+    def test_output_shows_album_art_overridden(self, prism_root):
+        """Confirmation output mentions album art override."""
+        url = "https://example.com/cover.jpg"
+        result = self._run(
+            ["metadata", "override", "song-1", "--album-art-url", url],
+            prism_root,
+        )
+        assert result.exit_code == 0
+        assert "Album art" in result.output or "album-art" in result.output.lower()
+
+    def test_output_shows_lyrics_overridden(self, prism_root, tmp_path):
+        """Confirmation output mentions lyrics override."""
+        lrc_file = tmp_path / "test.lrc"
+        lrc_file.write_text("[00:01.00] Line\n", encoding="utf-8")
+
+        result = self._run(
+            ["metadata", "override", "song-1", "--lyrics", str(lrc_file)],
+            prism_root,
+        )
+        assert result.exit_code == 0
+        assert "Lyrics" in result.output or "lyrics" in result.output.lower()
+
+    def test_manual_status_not_overwritten_by_fetch_all_without_force(self, prism_root):
+        """A manual entry is NOT overwritten by `metadata fetch --all` (without --force)."""
+        # First, set a manual override
+        url = "https://example.com/manual-cover.jpg"
+        self._run(
+            ["metadata", "override", "song-1", "--album-art-url", url],
+            prism_root,
+        )
+
+        # Now run `metadata fetch --all` WITHOUT --force
+        track = make_deezer_track()
+        with (
+            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._http_get_json", return_value=[]),
+        ):
+            fetch_result = self._run(
+                ["metadata", "fetch", "--all"],
+                prism_root,
+            )
+        assert fetch_result.exit_code == 0
+
+        # song-1's manual entry should be unchanged
+        metadata_after = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        song1_after = next(e for e in metadata_after if e["songId"] == "song-1")
+        assert song1_after["fetchStatus"] == "manual"
+        assert song1_after["albumArtUrl"] == url

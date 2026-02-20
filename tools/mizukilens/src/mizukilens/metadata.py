@@ -8,6 +8,9 @@ Public API
 normalize_artist(name: str) -> str
     Normalize an artist name for use as an ArtistInfo lookup key.
 
+is_lrc_format(content: str) -> bool
+    Return True if the content contains at least one LRC timestamp line.
+
 fetch_deezer_metadata(artist: str, title: str) -> dict | None
     Search Deezer for a track, returning structured metadata.
 
@@ -39,6 +42,7 @@ get_metadata_status(songs_path: Path, metadata_dir: Path) -> list[SongStatusReco
 from __future__ import annotations
 
 import json
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -107,6 +111,28 @@ def normalize_artist(name: str) -> str:
         normalize_artist("Ado")             -> "ado"
     """
     return " ".join(name.lower().strip().split())
+
+
+# LRC timestamp pattern: [MM:SS] or [MM:SS.xx] or [MM:SS.xxx]
+_LRC_TIMESTAMP_RE = re.compile(r"\[\d{2}:\d{2}[.\d]*\]")
+
+
+def is_lrc_format(content: str) -> bool:
+    """Return True if the content contains at least one LRC timestamp line.
+
+    LRC format detection: a line matches if it contains a timestamp of the
+    form ``[MM:SS]``, ``[MM:SS.xx]``, or ``[MM:SS.xxx]``.
+
+    Examples::
+
+        is_lrc_format("[00:05.00] Test lyric line\\n")  -> True
+        is_lrc_format("Just plain text\\n")             -> False
+        is_lrc_format("[01:23] line\\n[02:34] more\\n") -> True
+    """
+    for line in content.splitlines():
+        if _LRC_TIMESTAMP_RE.search(line):
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------

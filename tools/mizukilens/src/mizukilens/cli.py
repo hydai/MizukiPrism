@@ -888,8 +888,9 @@ def metadata_group() -> None:
 
     \b
     Subcommands:
-      fetch   — fetch metadata from Deezer (album art) and LRCLIB (lyrics)
-      status  — view metadata status for all songs
+      fetch    — fetch metadata from Deezer (album art) and LRCLIB (lyrics)
+      status   — view metadata status for all songs
+      override — manually override album art URL and/or lyrics
     """
 
 
@@ -1217,6 +1218,182 @@ def metadata_status_cmd(detail: bool, filter_status: str | None) -> None:
     for key in ("matched", "no_match", "error", "manual", "pending"):
         summary_parts.append(f"{key}: {status_counts[key]}")
     console.print("[dim]" + " | ".join(summary_parts) + "[/dim]")
+
+
+@metadata_group.command("override")
+@click.argument("song_id", metavar="SONG_ID")
+@click.option("--album-art-url", "album_art_url", type=str, default=None, metavar="URL",
+              help="Manually specify album art URL.")
+@click.option("--lyrics", "lyrics_file", type=click.Path(dir_okay=False), default=None, metavar="FILE",
+              help="Path to a lyrics file (LRC or plain text).")
+def metadata_override_cmd(song_id: str, album_art_url: str | None, lyrics_file: str | None) -> None:
+    """Manually override album art URL and/or lyrics for a song.
+
+    \b
+    At least one of --album-art-url or --lyrics must be provided.
+    LRC format auto-detected: if file contains [MM:SS.xx] timestamps,
+    stores as syncedLyrics; otherwise stores as plainLyrics.
+
+    \b
+    Sets fetchStatus: 'manual', matchConfidence: 'manual' to prevent
+    automatic overwrite by subsequent `metadata fetch` runs.
+
+    \b
+    Examples:
+      mizukilens metadata override song-1 --album-art-url "https://example.com/cover.jpg"
+      mizukilens metadata override song-1 --lyrics song.lrc
+      mizukilens metadata override song-1 --album-art-url URL --lyrics song.lrc
+    """
+    import sys
+    import json
+    from pathlib import Path
+    from mizukilens.metadata import (
+        is_lrc_format,
+        read_metadata_file,
+        write_metadata_file,
+        upsert_song_metadata,
+        upsert_song_lyrics,
+        _now_iso,
+    )
+
+    # Validate: at least one option must be provided
+    if album_art_url is None and lyrics_file is None:
+        console.print(
+            "[red]Error:[/red] At least one of [bold]--album-art-url[/bold] or "
+            "[bold]--lyrics[/bold] must be provided."
+        )
+        sys.exit(1)
+
+    # Validate lyrics file exists if provided
+    lyrics_path: Path | None = None
+    if lyrics_file is not None:
+        lyrics_path = Path(lyrics_file).resolve()
+        if not lyrics_path.exists():
+            console.print(
+                f"[red]Error:[/red] Lyrics file not found: [bold]{lyrics_path}[/bold]"
+            )
+            sys.exit(1)
+        if not lyrics_path.is_file():
+            console.print(
+                f"[red]Error:[/red] Lyrics path is not a file: [bold]{lyrics_path}[/bold]"
+            )
+            sys.exit(1)
+
+    # Locate MizukiPrism root
+    prism_root = _find_prism_root_from_cwd()
+    if prism_root is None:
+        console.print(
+            "[red]Error:[/red] Could not locate MizukiPrism project root "
+            "(expected data/songs.json). Run from inside the MizukiPrism directory."
+        )
+        sys.exit(1)
+
+    songs_path = prism_root / "data" / "songs.json"
+    metadata_dir = prism_root / "data" / "metadata"
+
+    # Load songs to validate SONG_ID
+    song_title: str | None = None
+    song_artist: str | None = None
+    try:
+        songs_text = songs_path.read_text(encoding="utf-8")
+        all_songs: list[dict] = json.loads(songs_text)
+        for s in all_songs:
+            if s.get("id") == song_id:
+                song_title = s.get("title", "")
+                song_artist = s.get("originalArtist", "")
+                break
+    except (OSError, json.JSONDecodeError) as exc:
+        console.print(f"[yellow]Warning:[/yellow] Could not read songs.json: {exc}")
+
+    if song_title is None:
+        console.print(
+            f"[yellow]Warning:[/yellow] Song ID [bold]{song_id}[/bold] not found in songs.json. "
+            "Proceeding with override anyway."
+        )
+
+    now = _now_iso()
+
+    # --- Album art override ---
+    if album_art_url is not None:
+        metadata_path = metadata_dir / "song-metadata.json"
+        metadata_records = read_metadata_file(metadata_path)
+
+        art_urls = {
+            "small": album_art_url,
+            "medium": album_art_url,
+            "big": album_art_url,
+            "xl": album_art_url,
+        }
+        song_meta_entry: dict = {
+            "songId": song_id,
+            "fetchStatus": "manual",
+            "matchConfidence": "manual",
+            "albumArtUrl": album_art_url,
+            "albumArtUrls": art_urls,
+            "albumTitle": None,
+            "deezerTrackId": None,
+            "deezerArtistId": None,
+            "trackDuration": None,
+            "fetchedAt": now,
+            "lastError": None,
+        }
+        metadata_records = upsert_song_metadata(metadata_records, song_meta_entry)
+        write_metadata_file(metadata_path, metadata_records)
+
+    # --- Lyrics override ---
+    if lyrics_path is not None:
+        try:
+            lyrics_content = lyrics_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            console.print(f"[red]Error:[/red] Could not read lyrics file: {exc}")
+            sys.exit(1)
+
+        lrc_format = is_lrc_format(lyrics_content)
+
+        lyrics_file_path = metadata_dir / "song-lyrics.json"
+        lyrics_records = read_metadata_file(lyrics_file_path)
+
+        if lrc_format:
+            synced_lyrics = lyrics_content
+            plain_lyrics = None
+        else:
+            synced_lyrics = None
+            plain_lyrics = lyrics_content
+
+        lyrics_entry: dict = {
+            "songId": song_id,
+            "fetchStatus": "manual",
+            "syncedLyrics": synced_lyrics,
+            "plainLyrics": plain_lyrics,
+            "fetchedAt": now,
+            "lastError": None,
+        }
+        lyrics_records = upsert_song_lyrics(lyrics_records, lyrics_entry)
+        write_metadata_file(lyrics_file_path, lyrics_records)
+
+    # --- Output confirmation ---
+    console.print()
+    if song_title is not None:
+        console.print(
+            f"[bold]Song:[/bold] {song_title}"
+            + (f"  ([dim]{song_artist}[/dim])" if song_artist else "")
+        )
+    else:
+        console.print(f"[bold]Song ID:[/bold] {song_id}")
+
+    overridden: list[str] = []
+    if album_art_url is not None:
+        overridden.append(f"[green]Album art URL[/green]: {album_art_url}")
+    if lyrics_path is not None:
+        lyrics_kind = "synced (LRC)" if is_lrc_format(lyrics_content) else "plain text"  # type: ignore[possibly-undefined]
+        overridden.append(f"[green]Lyrics[/green]: {lyrics_path.name} ({lyrics_kind})")
+
+    for item in overridden:
+        console.print(f"  Overrode {item}")
+
+    console.print(
+        f"[dim]fetchStatus: manual | matchConfidence: manual | fetchedAt: {now}[/dim]"
+    )
 
 
 # ---------------------------------------------------------------------------
