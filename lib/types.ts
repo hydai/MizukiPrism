@@ -24,3 +24,48 @@ export interface Stream {
   videoId: string;
   youtubeUrl: string;
 }
+
+export interface SongMetadata {
+  songId: string;
+  fetchStatus: 'matched' | 'no_match' | 'error' | 'manual';
+  matchConfidence: 'exact' | 'fuzzy' | 'manual' | null;
+  albumArtUrl?: string;
+  albumArtUrls?: {
+    small: string;
+    medium: string;
+    big: string;
+    xl: string;
+  };
+  albumTitle?: string;
+  deezerTrackId?: number;
+  deezerArtistId?: number;
+  trackDuration?: number;
+  fetchedAt: string;
+  lastError?: string;
+}
+
+export interface SongLyrics {
+  songId: string;
+  fetchStatus: 'matched' | 'no_match' | 'error' | 'manual';
+  syncedLyrics?: string;
+  plainLyrics?: string;
+  fetchedAt: string;
+  lastError?: string;
+}
+
+export interface ArtistInfo {
+  normalizedArtist: string;
+  originalName: string;
+  deezerArtistId: number;
+  pictureUrls?: {
+    medium: string;
+    big: string;
+    xl: string;
+  };
+  fetchedAt: string;
+}
+
+export interface LyricLine {
+  time: number;
+  text: string;
+}

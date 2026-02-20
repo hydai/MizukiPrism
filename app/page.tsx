@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, LogIn, LogOut, User, WifiOff, ChevronLeft, MoreHorizontal, House } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
@@ -10,6 +10,7 @@ import Toast from './components/Toast';
 import PlaylistPanel from './components/PlaylistPanel';
 import CreatePlaylistDialog from './components/CreatePlaylistDialog';
 import AddToPlaylistDropdown from './components/AddToPlaylistDropdown';
+import AlbumArt from './components/AlbumArt';
 
 interface Performance {
   id: string;
@@ -28,6 +29,7 @@ interface Song {
   originalArtist: string;
   tags: string[];
   performances: Performance[];
+  albumArtUrl?: string;
 }
 
 interface FlattenedSong extends Song {
@@ -38,6 +40,7 @@ interface FlattenedSong extends Song {
   timestamp: number;
   note: string;
   searchString: string;
+  albumArtUrl?: string;
 }
 
 const formatTime = (seconds: number): string => {
@@ -63,6 +66,8 @@ export default function Home() {
   const [mobileTab, setMobileTab] = useState<'home' | 'search' | 'library' | 'profile'>('home');
   const [songs, setSongs] = useState<Song[]>([]);
   const [loadError, setLoadError] = useState(false);
+  // Map from songId to albumArtUrl — populated from /api/metadata
+  const albumArtMapRef = useRef<Map<string, string>>(new Map());
 
   // Fetch songs from API — extracted so the retry button can call it again
   const fetchSongs = () => {
@@ -71,8 +76,13 @@ export default function Home() {
         if (!res.ok) throw new Error('API error');
         return res.json();
       })
-      .then(data => {
-        setSongs(data);
+      .then((data: Song[]) => {
+        // Merge albumArtUrl from metadata map into songs
+        const merged = data.map(song => ({
+          ...song,
+          albumArtUrl: albumArtMapRef.current.get(song.id),
+        }));
+        setSongs(merged);
         setLoadError(false);
       })
       .catch(() => {
@@ -80,8 +90,26 @@ export default function Home() {
       });
   };
 
+  // Fetch metadata on mount and populate albumArtMap, then fetch songs
   useEffect(() => {
-    fetchSongs();
+    fetch('/api/metadata')
+      .then(res => (res.ok ? res.json() : { songMetadata: [], artistInfo: [] }))
+      .then((data: { songMetadata: { songId: string; albumArtUrl?: string; albumArtUrls?: { small: string } }[] }) => {
+        const map = new Map<string, string>();
+        for (const entry of data.songMetadata) {
+          const url = entry.albumArtUrl ?? entry.albumArtUrls?.small;
+          if (url) {
+            map.set(entry.songId, url);
+          }
+        }
+        albumArtMapRef.current = map;
+      })
+      .catch(() => {
+        // metadata fetch failed — continue without art
+      })
+      .finally(() => {
+        fetchSongs();
+      });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -89,7 +117,7 @@ export default function Home() {
   const { playlists, storageError, clearStorageError, isOnline, conflictNotification, clearConflictNotification } = usePlaylist();
   const { user, isLoggedIn, logout } = useFanAuth();
 
-  const handleAddToQueue = (track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number }) => {
+  const handleAddToQueue = (track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number; albumArtUrl?: string }) => {
     addToQueue(track);
     setToastMessage('已加入播放佇列');
     setShowToast(true);
@@ -1011,6 +1039,7 @@ export default function Home() {
                     originalArtist: firstSong.originalArtist,
                     videoId: firstSong.videoId,
                     timestamp: firstSong.timestamp,
+                    albumArtUrl: firstSong.albumArtUrl,
                   });
                 }
               }}
@@ -1166,6 +1195,7 @@ export default function Home() {
                       originalArtist: firstSong.originalArtist,
                       videoId: firstSong.videoId,
                       timestamp: firstSong.timestamp,
+                      albumArtUrl: firstSong.albumArtUrl,
                     });
                   }
                 }}
@@ -1198,6 +1228,7 @@ export default function Home() {
                       originalArtist: firstSong.originalArtist,
                       videoId: firstSong.videoId,
                       timestamp: firstSong.timestamp,
+                      albumArtUrl: firstSong.albumArtUrl,
                     });
                   }
                 }}
@@ -1366,7 +1397,7 @@ export default function Home() {
               <>
                 {/* SongTableHeader */}
                 <div
-                  className="grid grid-cols-[32px_1fr_60px] lg:grid-cols-[32px_2fr_2fr_100px_60px] gap-0 px-3 py-2 sticky top-[88px] z-10"
+                  className="grid grid-cols-[32px_40px_1fr_60px] lg:grid-cols-[32px_40px_2fr_2fr_100px_60px] gap-0 px-3 py-2 sticky top-[88px] z-10"
                   style={{
                     borderBottom: '1px solid var(--border-table)',
                   }}
@@ -1377,6 +1408,8 @@ export default function Home() {
                   >
                     #
                   </div>
+                  {/* Album art header spacer */}
+                  <div />
                   <div
                     className="flex items-center font-bold uppercase tracking-wider lg:pl-3"
                     style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}
@@ -1431,7 +1464,7 @@ export default function Home() {
                         <div
                           key={`${song.id}-${song.performanceId}`}
                           data-testid="performance-row"
-                          className="group grid grid-cols-[32px_1fr_60px] lg:grid-cols-[32px_2fr_2fr_100px_60px] gap-0 items-center transition-all cursor-default"
+                          className="group grid grid-cols-[32px_40px_1fr_60px] lg:grid-cols-[32px_40px_2fr_2fr_100px_60px] gap-0 items-center transition-all cursor-default"
                           style={{
                             borderRadius: 'var(--radius-lg)',
                             padding: 'var(--space-3) var(--space-4)',
@@ -1482,6 +1515,7 @@ export default function Home() {
                                     originalArtist: song.originalArtist,
                                     videoId: song.videoId,
                                     timestamp: song.timestamp,
+                                    albumArtUrl: song.albumArtUrl,
                                   });
                                 }
                               }}
@@ -1502,6 +1536,15 @@ export default function Home() {
                             </button>
                           </div>
 
+                          {/* Album art column — 32×32 thumbnail */}
+                          <div className="flex items-center justify-center">
+                            <AlbumArt
+                              src={song.albumArtUrl}
+                              alt={`${song.title} - ${song.originalArtist}`}
+                              size={32}
+                            />
+                          </div>
+
                           {/* Title column: song title + artist + NoteBadge */}
                           <div
                             className="min-w-0 lg:pl-3 cursor-pointer"
@@ -1514,6 +1557,7 @@ export default function Home() {
                                   originalArtist: song.originalArtist,
                                   videoId: song.videoId,
                                   timestamp: song.timestamp,
+                                  albumArtUrl: song.albumArtUrl,
                                 });
                               }
                             }}
@@ -1587,6 +1631,7 @@ export default function Home() {
                                 originalArtist: song.originalArtist,
                                 videoId: song.videoId,
                                 timestamp: song.timestamp,
+                                albumArtUrl: song.albumArtUrl,
                               })}
                               className="opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
                               style={{
@@ -1814,6 +1859,7 @@ export default function Home() {
                                           originalArtist: song.originalArtist,
                                           videoId: perf.videoId,
                                           timestamp: perf.timestamp,
+                                          albumArtUrl: song.albumArtUrl,
                                         });
                                       }
                                     }}
@@ -1848,6 +1894,7 @@ export default function Home() {
                                           originalArtist: song.originalArtist,
                                           videoId: perf.videoId,
                                           timestamp: perf.timestamp,
+                                          albumArtUrl: song.albumArtUrl,
                                         });
                                       }
                                     }}
@@ -1915,6 +1962,7 @@ export default function Home() {
                                       originalArtist: song.originalArtist,
                                       videoId: perf.videoId,
                                       timestamp: perf.timestamp,
+                                      albumArtUrl: song.albumArtUrl,
                                     })}
                                     className="opacity-0 group-hover/version:opacity-100 transition-all transform hover:scale-110"
                                     style={{
@@ -2074,6 +2122,7 @@ export default function Home() {
                               originalArtist: song.originalArtist,
                               videoId: song.videoId,
                               timestamp: song.timestamp,
+                              albumArtUrl: song.albumArtUrl,
                             });
                           }
                         }}

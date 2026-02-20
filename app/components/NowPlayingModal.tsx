@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Play, Pause, SkipBack, SkipForward, ChevronDown } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
+import AlbumArt from './AlbumArt';
 
 export default function NowPlayingModal() {
   const [mounted, setMounted] = useState(false);
@@ -86,8 +87,16 @@ export default function NowPlayingModal() {
           </button>
         </div>
 
-        {/* Video Player Placeholder */}
+        {/* Album Art + Video Player Placeholder */}
         <div className="p-6">
+          {/* Album Art — 300×300 centered */}
+          <div className="flex justify-center mb-6">
+            <AlbumArt
+              src={currentTrack.albumArtUrl}
+              alt={`${currentTrack.title} - ${currentTrack.originalArtist}`}
+              size={300}
+            />
+          </div>
           <div className="aspect-video bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl overflow-hidden shadow-xl mb-6 flex items-center justify-center">
             <div className="text-center p-8">
               <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 flex items-center justify-center">

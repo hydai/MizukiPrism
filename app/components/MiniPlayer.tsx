@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Play, Pause, SkipBack, SkipForward, ListMusic, AlertCircle, Shuffle, Repeat, Music, Heart, Volume2 } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, ListMusic, AlertCircle, Shuffle, Repeat, Heart, Volume2 } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
+import AlbumArt from './AlbumArt';
 
 export default function MiniPlayer() {
   const {
@@ -117,18 +118,12 @@ export default function MiniPlayer() {
             setShowModal(true);
           }}
         >
-          {/* Cover thumbnail placeholder — 40×40, cornerRadius 8 */}
-          <div
-            className="flex-shrink-0 flex items-center justify-center"
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
-            }}
-          >
-            <Music style={{ width: '18px', height: '18px', color: 'white' }} />
-          </div>
+          {/* Cover thumbnail — 40×40 */}
+          <AlbumArt
+            src={currentTrack.albumArtUrl}
+            alt={`${currentTrack.title} - ${currentTrack.originalArtist}`}
+            size={40}
+          />
 
           {/* Song info — vertical, gap 2, fill remaining space */}
           <div className="flex flex-col min-w-0 flex-1" style={{ gap: '2px' }}>
@@ -211,18 +206,12 @@ export default function MiniPlayer() {
             className="flex items-center gap-3 flex-shrink-0"
             style={{ width: '280px' }}
           >
-            {/* Album cover thumbnail placeholder */}
-            <div
-              className="flex-shrink-0 flex items-center justify-center"
-              style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: 'var(--radius-sm)',
-                background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
-              }}
-            >
-              <Music style={{ width: '20px', height: '20px', color: 'white' }} />
-            </div>
+            {/* Album cover thumbnail — 48×48 desktop */}
+            <AlbumArt
+              src={currentTrack.albumArtUrl}
+              alt={`${currentTrack.title} - ${currentTrack.originalArtist}`}
+              size={48}
+            />
 
             {/* Track info */}
             <div className="min-w-0 flex-1">

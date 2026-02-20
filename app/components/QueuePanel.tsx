@@ -2,6 +2,7 @@
 
 import { X, GripVertical, Music } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
+import AlbumArt from './AlbumArt';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -119,6 +120,13 @@ export default function QueuePanel() {
                   <div className="text-slate-400 group-hover:text-slate-600 transition-colors flex-shrink-0">
                     <GripVertical className="w-5 h-5" />
                   </div>
+
+                  {/* Album Art — 40×40 */}
+                  <AlbumArt
+                    src={track.albumArtUrl}
+                    alt={`${track.title} - ${track.originalArtist}`}
+                    size={40}
+                  />
 
                   {/* Track Info */}
                   <div className="flex-1 min-w-0">

@@ -11,6 +11,7 @@ export interface Track {
   timestamp: number;
   endTimestamp?: number;
   deleted?: boolean;
+  albumArtUrl?: string;
 }
 
 interface PlayerContextType {
