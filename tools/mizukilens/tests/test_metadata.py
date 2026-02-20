@@ -11,9 +11,11 @@ Coverage:
   - upsert_artist_info()    — insert, update
   - is_stale()              — fresh, stale, missing
   - fetch_song_metadata()   — full integration (mocked APIs), all branches
+  - get_metadata_status()   — cross-reference logic, pending/matched/no_match
   - CLI: metadata fetch     — --missing, --stale, --all, --song, --force,
                               --lyrics-only, --art-only, error handling,
                               rate-limiting/min-interval
+  - CLI: metadata status    — basic, --filter, --detail, empty, all-pending, summary
 """
 
 from __future__ import annotations
@@ -32,9 +34,11 @@ from mizukilens.cli import main
 from mizukilens.metadata import (
     STALE_DAYS,
     FetchResult,
+    SongStatusRecord,
     fetch_deezer_metadata,
     fetch_lrclib_lyrics,
     fetch_song_metadata,
+    get_metadata_status,
     is_stale,
     normalize_artist,
     read_metadata_file,
@@ -1179,3 +1183,430 @@ class TestFetchResultOverallStatus:
     def test_matched_and_skipped(self):
         r = FetchResult("s1", "T", "A", deezer_status="matched", lyrics_status="skipped")
         assert r.overall_status == "matched"
+
+
+# ---------------------------------------------------------------------------
+# get_metadata_status
+# ---------------------------------------------------------------------------
+
+class TestGetMetadataStatus:
+    """Unit tests for get_metadata_status() cross-reference logic."""
+
+    def _make_root(self, tmp_path, songs, metadata=None, lyrics=None):
+        """Set up a minimal project root with data files."""
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        metadata_dir = data_dir / "metadata"
+        metadata_dir.mkdir()
+        (data_dir / "songs.json").write_text(
+            json.dumps(songs, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+        (metadata_dir / "song-metadata.json").write_text(
+            json.dumps(metadata or [], ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+        (metadata_dir / "song-lyrics.json").write_text(
+            json.dumps(lyrics or [], ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+        return data_dir, metadata_dir
+
+    def test_all_pending_when_no_metadata_files(self, tmp_path):
+        songs = [
+            {"id": "s1", "title": "Song A", "originalArtist": "Artist A"},
+            {"id": "s2", "title": "Song B", "originalArtist": "Artist B"},
+        ]
+        data_dir, metadata_dir = self._make_root(tmp_path, songs)
+        records = get_metadata_status(data_dir / "songs.json", metadata_dir)
+        assert len(records) == 2
+        assert all(r.cover_status == "pending" for r in records)
+        assert all(r.lyrics_status == "pending" for r in records)
+
+    def test_matched_song_shows_correct_status(self, tmp_path):
+        songs = [{"id": "s1", "title": "First Love", "originalArtist": "宇多田光"}]
+        metadata = [{
+            "songId": "s1",
+            "fetchStatus": "matched",
+            "matchConfidence": "exact",
+            "albumArtUrl": "https://example.com/art.jpg",
+            "albumArtUrls": {},
+            "deezerTrackId": 123,
+            "fetchedAt": "2026-02-20T10:00:00+00:00",
+            "lastError": None,
+        }]
+        lyrics = [{
+            "songId": "s1",
+            "fetchStatus": "matched",
+            "fetchedAt": "2026-02-20T10:00:00+00:00",
+            "lastError": None,
+        }]
+        data_dir, metadata_dir = self._make_root(tmp_path, songs, metadata, lyrics)
+        records = get_metadata_status(data_dir / "songs.json", metadata_dir)
+        assert len(records) == 1
+        r = records[0]
+        assert r.song_id == "s1"
+        assert r.cover_status == "matched"
+        assert r.lyrics_status == "matched"
+        assert r.match_confidence == "exact"
+        assert r.fetched_at == "2026-02-20"
+        assert r.album_art_url == "https://example.com/art.jpg"
+        assert r.deezer_track_id == 123
+
+    def test_no_match_status(self, tmp_path):
+        songs = [{"id": "s1", "title": "Rare Song", "originalArtist": "Unknown"}]
+        metadata = [{
+            "songId": "s1",
+            "fetchStatus": "no_match",
+            "matchConfidence": None,
+            "fetchedAt": "2026-02-20T10:00:00+00:00",
+            "lastError": None,
+        }]
+        data_dir, metadata_dir = self._make_root(tmp_path, songs, metadata)
+        records = get_metadata_status(data_dir / "songs.json", metadata_dir)
+        assert records[0].cover_status == "no_match"
+        assert records[0].lyrics_status == "pending"  # no lyrics entry
+        assert records[0].match_confidence is None
+
+    def test_error_status_with_last_error(self, tmp_path):
+        songs = [{"id": "s1", "title": "Bad Song", "originalArtist": "Err"}]
+        metadata = [{
+            "songId": "s1",
+            "fetchStatus": "error",
+            "matchConfidence": None,
+            "fetchedAt": "2026-02-20T10:00:00+00:00",
+            "lastError": "timeout",
+        }]
+        data_dir, metadata_dir = self._make_root(tmp_path, songs, metadata)
+        records = get_metadata_status(data_dir / "songs.json", metadata_dir)
+        assert records[0].cover_status == "error"
+        assert records[0].cover_last_error == "timeout"
+
+    def test_mixed_songs_some_pending(self, tmp_path):
+        songs = [
+            {"id": "s1", "title": "Matched", "originalArtist": "A"},
+            {"id": "s2", "title": "Pending", "originalArtist": "B"},
+        ]
+        metadata = [{
+            "songId": "s1",
+            "fetchStatus": "matched",
+            "matchConfidence": "fuzzy",
+            "fetchedAt": "2026-02-20T10:00:00+00:00",
+            "lastError": None,
+        }]
+        data_dir, metadata_dir = self._make_root(tmp_path, songs, metadata)
+        records = get_metadata_status(data_dir / "songs.json", metadata_dir)
+        assert len(records) == 2
+        assert records[0].cover_status == "matched"
+        assert records[1].cover_status == "pending"
+
+    def test_empty_songs_returns_empty(self, tmp_path):
+        data_dir, metadata_dir = self._make_root(tmp_path, [])
+        records = get_metadata_status(data_dir / "songs.json", metadata_dir)
+        assert records == []
+
+    def test_order_preserved(self, tmp_path):
+        songs = [
+            {"id": "s3", "title": "C", "originalArtist": "X"},
+            {"id": "s1", "title": "A", "originalArtist": "X"},
+            {"id": "s2", "title": "B", "originalArtist": "X"},
+        ]
+        data_dir, metadata_dir = self._make_root(tmp_path, songs)
+        records = get_metadata_status(data_dir / "songs.json", metadata_dir)
+        assert [r.song_id for r in records] == ["s3", "s1", "s2"]
+
+    def test_lyrics_status_independent_of_cover(self, tmp_path):
+        """Lyrics can be matched even when cover is no_match."""
+        songs = [{"id": "s1", "title": "Song", "originalArtist": "A"}]
+        metadata = [{
+            "songId": "s1",
+            "fetchStatus": "no_match",
+            "matchConfidence": None,
+            "fetchedAt": "2026-02-20T10:00:00+00:00",
+            "lastError": None,
+        }]
+        lyrics = [{
+            "songId": "s1",
+            "fetchStatus": "matched",
+            "fetchedAt": "2026-02-20T10:00:00+00:00",
+            "lastError": None,
+        }]
+        data_dir, metadata_dir = self._make_root(tmp_path, songs, metadata, lyrics)
+        records = get_metadata_status(data_dir / "songs.json", metadata_dir)
+        r = records[0]
+        assert r.cover_status == "no_match"
+        assert r.lyrics_status == "matched"
+
+    def test_manual_status(self, tmp_path):
+        songs = [{"id": "s1", "title": "Manual Song", "originalArtist": "A"}]
+        metadata = [{
+            "songId": "s1",
+            "fetchStatus": "manual",
+            "matchConfidence": "manual",
+            "albumArtUrl": "https://example.com/manual.jpg",
+            "fetchedAt": "2026-02-20T10:00:00+00:00",
+            "lastError": None,
+        }]
+        data_dir, metadata_dir = self._make_root(tmp_path, songs, metadata)
+        records = get_metadata_status(data_dir / "songs.json", metadata_dir)
+        assert records[0].cover_status == "manual"
+        assert records[0].match_confidence == "manual"
+
+    def test_missing_metadata_dir_returns_all_pending(self, tmp_path):
+        """When metadata files don't exist, all songs are pending."""
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        songs = [{"id": "s1", "title": "Song", "originalArtist": "A"}]
+        (data_dir / "songs.json").write_text(json.dumps(songs) + "\n", encoding="utf-8")
+        # metadata dir does not exist
+        metadata_dir = data_dir / "metadata"
+        records = get_metadata_status(data_dir / "songs.json", metadata_dir)
+        assert len(records) == 1
+        assert records[0].cover_status == "pending"
+
+
+# ---------------------------------------------------------------------------
+# CLI: metadata status
+# ---------------------------------------------------------------------------
+
+class TestCLIMetadataStatus:
+    """Tests for the `mizukilens metadata status` CLI command."""
+
+    @pytest.fixture()
+    def prism_root(self, tmp_path):
+        """Set up a minimal MizukiPrism project root with mixed statuses."""
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        metadata_dir = data_dir / "metadata"
+        metadata_dir.mkdir()
+
+        songs = [
+            {"id": "s1", "title": "Matched Song", "originalArtist": "Artist A"},
+            {"id": "s2", "title": "No Match Song", "originalArtist": "Artist B"},
+            {"id": "s3", "title": "Error Song", "originalArtist": "Artist C"},
+            {"id": "s4", "title": "Pending Song", "originalArtist": "Artist D"},
+        ]
+        (data_dir / "songs.json").write_text(
+            json.dumps(songs, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+
+        metadata = [
+            {
+                "songId": "s1",
+                "fetchStatus": "matched",
+                "matchConfidence": "exact",
+                "albumArtUrl": "https://example.com/s1.jpg",
+                "albumArtUrls": {"xl": "https://example.com/s1_xl.jpg"},
+                "deezerTrackId": 111,
+                "fetchedAt": "2026-02-20T10:00:00+00:00",
+                "lastError": None,
+            },
+            {
+                "songId": "s2",
+                "fetchStatus": "no_match",
+                "matchConfidence": None,
+                "albumArtUrl": None,
+                "albumArtUrls": None,
+                "deezerTrackId": None,
+                "fetchedAt": "2026-02-20T10:00:00+00:00",
+                "lastError": None,
+            },
+            {
+                "songId": "s3",
+                "fetchStatus": "error",
+                "matchConfidence": None,
+                "albumArtUrl": None,
+                "albumArtUrls": None,
+                "deezerTrackId": None,
+                "fetchedAt": "2026-02-20T10:00:00+00:00",
+                "lastError": "timeout",
+            },
+            # s4 has no metadata entry -> pending
+        ]
+        (metadata_dir / "song-metadata.json").write_text(
+            json.dumps(metadata) + "\n", encoding="utf-8"
+        )
+
+        lyrics = [
+            {
+                "songId": "s1",
+                "fetchStatus": "matched",
+                "fetchedAt": "2026-02-20T10:00:00+00:00",
+                "lastError": None,
+            },
+            # s2, s3, s4 have no lyrics entry -> pending
+        ]
+        (metadata_dir / "song-lyrics.json").write_text(
+            json.dumps(lyrics) + "\n", encoding="utf-8"
+        )
+        (metadata_dir / "artist-info.json").write_text("[]", encoding="utf-8")
+        return tmp_path
+
+    def _run(self, args: list[str], prism_root: Path) -> "Result":
+        """Run CLI command from within the prism_root directory.
+
+        Uses a wide terminal (COLUMNS=250) so Rich tables are not truncated.
+        """
+        runner = CliRunner(env={"COLUMNS": "250"})
+        import os
+        old_cwd = os.getcwd()
+        try:
+            os.chdir(str(prism_root))
+            return runner.invoke(main, args, catch_exceptions=False)
+        finally:
+            os.chdir(old_cwd)
+
+    def test_basic_status_shows_all_songs(self, prism_root):
+        result = self._run(["metadata", "status"], prism_root)
+        assert result.exit_code == 0
+        assert "Matched Song" in result.output
+        assert "No Match Song" in result.output
+        assert "Error Song" in result.output
+        assert "Pending Song" in result.output
+
+    def test_basic_status_shows_correct_columns(self, prism_root):
+        result = self._run(["metadata", "status"], prism_root)
+        assert result.exit_code == 0
+        # Column headers
+        assert "Song Title" in result.output
+        assert "Original Artist" in result.output
+        assert "Cover" in result.output
+        assert "Lyrics" in result.output
+        assert "Confidence" in result.output
+        assert "Fetched" in result.output
+
+    def test_basic_status_shows_mixed_statuses(self, prism_root):
+        result = self._run(["metadata", "status"], prism_root)
+        assert result.exit_code == 0
+        assert "matched" in result.output
+        assert "no_match" in result.output
+        assert "error" in result.output
+        assert "pending" in result.output
+
+    def test_pending_songs_show_as_pending(self, prism_root):
+        """Songs without metadata entries must appear as pending."""
+        result = self._run(["metadata", "status"], prism_root)
+        assert result.exit_code == 0
+        # s4 has no metadata, should show as pending
+        assert "Pending Song" in result.output
+        assert "pending" in result.output
+
+    def test_filter_matched_shows_only_matched(self, prism_root):
+        result = self._run(["metadata", "status", "--filter", "matched"], prism_root)
+        assert result.exit_code == 0
+        assert "Matched Song" in result.output
+        # Other songs should NOT appear in the table rows
+        assert "No Match Song" not in result.output
+        assert "Pending Song" not in result.output
+
+    def test_filter_pending_shows_only_pending(self, prism_root):
+        result = self._run(["metadata", "status", "--filter", "pending"], prism_root)
+        assert result.exit_code == 0
+        assert "Pending Song" in result.output
+        assert "Matched Song" not in result.output
+
+    def test_filter_no_match(self, prism_root):
+        result = self._run(["metadata", "status", "--filter", "no_match"], prism_root)
+        assert result.exit_code == 0
+        assert "No Match Song" in result.output
+        assert "Matched Song" not in result.output
+
+    def test_filter_error(self, prism_root):
+        result = self._run(["metadata", "status", "--filter", "error"], prism_root)
+        assert result.exit_code == 0
+        assert "Error Song" in result.output
+        assert "Matched Song" not in result.output
+
+    def test_detail_includes_extra_columns(self, prism_root):
+        result = self._run(["metadata", "status", "--detail"], prism_root)
+        assert result.exit_code == 0
+        # Detail columns should appear
+        assert "Album Art URL" in result.output
+        assert "Deezer Track ID" in result.output
+        assert "Last Error" in result.output
+
+    def test_detail_shows_album_art_url(self, prism_root):
+        result = self._run(["metadata", "status", "--detail"], prism_root)
+        assert result.exit_code == 0
+        assert "https://example.com/s1.jpg" in result.output
+
+    def test_detail_shows_deezer_track_id(self, prism_root):
+        result = self._run(["metadata", "status", "--detail"], prism_root)
+        assert result.exit_code == 0
+        assert "111" in result.output
+
+    def test_detail_shows_last_error(self, prism_root):
+        result = self._run(["metadata", "status", "--detail"], prism_root)
+        assert result.exit_code == 0
+        assert "timeout" in result.output
+
+    def test_summary_row_appears(self, prism_root):
+        result = self._run(["metadata", "status"], prism_root)
+        assert result.exit_code == 0
+        assert "Total:" in result.output
+
+    def test_summary_counts_are_correct(self, prism_root):
+        result = self._run(["metadata", "status"], prism_root)
+        assert result.exit_code == 0
+        # 4 songs: 1 matched, 1 no_match, 1 error, 1 pending
+        assert "Total: 4" in result.output
+        assert "matched: 1" in result.output
+        assert "no_match: 1" in result.output
+        assert "error: 1" in result.output
+        assert "pending: 1" in result.output
+
+    def test_empty_songs_json(self, tmp_path):
+        """When songs.json is empty, output indicates no songs."""
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        metadata_dir = data_dir / "metadata"
+        metadata_dir.mkdir()
+        (data_dir / "songs.json").write_text("[]", encoding="utf-8")
+        (metadata_dir / "song-metadata.json").write_text("[]", encoding="utf-8")
+        (metadata_dir / "song-lyrics.json").write_text("[]", encoding="utf-8")
+        (metadata_dir / "artist-info.json").write_text("[]", encoding="utf-8")
+
+        runner = CliRunner(env={"COLUMNS": "250"})
+        import os
+        old_cwd = os.getcwd()
+        try:
+            os.chdir(str(tmp_path))
+            result = runner.invoke(main, ["metadata", "status"], catch_exceptions=False)
+        finally:
+            os.chdir(old_cwd)
+
+        assert result.exit_code == 0
+        assert "No songs" in result.output
+
+    def test_all_pending_no_metadata_files(self, tmp_path):
+        """When metadata files are absent, all songs show as pending."""
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        metadata_dir = data_dir / "metadata"
+        metadata_dir.mkdir()
+        songs = [
+            {"id": "s1", "title": "Song A", "originalArtist": "A"},
+            {"id": "s2", "title": "Song B", "originalArtist": "B"},
+        ]
+        (data_dir / "songs.json").write_text(json.dumps(songs) + "\n", encoding="utf-8")
+        # No metadata files — get_metadata_status handles missing files gracefully
+
+        runner = CliRunner(env={"COLUMNS": "250"})
+        import os
+        old_cwd = os.getcwd()
+        try:
+            os.chdir(str(tmp_path))
+            result = runner.invoke(main, ["metadata", "status"], catch_exceptions=False)
+        finally:
+            os.chdir(old_cwd)
+
+        assert result.exit_code == 0
+        assert "Song A" in result.output
+        assert "Song B" in result.output
+        assert "pending" in result.output
+        assert "Total: 2" in result.output
+        assert "pending: 2" in result.output
+
+    def test_filter_shows_summary_of_all_songs(self, prism_root):
+        """Summary row always shows counts for all songs, not just filtered."""
+        result = self._run(["metadata", "status", "--filter", "matched"], prism_root)
+        assert result.exit_code == 0
+        # Summary should still reflect all 4 songs
+        assert "Total: 4" in result.output

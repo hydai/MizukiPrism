@@ -888,7 +888,8 @@ def metadata_group() -> None:
 
     \b
     Subcommands:
-      fetch  — fetch metadata from Deezer (album art) and LRCLIB (lyrics)
+      fetch   — fetch metadata from Deezer (album art) and LRCLIB (lyrics)
+      status  — view metadata status for all songs
     """
 
 
@@ -1082,6 +1083,140 @@ def metadata_fetch_cmd(
     tbl.add_row("[bold]Total[/bold]", f"[bold]{len(target_songs)}[/bold]")
 
     console.print(tbl)
+
+
+@metadata_group.command("status")
+@click.option("--detail", is_flag=True, default=False,
+              help="Show additional columns (URLs, Deezer IDs, error messages, fetched time).")
+@click.option(
+    "--filter", "filter_status",
+    type=click.Choice(["matched", "no_match", "error", "manual", "pending"], case_sensitive=False),
+    default=None,
+    metavar="STATUS",
+    help="Filter by status (matched, no_match, error, manual, pending).",
+)
+def metadata_status_cmd(detail: bool, filter_status: str | None) -> None:
+    """Show metadata status for all songs.
+
+    \b
+    Cross-references songs.json with song-metadata.json and song-lyrics.json.
+    Songs without a metadata entry are shown as 'pending'.
+
+    \b
+    Examples:
+      mizukilens metadata status
+      mizukilens metadata status --filter pending
+      mizukilens metadata status --filter matched --detail
+    """
+    import sys
+    import json
+    from pathlib import Path
+    from rich.table import Table
+    from rich import box
+    from mizukilens.metadata import get_metadata_status
+
+    # Locate MizukiPrism root
+    prism_root = _find_prism_root_from_cwd()
+    if prism_root is None:
+        console.print(
+            "[red]Error:[/red] Could not locate MizukiPrism project root "
+            "(expected data/songs.json). Run from inside the MizukiPrism directory."
+        )
+        sys.exit(1)
+
+    songs_path = prism_root / "data" / "songs.json"
+    metadata_dir = prism_root / "data" / "metadata"
+
+    records = get_metadata_status(songs_path, metadata_dir)
+
+    if not records:
+        console.print("[dim]No songs found in songs.json.[/dim]")
+        return
+
+    # Apply filter
+    if filter_status is not None:
+        records = [
+            r for r in records
+            if r.cover_status == filter_status or r.lyrics_status == filter_status
+        ]
+
+    # Status styling
+    _status_style = {
+        "matched":  "[green]matched[/green]",
+        "no_match": "[yellow]no_match[/yellow]",
+        "error":    "[red]error[/red]",
+        "manual":   "[cyan]manual[/cyan]",
+        "pending":  "[dim]pending[/dim]",
+    }
+
+    def _fmt_status(s: str) -> str:
+        return _status_style.get(s, s)
+
+    def _fmt_confidence(c: str | None) -> str:
+        return c if c is not None else "[dim]\u2014[/dim]"
+
+    def _fmt_fetched(f: str | None) -> str:
+        return f if f is not None else "[dim]\u2014[/dim]"
+
+    # Build table
+    tbl = Table(
+        title="Metadata Status",
+        box=box.ROUNDED,
+        show_header=True,
+        header_style="bold cyan",
+    )
+    tbl.add_column("Song Title", style="bold", min_width=20)
+    tbl.add_column("Original Artist", min_width=12)
+    tbl.add_column("Cover", no_wrap=True)
+    tbl.add_column("Lyrics", no_wrap=True)
+    tbl.add_column("Confidence", no_wrap=True)
+    tbl.add_column("Fetched", no_wrap=True)
+    if detail:
+        tbl.add_column("Album Art URL", overflow="fold")
+        tbl.add_column("Deezer Track ID", no_wrap=True)
+        tbl.add_column("Last Error", overflow="fold")
+
+    for r in records:
+        row = [
+            r.title,
+            r.original_artist,
+            _fmt_status(r.cover_status),
+            _fmt_status(r.lyrics_status),
+            _fmt_confidence(r.match_confidence),
+            _fmt_fetched(r.fetched_at),
+        ]
+        if detail:
+            row.append(r.album_art_url or "[dim]\u2014[/dim]")
+            row.append(str(r.deezer_track_id) if r.deezer_track_id is not None else "[dim]\u2014[/dim]")
+            # Show first non-None error
+            last_err = r.cover_last_error or r.lyrics_last_error or ""
+            row.append(last_err or "[dim]\u2014[/dim]")
+        tbl.add_row(*row)
+
+    console.print(tbl)
+
+    # --- Compute summary counts (over all records, before filter) ---
+    all_records = get_metadata_status(songs_path, metadata_dir)
+    status_counts: dict[str, int] = {
+        "matched": 0,
+        "no_match": 0,
+        "error": 0,
+        "manual": 0,
+        "pending": 0,
+    }
+    for r in all_records:
+        # A song is counted by its cover_status (primary metadata source)
+        cs = r.cover_status
+        if cs in status_counts:
+            status_counts[cs] += 1
+        else:
+            status_counts["pending"] += 1
+
+    total = len(all_records)
+    summary_parts = [f"Total: {total}"]
+    for key in ("matched", "no_match", "error", "manual", "pending"):
+        summary_parts.append(f"{key}: {status_counts[key]}")
+    console.print("[dim]" + " | ".join(summary_parts) + "[/dim]")
 
 
 # ---------------------------------------------------------------------------

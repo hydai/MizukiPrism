@@ -31,6 +31,9 @@ upsert_artist_info(records: list[dict], entry: dict) -> list[dict]
 
 fetch_song_metadata(song: dict, metadata_dir: Path, fetch_deezer: bool, fetch_lyrics: bool) -> FetchResult
     Fetch and persist metadata for a single song.
+
+get_metadata_status(songs_path: Path, metadata_dir: Path) -> list[SongStatusRecord]
+    Cross-reference songs.json with metadata files to compute per-song status.
 """
 
 from __future__ import annotations
@@ -580,3 +583,115 @@ def is_stale(entry: dict) -> bool:
         return age.days >= STALE_DAYS
     except (ValueError, TypeError):
         return True
+
+
+# ---------------------------------------------------------------------------
+# Metadata status
+# ---------------------------------------------------------------------------
+
+@dataclass
+class SongStatusRecord:
+    """Per-song metadata status, computed by cross-referencing data files."""
+
+    song_id: str
+    title: str
+    original_artist: str
+    cover_status: str           # 'matched', 'no_match', 'error', 'manual', 'pending'
+    lyrics_status: str          # 'matched', 'no_match', 'error', 'manual', 'pending'
+    match_confidence: str | None = None   # 'exact', 'fuzzy', 'manual', or None
+    fetched_at: str | None = None         # ISO 8601 date string (date portion only)
+    album_art_url: str | None = None
+    deezer_track_id: int | None = None
+    cover_last_error: str | None = None
+    lyrics_last_error: str | None = None
+
+
+def get_metadata_status(
+    songs_path: Path,
+    metadata_dir: Path,
+) -> list[SongStatusRecord]:
+    """Cross-reference songs.json with metadata files to compute per-song status.
+
+    ``pending`` is a virtual status: songs in songs.json with NO entry in
+    song-metadata.json / song-lyrics.json are reported as ``pending``.
+
+    Args:
+        songs_path: Path to data/songs.json.
+        metadata_dir: Path to data/metadata/ directory.
+
+    Returns:
+        A list of :class:`SongStatusRecord`, one per song in songs.json,
+        in the same order as songs.json.
+    """
+    import json as _json
+
+    # Load songs
+    try:
+        raw = songs_path.read_text(encoding="utf-8")
+        all_songs: list[dict] = _json.loads(raw)
+    except (OSError, _json.JSONDecodeError):
+        all_songs = []
+    if not isinstance(all_songs, list):
+        all_songs = []
+
+    # Load metadata files
+    metadata_records = read_metadata_file(metadata_dir / "song-metadata.json")
+    lyrics_records = read_metadata_file(metadata_dir / "song-lyrics.json")
+
+    # Build lookup dicts
+    metadata_by_id: dict[str, dict] = {r["songId"]: r for r in metadata_records if "songId" in r}
+    lyrics_by_id: dict[str, dict] = {r["songId"]: r for r in lyrics_records if "songId" in r}
+
+    records: list[SongStatusRecord] = []
+    for song in all_songs:
+        song_id = song.get("id", "")
+        title = song.get("title", "")
+        artist = song.get("originalArtist", "")
+
+        meta = metadata_by_id.get(song_id)
+        lyric = lyrics_by_id.get(song_id)
+
+        # Cover status
+        if meta is None:
+            cover_status = "pending"
+            match_confidence = None
+            fetched_at = None
+            album_art_url = None
+            deezer_track_id = None
+            cover_last_error = None
+        else:
+            cover_status = meta.get("fetchStatus", "pending")
+            match_confidence = meta.get("matchConfidence")
+            raw_fetched = meta.get("fetchedAt")
+            # Extract date portion only (YYYY-MM-DD)
+            if raw_fetched:
+                fetched_at = raw_fetched[:10]
+            else:
+                fetched_at = None
+            album_art_url = meta.get("albumArtUrl")
+            deezer_track_id = meta.get("deezerTrackId")
+            cover_last_error = meta.get("lastError")
+
+        # Lyrics status
+        if lyric is None:
+            lyrics_status = "pending"
+            lyrics_last_error = None
+        else:
+            lyrics_status = lyric.get("fetchStatus", "pending")
+            lyrics_last_error = lyric.get("lastError")
+
+        records.append(SongStatusRecord(
+            song_id=song_id,
+            title=title,
+            original_artist=artist,
+            cover_status=cover_status,
+            lyrics_status=lyrics_status,
+            match_confidence=match_confidence,
+            fetched_at=fetched_at,
+            album_art_url=album_art_url,
+            deezer_track_id=deezer_track_id,
+            cover_last_error=cover_last_error,
+            lyrics_last_error=lyrics_last_error,
+        ))
+
+    return records
