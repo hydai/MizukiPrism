@@ -865,6 +865,226 @@ def candidates_reject_cmd(candidate_id: int) -> None:
 
 
 # ---------------------------------------------------------------------------
+# metadata  (implemented)
+# ---------------------------------------------------------------------------
+
+def _find_prism_root_from_cwd() -> "Path | None":
+    """Walk up from the current working directory to find MizukiPrism repo root."""
+    from pathlib import Path
+    candidate = Path.cwd().resolve()
+    for _ in range(20):
+        if (candidate / "data" / "songs.json").exists():
+            return candidate
+        parent = candidate.parent
+        if parent == candidate:
+            break
+        candidate = parent
+    return None
+
+
+@main.group("metadata")
+def metadata_group() -> None:
+    """Manage song metadata (album art, lyrics) fetched from external APIs.
+
+    \b
+    Subcommands:
+      fetch  — fetch metadata from Deezer (album art) and LRCLIB (lyrics)
+    """
+
+
+@metadata_group.command("fetch")
+@click.option("--missing", "mode", flag_value="missing", default=True,
+              help="Fetch songs without any metadata entry (default).")
+@click.option("--stale", "mode", flag_value="stale",
+              help="Re-fetch entries older than 90 days.")
+@click.option("--all", "mode", flag_value="all",
+              help="Re-fetch all songs (skips manual unless --force).")
+@click.option("--song", "song_id", type=str, default=None, metavar="ID",
+              help="Fetch a specific song by ID.")
+@click.option("--force", is_flag=True, default=False,
+              help="Allow overwriting manual entries.")
+@click.option("--lyrics-only", "lyrics_only", is_flag=True, default=False,
+              help="Only fetch lyrics from LRCLIB (skip Deezer).")
+@click.option("--art-only", "art_only", is_flag=True, default=False,
+              help="Only fetch album art from Deezer (skip LRCLIB).")
+def metadata_fetch_cmd(
+    mode: str,
+    song_id: str | None,
+    force: bool,
+    lyrics_only: bool,
+    art_only: bool,
+) -> None:
+    """Fetch album art and lyrics metadata from Deezer and LRCLIB.
+
+    \b
+    Examples:
+      mizukilens metadata fetch --missing       # new songs only (default)
+      mizukilens metadata fetch --stale         # re-fetch entries >90 days old
+      mizukilens metadata fetch --all           # re-fetch everything
+      mizukilens metadata fetch --song song-1   # fetch one specific song
+      mizukilens metadata fetch --art-only      # Deezer only
+      mizukilens metadata fetch --lyrics-only   # LRCLIB only
+    """
+    import sys
+    import json
+    from pathlib import Path
+    from datetime import datetime, timezone
+    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+    from rich.table import Table
+    from rich import box
+    from mizukilens.metadata import (
+        read_metadata_file,
+        fetch_song_metadata,
+        is_stale,
+        STALE_DAYS,
+    )
+
+    if lyrics_only and art_only:
+        console.print("[red]Error:[/red] --lyrics-only and --art-only cannot be used together.")
+        sys.exit(1)
+
+    # Determine fetch flags
+    do_deezer = not lyrics_only
+    do_lyrics = not art_only
+
+    # Locate MizukiPrism root
+    prism_root = _find_prism_root_from_cwd()
+    if prism_root is None:
+        console.print(
+            "[red]Error:[/red] Could not locate MizukiPrism project root "
+            "(expected data/songs.json). Run from inside the MizukiPrism directory."
+        )
+        sys.exit(1)
+
+    songs_path = prism_root / "data" / "songs.json"
+    metadata_dir = prism_root / "data" / "metadata"
+
+    # Load songs
+    try:
+        songs_text = songs_path.read_text(encoding="utf-8")
+        all_songs: list[dict] = json.loads(songs_text)
+    except (OSError, json.JSONDecodeError) as exc:
+        console.print(f"[red]Error:[/red] Could not read songs.json: {exc}")
+        sys.exit(1)
+
+    if not isinstance(all_songs, list):
+        console.print("[red]Error:[/red] songs.json must be a JSON array.")
+        sys.exit(1)
+
+    # Load existing metadata records for filtering
+    metadata_path = metadata_dir / "song-metadata.json"
+    existing_metadata: list[dict] = read_metadata_file(metadata_path)
+    existing_by_id: dict[str, dict] = {r["songId"]: r for r in existing_metadata if "songId" in r}
+
+    # Determine target songs
+    if song_id is not None:
+        # Single song mode
+        target_songs = [s for s in all_songs if s.get("id") == song_id]
+        if not target_songs:
+            console.print(f"[red]Error:[/red] Song ID [bold]{song_id}[/bold] not found in songs.json.")
+            sys.exit(1)
+    elif mode == "missing":
+        target_songs = [s for s in all_songs if s.get("id") not in existing_by_id]
+    elif mode == "stale":
+        target_songs = [
+            s for s in all_songs
+            if s.get("id") in existing_by_id and is_stale(existing_by_id[s["id"]])
+        ]
+    elif mode == "all":
+        if force:
+            target_songs = list(all_songs)
+        else:
+            # Skip manual entries unless --force
+            target_songs = [
+                s for s in all_songs
+                if existing_by_id.get(s.get("id", ""), {}).get("fetchStatus") != "manual"
+            ]
+    else:
+        target_songs = []
+
+    if not target_songs:
+        console.print("[dim]No songs to fetch. Nothing to do.[/dim]")
+        return
+
+    console.print(f"[cyan]Fetching metadata for[/cyan] [bold]{len(target_songs)}[/bold] songs...")
+    if not do_deezer:
+        console.print("[dim](Lyrics only — Deezer skipped)[/dim]")
+    if not do_lyrics:
+        console.print("[dim](Art only — LRCLIB skipped)[/dim]")
+
+    # --- Fetch with progress bar ---
+    matched = 0
+    no_match = 0
+    errored = 0
+    skipped_count = 0
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        console=console,
+        transient=True,
+    ) as progress:
+        task = progress.add_task("Fetching...", total=len(target_songs))
+
+        for i, song in enumerate(target_songs):
+            title = song.get("title", "")
+            artist = song.get("originalArtist", "")
+            progress.update(
+                task,
+                advance=0,
+                description=f"[{i + 1}/{len(target_songs)}] {artist} — {title}",
+            )
+
+            try:
+                result = fetch_song_metadata(
+                    song=song,
+                    metadata_dir=metadata_dir,
+                    fetch_deezer=do_deezer,
+                    fetch_lyrics=do_lyrics,
+                )
+            except Exception as exc:  # noqa: BLE001
+                console.print(f"\n[red]Unexpected error[/red] for song {song.get('id')}: {exc}")
+                errored += 1
+                progress.advance(task)
+                continue
+
+            status = result.overall_status
+            if status == "matched":
+                matched += 1
+            elif status == "no_match":
+                no_match += 1
+            elif status == "error":
+                errored += 1
+            elif status == "skipped":
+                skipped_count += 1
+
+            progress.advance(task)
+
+    console.print()
+
+    # --- Summary table ---
+    tbl = Table(
+        title="Metadata Fetch Summary",
+        box=box.ROUNDED,
+        show_header=True,
+        header_style="bold cyan",
+    )
+    tbl.add_column("Result", style="bold")
+    tbl.add_column("Count", justify="right")
+
+    tbl.add_row("[green]Matched[/green]", str(matched))
+    tbl.add_row("[yellow]No match[/yellow]", str(no_match))
+    tbl.add_row("[red]Error[/red]", str(errored))
+    tbl.add_row("[dim]Skipped[/dim]", str(skipped_count))
+    tbl.add_section()
+    tbl.add_row("[bold]Total[/bold]", f"[bold]{len(target_songs)}[/bold]")
+
+    console.print(tbl)
+
+
+# ---------------------------------------------------------------------------
 # cache  (implemented)
 # ---------------------------------------------------------------------------
 
