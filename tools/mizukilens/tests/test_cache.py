@@ -97,8 +97,8 @@ class TestDatabaseCreation:
         cur = db.execute("PRAGMA table_info(streams)")
         columns = {row["name"] for row in cur.fetchall()}
         expected = {
-            "video_id", "channel_id", "title", "date", "status",
-            "source", "raw_comment", "raw_description",
+            "video_id", "channel_id", "title", "date", "date_source",
+            "status", "source", "raw_comment", "raw_description",
             "comment_author", "comment_author_url", "comment_id",
             "created_at", "updated_at",
         }
@@ -880,3 +880,148 @@ class TestCandidateComments:
         save_candidate_comments(db, "cv8", candidates)
         row = list_candidate_comments(db, video_id="cv8")[0]
         assert row["keywords_matched"] == "歌單,Songlist"
+
+
+# ===========================================================================
+# SECTION: date_source column and protection (fix VOD dates)
+# ===========================================================================
+
+
+class TestDateSource:
+    """Tests for the date_source column, migration, and protection logic."""
+
+    def test_new_db_has_date_source_column(self, db: sqlite3.Connection) -> None:
+        cur = db.execute("PRAGMA table_info(streams)")
+        columns = {row["name"] for row in cur.fetchall()}
+        assert "date_source" in columns
+
+    def test_upsert_stream_stores_date_source(self, db: sqlite3.Connection) -> None:
+        upsert_stream(
+            db,
+            video_id="ds01",
+            status="discovered",
+            date="2024-03-15",
+            date_source="relative",
+        )
+        stream = get_stream(db, "ds01")
+        assert stream["date_source"] == "relative"
+
+    def test_upsert_stream_date_source_defaults_null(self, db: sqlite3.Connection) -> None:
+        upsert_stream(db, video_id="ds02", status="discovered")
+        stream = get_stream(db, "ds02")
+        assert stream["date_source"] is None
+
+    def test_upsert_preserves_precise_date(self, db: sqlite3.Connection) -> None:
+        """Re-upserting with a relative date should not overwrite a precise date."""
+        upsert_stream(
+            db,
+            video_id="ds03",
+            status="discovered",
+            date="2024-03-15",
+            date_source="precise",
+        )
+        # Re-upsert with a relative date
+        upsert_stream(
+            db,
+            video_id="ds03",
+            status="discovered",
+            date="2024-03-10",
+            date_source="relative",
+        )
+        stream = get_stream(db, "ds03")
+        assert stream["date"] == "2024-03-15"
+        assert stream["date_source"] == "precise"
+
+    def test_upsert_allows_precise_to_overwrite_relative(self, db: sqlite3.Connection) -> None:
+        """A precise date can overwrite a relative date."""
+        upsert_stream(
+            db,
+            video_id="ds04",
+            status="discovered",
+            date="2024-03-10",
+            date_source="relative",
+        )
+        upsert_stream(
+            db,
+            video_id="ds04",
+            status="discovered",
+            date="2024-03-15",
+            date_source="precise",
+        )
+        stream = get_stream(db, "ds04")
+        assert stream["date"] == "2024-03-15"
+        assert stream["date_source"] == "precise"
+
+    def test_upsert_null_date_source_does_not_overwrite_precise(
+        self, db: sqlite3.Connection
+    ) -> None:
+        """Upserting with date_source=None should not overwrite a precise date."""
+        upsert_stream(
+            db,
+            video_id="ds05",
+            status="discovered",
+            date="2024-03-15",
+            date_source="precise",
+        )
+        upsert_stream(
+            db,
+            video_id="ds05",
+            status="discovered",
+            date="2024-03-10",
+        )
+        stream = get_stream(db, "ds05")
+        assert stream["date"] == "2024-03-15"
+        assert stream["date_source"] == "precise"
+
+    def test_migration_adds_date_source_to_old_db(self, tmp_path: Path) -> None:
+        """Simulate an old DB without date_source, then reopen."""
+        db_path = tmp_path / "old_no_date_source.db"
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON;")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS streams (
+                video_id         TEXT PRIMARY KEY,
+                channel_id       TEXT,
+                title            TEXT,
+                date             TEXT,
+                status           TEXT NOT NULL,
+                source           TEXT,
+                raw_comment      TEXT,
+                raw_description  TEXT,
+                comment_author   TEXT,
+                comment_author_url TEXT,
+                comment_id       TEXT,
+                created_at       TEXT NOT NULL,
+                updated_at       TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS parsed_songs (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                video_id         TEXT NOT NULL REFERENCES streams(video_id) ON DELETE CASCADE,
+                order_index      INTEGER NOT NULL,
+                song_name        TEXT NOT NULL,
+                artist           TEXT,
+                start_timestamp  TEXT NOT NULL,
+                end_timestamp    TEXT,
+                note             TEXT
+            )
+        """)
+        conn.execute(
+            "INSERT INTO streams (video_id, status, date, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            ("old_vid", "discovered", "2024-01-01", "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z"),
+        )
+        conn.commit()
+        conn.close()
+
+        # Reopen with open_db → migration should add date_source
+        conn2 = open_db(db_path)
+        cur = conn2.execute("PRAGMA table_info(streams)")
+        columns = {row["name"] for row in cur.fetchall()}
+        assert "date_source" in columns
+
+        stream = get_stream(conn2, "old_vid")
+        assert stream["date_source"] is None
+        conn2.close()

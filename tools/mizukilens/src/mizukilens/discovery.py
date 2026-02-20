@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import re
 import sqlite3
+import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Generator
@@ -45,12 +47,14 @@ class FetchResult:
     total: int = 0     # new + existing + skipped keywords
     skipped: int = 0   # failed keyword filter (keyword_only mode only)
     partial: bool = False  # True if a network error interrupted the run
+    dates_resolved: int = 0  # precise dates fetched via yt-dlp
 
     def summary_line(self) -> str:
         """Return a human-readable summary string (Japanese + English)."""
-        return (
-            f"新發現 {self.new} 場、已存在 {self.existing} 場、總計 {self.total} 場"
-        )
+        line = f"新發現 {self.new} 場、已存在 {self.existing} 場、總計 {self.total} 場"
+        if self.dates_resolved > 0:
+            line += f"、日付解決 {self.dates_resolved} 件"
+        return line
 
 
 # ---------------------------------------------------------------------------
@@ -291,6 +295,85 @@ def _video_date_in_range(
 
 
 # ---------------------------------------------------------------------------
+# Precise date resolution via yt-dlp
+# ---------------------------------------------------------------------------
+
+
+def resolve_precise_dates(
+    conn: sqlite3.Connection,
+    video_ids: list[str] | None = None,
+    *,
+    progress_callback: Callable[[str, str | None], None] | None = None,
+) -> int:
+    """Fetch precise upload dates for streams via ``yt-dlp``.
+
+    Parameters
+    ----------
+    conn:
+        Open SQLite connection.
+    video_ids:
+        Specific video IDs to resolve.  When *None*, resolves all streams
+        whose ``date_source`` is not ``'precise'``.
+    progress_callback:
+        Called with ``(video_id, formatted_date_or_none)`` after each attempt.
+
+    Returns
+    -------
+    int
+        Number of successfully updated dates.
+    """
+    if video_ids is None:
+        cur = conn.execute(
+            "SELECT video_id FROM streams "
+            "WHERE date_source IS NULL OR date_source != 'precise'"
+        )
+        video_ids = [row["video_id"] for row in cur.fetchall()]
+
+    if not video_ids:
+        return 0
+
+    from mizukilens.cache import _now_iso
+
+    updated = 0
+    for vid in video_ids:
+        formatted_date: str | None = None
+        try:
+            proc = subprocess.run(
+                [
+                    "yt-dlp",
+                    "--skip-download",
+                    "--no-warnings",
+                    "--print", "upload_date",
+                    f"https://www.youtube.com/watch?v={vid}",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if proc.returncode == 0:
+                raw = proc.stdout.strip()
+                # yt-dlp outputs YYYYMMDD
+                if re.fullmatch(r"\d{8}", raw):
+                    formatted_date = f"{raw[:4]}-{raw[4:6]}-{raw[6:8]}"
+        except (subprocess.TimeoutExpired, OSError):
+            pass  # skip on failure
+
+        if formatted_date:
+            conn.execute(
+                "UPDATE streams SET date = ?, date_source = 'precise', "
+                "updated_at = ? WHERE video_id = ?",
+                (formatted_date, _now_iso(), vid),
+            )
+            conn.commit()
+            updated += 1
+
+        if progress_callback:
+            progress_callback(vid, formatted_date)
+
+    return updated
+
+
+# ---------------------------------------------------------------------------
 # Main fetch function
 # ---------------------------------------------------------------------------
 
@@ -354,6 +437,7 @@ def fetch_streams(
     from mizukilens.cache import get_stream, upsert_stream
 
     result = FetchResult()
+    newly_discovered: list[str] = []
 
     # Determine scrapetube content_type
     content_type = "videos" if use_keyword_filter else "streams"
@@ -449,11 +533,13 @@ def fetch_streams(
                 channel_id=channel_id_str,
                 title=title,
                 date=parsed_date,
+                date_source="relative",
                 status="discovered",
                 source="scrapetube",
             )
             result.new += 1
             result.total += 1
+            newly_discovered.append(video_id)
             if progress_callback:
                 progress_callback(info)
             videos_seen += 1
@@ -470,5 +556,11 @@ def fetch_streams(
             result.partial = True
             raise NetworkError(f"ネットワークエラーが発生しました: {exc}") from exc
         raise
+
+    if newly_discovered:
+        try:
+            result.dates_resolved = resolve_precise_dates(conn, newly_discovered)
+        except Exception:  # noqa: BLE001
+            pass  # Non-fatal: relative dates are acceptable fallback
 
     return result

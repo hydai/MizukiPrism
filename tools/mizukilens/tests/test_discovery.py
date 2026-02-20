@@ -883,3 +883,178 @@ class TestFetchCmdCli:
             result = runner.invoke(main, ["fetch", "--all"], catch_exceptions=False)
 
         assert result.exit_code != 0 or "設定" in result.output or "エラー" in result.output
+
+
+# ---------------------------------------------------------------------------
+# 12. resolve_precise_dates
+# ---------------------------------------------------------------------------
+
+
+class TestResolvePreciseDates:
+    """Tests for yt-dlp-based precise date resolution."""
+
+    def test_resolve_success(self, mem_db: sqlite3.Connection) -> None:
+        """Successfully resolves a date via yt-dlp mock."""
+        from mizukilens.cache import upsert_stream
+        from mizukilens.discovery import resolve_precise_dates
+
+        upsert_stream(
+            mem_db, video_id="vid_resolve1", status="discovered",
+            date="2024-03-10", date_source="relative",
+        )
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = "20240315\n"
+
+        with patch("mizukilens.discovery.subprocess.run", return_value=mock_proc):
+            count = resolve_precise_dates(mem_db, ["vid_resolve1"])
+
+        assert count == 1
+        stream = get_stream(mem_db, "vid_resolve1")
+        assert stream["date"] == "2024-03-15"
+        assert stream["date_source"] == "precise"
+
+    def test_resolve_partial_failure(self, mem_db: sqlite3.Connection) -> None:
+        """One video succeeds, one fails — only the successful one is updated."""
+        from mizukilens.cache import upsert_stream
+        from mizukilens.discovery import resolve_precise_dates
+
+        upsert_stream(
+            mem_db, video_id="vid_ok", status="discovered",
+            date="2024-01-01", date_source="relative",
+        )
+        upsert_stream(
+            mem_db, video_id="vid_fail", status="discovered",
+            date="2024-01-02", date_source="relative",
+        )
+
+        def mock_run(cmd, **kwargs):
+            vid = cmd[-1].split("=")[-1]
+            result = MagicMock()
+            if vid == "vid_ok":
+                result.returncode = 0
+                result.stdout = "20240315\n"
+            else:
+                result.returncode = 1
+                result.stdout = ""
+            return result
+
+        with patch("mizukilens.discovery.subprocess.run", side_effect=mock_run):
+            count = resolve_precise_dates(mem_db, ["vid_ok", "vid_fail"])
+
+        assert count == 1
+        assert get_stream(mem_db, "vid_ok")["date"] == "2024-03-15"
+        assert get_stream(mem_db, "vid_ok")["date_source"] == "precise"
+        assert get_stream(mem_db, "vid_fail")["date"] == "2024-01-02"
+        assert get_stream(mem_db, "vid_fail")["date_source"] == "relative"
+
+    def test_resolve_timeout(self, mem_db: sqlite3.Connection) -> None:
+        """Subprocess timeout is handled gracefully."""
+        from mizukilens.cache import upsert_stream
+        from mizukilens.discovery import resolve_precise_dates
+        import subprocess as sp
+
+        upsert_stream(
+            mem_db, video_id="vid_timeout", status="discovered",
+            date="2024-01-01", date_source="relative",
+        )
+
+        with patch(
+            "mizukilens.discovery.subprocess.run",
+            side_effect=sp.TimeoutExpired("yt-dlp", 30),
+        ):
+            count = resolve_precise_dates(mem_db, ["vid_timeout"])
+
+        assert count == 0
+        stream = get_stream(mem_db, "vid_timeout")
+        assert stream["date"] == "2024-01-01"
+        assert stream["date_source"] == "relative"
+
+    def test_resolve_empty_list(self, mem_db: sqlite3.Connection) -> None:
+        """Empty video list returns 0 without calling subprocess."""
+        from mizukilens.discovery import resolve_precise_dates
+
+        with patch("mizukilens.discovery.subprocess.run") as mock_run:
+            count = resolve_precise_dates(mem_db, [])
+
+        assert count == 0
+        mock_run.assert_not_called()
+
+    def test_resolve_auto_selects_imprecise(self, mem_db: sqlite3.Connection) -> None:
+        """When video_ids=None, only non-precise streams are selected."""
+        from mizukilens.cache import upsert_stream
+        from mizukilens.discovery import resolve_precise_dates
+
+        upsert_stream(
+            mem_db, video_id="vid_precise", status="discovered",
+            date="2024-03-15", date_source="precise",
+        )
+        upsert_stream(
+            mem_db, video_id="vid_relative", status="discovered",
+            date="2024-01-01", date_source="relative",
+        )
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = "20240220\n"
+
+        with patch("mizukilens.discovery.subprocess.run", return_value=mock_proc) as mock_run:
+            count = resolve_precise_dates(mem_db, None)
+
+        assert count == 1
+        # Only vid_relative should have been processed
+        assert mock_run.call_count == 1
+        assert get_stream(mem_db, "vid_precise")["date"] == "2024-03-15"
+        assert get_stream(mem_db, "vid_relative")["date"] == "2024-02-20"
+
+    def test_progress_callback_called(self, mem_db: sqlite3.Connection) -> None:
+        """Progress callback receives (video_id, date_or_none)."""
+        from mizukilens.cache import upsert_stream
+        from mizukilens.discovery import resolve_precise_dates
+
+        upsert_stream(
+            mem_db, video_id="vid_cb", status="discovered",
+            date="2024-01-01", date_source="relative",
+        )
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = "20240315\n"
+
+        calls: list[tuple[str, str | None]] = []
+
+        with patch("mizukilens.discovery.subprocess.run", return_value=mock_proc):
+            resolve_precise_dates(
+                mem_db, ["vid_cb"], progress_callback=lambda v, d: calls.append((v, d))
+            )
+
+        assert len(calls) == 1
+        assert calls[0] == ("vid_cb", "2024-03-15")
+
+
+# ---------------------------------------------------------------------------
+# 13. fetch_streams sets date_source="relative"
+# ---------------------------------------------------------------------------
+
+
+class TestFetchStreamsDateSource:
+    """Tests that fetch_streams marks dates as relative."""
+
+    def test_new_streams_get_relative_date_source(self, mem_db: sqlite3.Connection) -> None:
+        """New streams discovered via scrapetube get date_source='relative'."""
+        videos = [_make_video("vid_ds1", "歌回テスト", "3 days ago")]
+
+        with patch("scrapetube.get_channel", return_value=iter(videos)):
+            with patch("mizukilens.discovery.resolve_precise_dates", return_value=0):
+                result = fetch_streams(
+                    mem_db,
+                    channel_id="UCtest",
+                    channel_id_str="UCtest",
+                    keywords=[],
+                    fetch_all=True,
+                )
+
+        assert result.new == 1
+        stream = get_stream(mem_db, "vid_ds1")
+        assert stream["date_source"] == "relative"
