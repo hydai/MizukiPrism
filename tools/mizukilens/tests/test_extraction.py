@@ -1326,3 +1326,102 @@ class TestKeywordCandidates:
 
         with pytest.raises(ValueError, match="belongs to video"):
             extract_from_candidate(db, "cand_vid3b", cand_id)
+
+
+# ---------------------------------------------------------------------------
+# §10  Tree-drawing formatted songlists
+# ---------------------------------------------------------------------------
+
+
+class TestTreeDrawingParseSongLine:
+    """Tests for tree-drawing character stripping in :func:`parse_song_line`."""
+
+    def test_tree_char_prefix_stripped(self):
+        """├ with numbered timestamp line should parse correctly."""
+        result = parse_song_line(" ├ 55. 0:19:14   Rain On Me / Lady Gaga & Ariana Grande")
+        assert result is not None
+        assert result["start_seconds"] == 1154  # 19*60 + 14
+        assert result["song_name"] == "Rain On Me"
+        assert result["artist"] == "Lady Gaga & Ariana Grande"
+
+    def test_tree_char_end_branch(self):
+        """└ variant should also be stripped."""
+        result = parse_song_line(" └ 53. 4:14:18   夜に駆ける / YOASOBI")
+        assert result is not None
+        assert result["start_seconds"] == 15258  # 4*3600 + 14*60 + 18
+        assert result["song_name"] == "夜に駆ける"
+        assert result["artist"] == "YOASOBI"
+
+    def test_tree_char_with_jp_content(self):
+        """Japanese song with tree prefix parses correctly."""
+        result = parse_song_line(" ├ 1. 0:02:30   打上花火 / DAOKO×米津玄師")
+        assert result is not None
+        assert result["start_seconds"] == 150
+        assert result["song_name"] == "打上花火"
+        assert result["artist"] == "DAOKO×米津玄師"
+
+    def test_tree_char_only_line_returns_none(self):
+        """Lines with only tree-drawing characters return None."""
+        assert parse_song_line(" ├──────────────── ") is None
+        assert parse_song_line("│  │") is None
+        assert parse_song_line("└───┘") is None
+
+    def test_performer_header_still_returns_none(self):
+        """Performer headers with lenticular brackets should still return None."""
+        assert parse_song_line("『玥Itsuki』") is None
+        assert parse_song_line("『穆克蕗』4:22:07") is None
+
+
+class TestTreeDrawingParseTextToSongs:
+    """Tests for tree-drawing formatted multi-line songlists."""
+
+    def test_tree_drawing_songlist_format(self):
+        """Multi-line parse with performer headers interleaved."""
+        text = (
+            "『Singer A』0:00:00\n"
+            " ├ 1. 0:02:30   Song One / Artist A\n"
+            " ├ 2. 0:06:15   Song Two / Artist B\n"
+            " └ 3. 0:10:00   Song Three / Artist C\n"
+            "『Singer B』0:30:00\n"
+            " ├ 4. 0:32:00   Song Four / Artist D\n"
+            " └ 5. 0:36:45   Song Five / Artist E\n"
+        )
+        songs = parse_text_to_songs(text)
+        assert len(songs) == 5
+        assert songs[0]["song_name"] == "Song One"
+        assert songs[0]["artist"] == "Artist A"
+        assert songs[0]["start_seconds"] == 150  # 2:30
+        assert songs[1]["start_seconds"] == 375  # 6:15
+        assert songs[4]["song_name"] == "Song Five"
+        assert songs[4]["start_seconds"] == 2205  # 36:45
+
+
+class TestTreeDrawingIntegration:
+    """End-to-end integration test for tree-drawing formatted comments."""
+
+    def test_tree_drawing_comment_extracts_end_to_end(self, db):
+        """Full pipeline: tree-drawing comment → extracted status with songs."""
+        _add_stream(db, "vid_tree")
+        text = (
+            "『玥Itsuki』0:00:00\n"
+            " ├ 1. 0:02:30   打上花火 / DAOKO×米津玄師\n"
+            " ├ 2. 0:06:15   Lemon / 米津玄師\n"
+            " └ 3. 0:10:00   Pretender / Official髭男dism\n"
+            "『穆克蕗』0:30:00\n"
+            " ├ 4. 0:32:00   夜に駆ける / YOASOBI\n"
+            " └ 5. 0:36:45   廻廻奇譚 / Eve\n"
+        )
+        comments = [_make_comment_dict(text, votes="50")]
+
+        result = extract_timestamps(db, "vid_tree", comment_generator=iter(comments))
+
+        assert result.status == "extracted"
+        assert result.source == "comment"
+        assert len(result.songs) == 5
+        assert result.songs[0]["song_name"] == "打上花火"
+        assert result.songs[0]["artist"] == "DAOKO×米津玄師"
+        assert result.songs[0]["start_seconds"] == 150
+        assert result.songs[3]["song_name"] == "夜に駆ける"
+        assert result.songs[3]["artist"] == "YOASOBI"
+        assert result.songs[4]["song_name"] == "廻廻奇譚"
+        assert result.songs[4]["start_seconds"] == 2205

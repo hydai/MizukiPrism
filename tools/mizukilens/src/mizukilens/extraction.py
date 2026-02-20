@@ -193,6 +193,11 @@ def parse_song_line(line: str) -> dict[str, Any] | None:
     if not line:
         return None
 
+    # Strip leading box-drawing / tree-formatting characters (├ └ │ ─ etc.)
+    line = re.sub(r"^[\u2500-\u257F\s]+", "", line)
+    if not line:
+        return None
+
     # Strip common numbering prefixes: "01. ", "1) ", "#3 "
     line = re.sub(r"^(?:\d+\.\s*|\d+\)\s+|#\d+\s+)", "", line)
 
