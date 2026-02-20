@@ -643,10 +643,7 @@ class ReviewApp(App[None]):
             status = stream["status"] or "discovered"
             icon = STATUS_ICONS.get(status, "?")
             date = stream["date"] or "日付不明"
-            if stream["date"] and (
-                not stream.get("date_source")
-                or stream["date_source"] != "precise"
-            ):
+            if stream["date"] and stream["date_source"] != "precise":
                 date = f"{date}~"
             title = stream["title"] or stream["video_id"] or "タイトル不明"
             # Truncate title for display
