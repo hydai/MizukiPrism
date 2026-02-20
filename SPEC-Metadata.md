@@ -138,11 +138,15 @@ MizukiPrism Metadata Integration 透過外部 API（Deezer、LRCLIB）自動為�
 
 | 狀態 | 操作 | 結果 |
 |------|------|------|
-| 歌曲無歌詞 | 策展人透過 CLI 觸發擷取 | 以 `artist_name=${originalArtist}&track_name=${title}` 搜尋 LRCLIB `/api/search` |
-| 搜尋有結果 | — | 優先取 `syncedLyrics` 不為空的結果；若無同步歌詞，取 `plainLyrics`；儲存至靜態 JSON |
+| 歌曲無歌詞 | 策展人透過 CLI 觸發擷取 | 以 `artist_name=${originalArtist}&track_name=${title}` 搜尋 LRCLIB `/api/search`（見下方搜尋策略說明） |
+| 搜尋有結果 | — | 取第一筆 `syncedLyrics` 不為空的結果；若所有結果皆無同步歌詞，取第一筆的 `plainLyrics`；儲存至靜態 JSON |
 | 搜尋無結果 | — | 標記 `fetchStatus: 'no_match'`，歌詞區顯示佔位文字 |
-| API 錯誤 | — | 標記 `fetchStatus: 'error'`，下次觸發時重試 |
+| API 錯誤 | — | 標記 `fetchStatus: 'error'`，記錄錯誤訊息至 `lastError`，下次觸發時重試 |
 | 策展人手動覆寫 | 貼上自訂歌詞文字 | 標記 `fetchStatus: 'manual'`，不再自動覆寫 |
+
+##### 搜尋策略
+
+LRCLIB 採用單一搜尋策略而非 Deezer 的多層回退，原因為：LRCLIB `/api/search` 端點本身支援模糊匹配，且歌詞資料的精確度要求高於封面——錯誤匹配的歌詞比缺少歌詞更糟。若單一搜尋無結果，直接標記 `no_match`，由策展人透過 `metadata override --lyrics` 手動補充。
 
 ##### LRC 格式解析
 
@@ -190,12 +194,20 @@ data/
 | 頁面載入 | 前端 fetch `/data/metadata/song-metadata.json`，將 `albumArtUrl` 客戶端合併至歌曲列表 |
 | 歌曲播放 | 前端 fetch `/data/metadata/song-lyrics.json`（延遲載入，首次開啟歌詞面板時觸發），以 songId 查詢歌詞 |
 
-> **歌詞檔案策略**：使用單一 `song-lyrics.json` 而非逐首歌曲建立檔案。預估 ~2000 首歌曲 × ~3KB 平均 ≈ 3–5MB，僅在歌詞面板開啟時延遲載入。逐首建立檔案會在 git 中產生數千個檔案。
+歌詞以單一 `song-lyrics.json` 儲存而非逐首建立檔案，以控制 git 檔案數量。預估規模：~2000 首歌曲 × ~3KB ≈ 3–5MB，僅在歌詞面板開啟時延遲載入。
 
 ##### 資料一致性
 
 - 刪除歌曲時，策展人應透過 `metadata clear <id>` 移除對應的 SongMetadata 與 SongLyrics 條目
 - 歌曲的 `originalArtist` 或 `title` 被策展人修改時，現有後設資料**不自動更新**（避免覆寫手動覆寫的資料），策展人可透過 CLI 手動觸發重新擷取
+
+##### `pending` 狀態語意
+
+`pending` 為虛擬狀態：尚無後設資料的歌曲在 `song-metadata.json` 中**不存在任何條目**。CLI 的 `metadata status --filter pending` 透過比對 `songs.json` 與 `song-metadata.json` 計算出缺少條目的歌曲，將其顯示為 `pending`。`metadata fetch --missing` 同樣以此差集作為擷取目標。
+
+##### ArtistInfo 生命週期
+
+ArtistInfo 在擷取 SongMetadata 時一併建立或更新（同一次 Deezer API 呼叫的回傳資料）。`metadata clear` 僅移除 SongMetadata 與 SongLyrics 條目，不清除 ArtistInfo——ArtistInfo 為多首歌曲共用的資源，保留不影響正確性。若需完整重建，策展人可手動刪除 `artist-info.json` 後執行 `metadata fetch --all`。
 
 #### 3.1.4 專輯封面顯示（Album Art Display）
 
@@ -311,6 +323,8 @@ mizukilens metadata override SONG_ID [--album-art-url URL] [--lyrics FILE]
 | `--album-art-url URL` | 手動指定專輯封面 URL |
 | `--lyrics FILE` | 手動指定歌詞檔案（LRC 或純文字） |
 
+格式偵測：若檔案內容包含至少一行符合 `[MM:SS.xx]` 時間戳格式，視為 LRC 同步歌詞並存入 `syncedLyrics`；否則視為純文字歌詞並存入 `plainLyrics`。
+
 結果：標記 `fetchStatus: 'manual'`，`matchConfidence: 'manual'`，後續自動擷取不覆寫。
 
 **`mizukilens metadata clear`** — 清除後設資料
@@ -357,6 +371,7 @@ mizukilens metadata clear SONG_ID [--all] [--force]
 | Deezer API 免驗證 | Deezer Search API 無需 API key 或 OAuth，公開存取 |
 | LRCLIB API 免驗證 | LRCLIB API 無需 API key，公開存取 |
 | J-POP 覆蓋率 | Deezer 的日本音樂覆蓋率高但非 100%；部分獨立或同人曲目可能無法匹配 |
+| LRCLIB 多語言支援 | LRCLIB API 支援以日文原唱者名稱與歌名搜尋；若匹配率不佳，策展人可透過 `metadata override --lyrics` 手動補充 |
 | 原唱者一致性 | 搜尋以策展人維護的 `originalArtist` 為準，拼寫差異可能影響匹配率 |
 | 圖片 URL 有效性 | Deezer 提供的圖片 URL 長期有效，但不保證永久；90 天過期重新擷取可緩解此風險 |
 | 檔案規模 | 預期歌曲數量在 ~2000 首以內，三個 JSON 靜態檔案總大小預估 <5 MB |
@@ -375,7 +390,7 @@ mizukilens metadata clear SONG_ID [--all] [--force]
 | 歌曲歌詞 | SongLyrics | 從 LRCLIB API 擷取的歌詞資料，可為同步歌詞（LRC 格式）或純文字。每首歌曲最多一筆。 |
 | 原唱者資訊 | ArtistInfo | 從 Deezer API 擷取的原唱者相關資訊，包含圖片 URL。以正規化的原唱者名稱為鍵，多首歌曲可共用同一筆。 |
 | 歌詞行 | LyricLine | 同步歌詞中的一行，包含時間戳（秒）與歌詞文字。 |
-| 擷取狀態 | fetchStatus | 後設資料的擷取結果狀態：`matched`（已匹配）、`no_match`（無匹配）、`error`（擷取失敗）、`manual`（手動覆寫）、`pending`（尚未擷取）。 |
+| 擷取狀態 | fetchStatus | 後設資料的擷取結果狀態：`matched`（已匹配）、`no_match`（無匹配）、`error`（擷取失敗）、`manual`（手動覆寫）。`pending`（尚未擷取）為虛擬狀態，表示歌曲在靜態檔案中無對應條目。 |
 | 匹配信心度 | matchConfidence | 搜尋結果與原曲的匹配程度：`exact`（結構化搜尋命中）、`fuzzy`（回退策略命中）、`manual`（手動覆寫）。 |
 | 過期 | stale | 靜態檔案條目的 `fetchedAt` 距今超過 90 天，建議重新擷取。 |
 | 靜態合併 | static merge | 前端在客戶端將 `song-metadata.json` 的資料合併至歌曲列表，不依賴伺服器端合併。 |
@@ -453,9 +468,9 @@ normalizeArtist(name: string): string
 | 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
 | songId | string | 是 | 對應的歌曲 ID（與 Song.id 對應） |
-| fetchStatus | `'matched' \| 'no_match' \| 'error' \| 'manual' \| 'pending'` | 是 | 擷取狀態 |
+| fetchStatus | `'matched' \| 'no_match' \| 'error' \| 'manual'` | 是 | 擷取狀態（`pending` 為虛擬狀態，見 §3.1.3） |
 | matchConfidence | `'exact' \| 'fuzzy' \| 'manual' \| null` | 否 | 匹配信心度，`fetchStatus` 非 `matched` 或 `manual` 時為 `null` |
-| albumArtUrl | string | 否 | 專輯封面 URL，固定為 `albumArtUrls.xl`（1000px）的便利別名 |
+| albumArtUrl | string | 否 | 專輯封面 URL（儲存值，寫入時由 CLI 複製自 `albumArtUrls.xl`），供前端合併時直接使用，避免逐次存取巢狀物件 |
 | albumArtUrls | `{ small: string; medium: string; big: string; xl: string }` | 否 | 各尺寸專輯封面 URL |
 | albumTitle | string | 否 | 專輯名稱 |
 | deezerTrackId | number | 否 | Deezer 曲目 ID（供除錯與回溯） |
@@ -471,7 +486,7 @@ normalizeArtist(name: string): string
 | 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
 | songId | string | 是 | 對應的歌曲 ID |
-| fetchStatus | `'matched' \| 'no_match' \| 'error' \| 'manual' \| 'pending'` | 是 | 擷取狀態 |
+| fetchStatus | `'matched' \| 'no_match' \| 'error' \| 'manual'` | 是 | 擷取狀態（`pending` 為虛擬狀態，見 §3.1.3） |
 | syncedLyrics | string | 否 | LRC 格式的同步歌詞原始文字 |
 | plainLyrics | string | 否 | 純文字歌詞 |
 | fetchedAt | string | 是 | 最後擷取時間（ISO 8601） |
@@ -544,7 +559,7 @@ normalizeArtist(name: string): string
 |------|------|
 | `SONG_ID` | 目標歌曲 ID（必填） |
 | `--album-art-url URL` | 手動封面 URL |
-| `--lyrics FILE` | 手動歌詞檔案（LRC 或純文字） |
+| `--lyrics FILE` | 手動歌詞檔案（含 `[MM:SS.xx]` 時間戳視為 LRC，否則視為純文字） |
 
 行為：標記 `fetchStatus: 'manual'`，`matchConfidence: 'manual'`。
 
