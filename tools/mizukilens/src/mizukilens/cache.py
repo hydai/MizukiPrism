@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS streams (
     channel_id          TEXT,
     title               TEXT,
     date                TEXT,
+    date_source         TEXT,
     status              TEXT NOT NULL,
     source              TEXT,
     raw_comment         TEXT,
@@ -186,6 +187,12 @@ def _init_schema(conn: sqlite3.Connection) -> None:
         except sqlite3.OperationalError:
             pass  # column already exists
 
+    # Migration: add date_source column to track date precision.
+    try:
+        conn.execute("ALTER TABLE streams ADD COLUMN date_source TEXT")
+    except sqlite3.OperationalError:
+        pass  # column already exists
+
     conn.commit()
 
 
@@ -221,6 +228,7 @@ def upsert_stream(
     channel_id: str | None = None,
     title: str | None = None,
     date: str | None = None,
+    date_source: str | None = None,
     status: str,
     source: str | None = None,
     raw_comment: str | None = None,
@@ -234,6 +242,10 @@ def upsert_stream(
     On conflict (same *video_id*), updates all provided fields and bumps
     ``updated_at``.  The ``created_at`` field is only set on first insertion.
 
+    When *date_source* is ``"precise"``, the date is considered authoritative.
+    A subsequent upsert with a non-precise source will not overwrite a precise
+    date or date_source.
+
     Raises:
         ValueError: If *status* is not in :data:`VALID_STATUSES`.
     """
@@ -244,19 +256,30 @@ def upsert_stream(
     conn.execute(
         """
         INSERT INTO streams
-            (video_id, channel_id, title, date, status, source,
+            (video_id, channel_id, title, date, date_source, status, source,
              raw_comment, raw_description,
              comment_author, comment_author_url, comment_id,
              created_at, updated_at)
         VALUES
-            (:video_id, :channel_id, :title, :date, :status, :source,
+            (:video_id, :channel_id, :title, :date, :date_source, :status, :source,
              :raw_comment, :raw_description,
              :comment_author, :comment_author_url, :comment_id,
              :now, :now)
         ON CONFLICT(video_id) DO UPDATE SET
             channel_id         = COALESCE(:channel_id, channel_id),
             title              = COALESCE(:title, title),
-            date               = COALESCE(:date, date),
+            date               = CASE
+                WHEN date_source = 'precise'
+                     AND (:date_source IS NULL OR :date_source != 'precise')
+                    THEN date
+                ELSE COALESCE(:date, date)
+            END,
+            date_source        = CASE
+                WHEN date_source = 'precise'
+                     AND (:date_source IS NULL OR :date_source != 'precise')
+                    THEN date_source
+                ELSE COALESCE(:date_source, date_source)
+            END,
             status             = :status,
             source             = COALESCE(:source, source),
             raw_comment        = COALESCE(:raw_comment, raw_comment),
@@ -271,6 +294,7 @@ def upsert_stream(
             "channel_id":         channel_id,
             "title":              title,
             "date":               date,
+            "date_source":        date_source,
             "status":             status,
             "source":             source,
             "raw_comment":        raw_comment,

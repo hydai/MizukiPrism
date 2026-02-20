@@ -166,10 +166,57 @@ def fetch_cmd(fetch_all: bool, recent: int | None, after: str | None,
     # --- Print summary ----------------------------------------------------
     console.print()
     console.print(f"[bold green]完了![/bold green]  {result.summary_line()}")
+    if result.dates_resolved > 0:
+        console.print(f"[dim]正確な日付を取得: {result.dates_resolved} 件[/dim]")
     if result.skipped > 0:
         console.print(
             f"[dim]キーワードに一致しない動画をスキップ: {result.skipped} 件[/dim]"
         )
+
+
+# ---------------------------------------------------------------------------
+# fix-dates
+# ---------------------------------------------------------------------------
+
+@main.command("fix-dates")
+@click.option("--stream", "stream_id", type=str, default=None, metavar="VIDEO_ID",
+              help="Fix date for a specific stream only.")
+def fix_dates_cmd(stream_id: str | None) -> None:
+    """Fetch precise upload dates for cached streams using yt-dlp."""
+    from mizukilens.cache import open_db
+    from mizukilens.discovery import resolve_precise_dates
+
+    conn = open_db()
+    try:
+        video_ids = [stream_id] if stream_id else None
+
+        # Count how many need resolving
+        if video_ids is None:
+            cur = conn.execute(
+                "SELECT COUNT(*) FROM streams "
+                "WHERE date_source IS NULL OR date_source != 'precise'"
+            )
+            total = cur.fetchone()[0]
+        else:
+            total = 1
+
+        if total == 0:
+            console.print("[dim]すべてのストリームの日付は正確です。[/dim]")
+            return
+
+        console.print(f"[cyan]日付解決対象:[/cyan] {total} 件")
+
+        resolved = [0]
+
+        def on_progress(vid: str, date_str: str | None) -> None:
+            resolved[0] += 1
+            status = f"[green]{date_str}[/green]" if date_str else "[yellow]失敗[/yellow]"
+            console.print(f"  ({resolved[0]}/{total}) {vid}: {status}")
+
+        count = resolve_precise_dates(conn, video_ids, progress_callback=on_progress)
+        console.print(f"\n[bold green]完了![/bold green]  {count}/{total} 件の日付を解決しました。")
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
