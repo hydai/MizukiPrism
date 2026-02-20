@@ -2146,3 +2146,386 @@ class TestCLIMetadataOverride:
         song1_after = next(e for e in metadata_after if e["songId"] == "song-1")
         assert song1_after["fetchStatus"] == "manual"
         assert song1_after["albumArtUrl"] == url
+
+
+# ---------------------------------------------------------------------------
+# CLI: metadata clear
+# ---------------------------------------------------------------------------
+
+class TestCLIMetadataClear:
+    """Tests for the `mizukilens metadata clear` CLI command."""
+
+    @pytest.fixture()
+    def prism_root(self, tmp_path):
+        """Set up a minimal MizukiPrism project root with two songs and metadata."""
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        metadata_dir = data_dir / "metadata"
+        metadata_dir.mkdir()
+
+        songs = [
+            {"id": "song-1", "title": "First Love", "originalArtist": "宇多田光"},
+            {"id": "song-2", "title": "Idol", "originalArtist": "YOASOBI"},
+        ]
+        (data_dir / "songs.json").write_text(
+            json.dumps(songs, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        # Pre-populate both songs with matched metadata, lyrics, and artist info
+        metadata = [
+            {
+                "songId": "song-1",
+                "fetchStatus": "matched",
+                "matchConfidence": "exact",
+                "albumArtUrl": "https://example.com/art1.jpg",
+                "albumArtUrls": {"small": "", "medium": "", "big": "", "xl": "https://example.com/art1.jpg"},
+                "albumTitle": "Album A",
+                "deezerTrackId": 1,
+                "deezerArtistId": 10,
+                "trackDuration": 240,
+                "fetchedAt": _fresh_iso(),
+                "lastError": None,
+            },
+            {
+                "songId": "song-2",
+                "fetchStatus": "matched",
+                "matchConfidence": "fuzzy",
+                "albumArtUrl": "https://example.com/art2.jpg",
+                "albumArtUrls": {"small": "", "medium": "", "big": "", "xl": "https://example.com/art2.jpg"},
+                "albumTitle": "Album B",
+                "deezerTrackId": 2,
+                "deezerArtistId": 20,
+                "trackDuration": 200,
+                "fetchedAt": _fresh_iso(),
+                "lastError": None,
+            },
+        ]
+        lyrics = [
+            {
+                "songId": "song-1",
+                "fetchStatus": "matched",
+                "syncedLyrics": "[00:01.00] Line one",
+                "plainLyrics": "Line one",
+                "fetchedAt": _fresh_iso(),
+                "lastError": None,
+            },
+            {
+                "songId": "song-2",
+                "fetchStatus": "matched",
+                "syncedLyrics": "[00:01.00] Line two",
+                "plainLyrics": "Line two",
+                "fetchedAt": _fresh_iso(),
+                "lastError": None,
+            },
+        ]
+        artist_info = [
+            {
+                "normalizedArtist": "宇多田光",
+                "originalName": "宇多田光",
+                "deezerArtistId": 10,
+                "pictureUrls": {"medium": "", "big": "", "xl": ""},
+                "fetchedAt": _fresh_iso(),
+            },
+            {
+                "normalizedArtist": "yoasobi",
+                "originalName": "YOASOBI",
+                "deezerArtistId": 20,
+                "pictureUrls": {"medium": "", "big": "", "xl": ""},
+                "fetchedAt": _fresh_iso(),
+            },
+        ]
+        (metadata_dir / "song-metadata.json").write_text(
+            json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        (metadata_dir / "song-lyrics.json").write_text(
+            json.dumps(lyrics, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        (metadata_dir / "artist-info.json").write_text(
+            json.dumps(artist_info, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        return tmp_path
+
+    def _run(self, args: list[str], prism_root: Path, input: str | None = None) -> "Result":
+        """Run CLI command from within the prism_root directory."""
+        runner = CliRunner()
+        import os
+        old_cwd = os.getcwd()
+        try:
+            os.chdir(str(prism_root))
+            return runner.invoke(main, args, input=input, catch_exceptions=False)
+        finally:
+            os.chdir(old_cwd)
+
+    # --- Single song clear ---
+
+    def test_clear_specific_song_removes_from_metadata(self, prism_root):
+        """Clearing a specific song removes its entry from song-metadata.json."""
+        result = self._run(
+            ["metadata", "clear", "song-1", "--force"],
+            prism_root,
+        )
+        assert result.exit_code == 0
+
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        song_ids = [e["songId"] for e in metadata]
+        assert "song-1" not in song_ids
+        assert "song-2" in song_ids  # song-2 should be untouched
+
+    def test_clear_specific_song_removes_from_lyrics(self, prism_root):
+        """Clearing a specific song removes its entry from song-lyrics.json."""
+        result = self._run(
+            ["metadata", "clear", "song-1", "--force"],
+            prism_root,
+        )
+        assert result.exit_code == 0
+
+        lyrics = json.loads(
+            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
+        )
+        song_ids = [e["songId"] for e in lyrics]
+        assert "song-1" not in song_ids
+        assert "song-2" in song_ids  # song-2 should be untouched
+
+    def test_clear_does_not_remove_artist_info(self, prism_root):
+        """Clearing a song does NOT remove ArtistInfo entries (shared resource)."""
+        result = self._run(
+            ["metadata", "clear", "song-1", "--force"],
+            prism_root,
+        )
+        assert result.exit_code == 0
+
+        artist_info = json.loads(
+            (prism_root / "data" / "metadata" / "artist-info.json").read_text()
+        )
+        # Both artist entries should still be present
+        normalized = [e["normalizedArtist"] for e in artist_info]
+        assert "yoasobi" in normalized
+
+    def test_clear_with_force_skips_confirmation(self, prism_root):
+        """--force clears without prompting and exits 0."""
+        result = self._run(
+            ["metadata", "clear", "song-1", "--force"],
+            prism_root,
+        )
+        assert result.exit_code == 0
+        # No prompt text expected
+        assert "Cleared metadata for" in result.output
+
+    def test_clear_outputs_song_title_in_confirmation(self, prism_root):
+        """Output contains the song title after clearing."""
+        result = self._run(
+            ["metadata", "clear", "song-1", "--force"],
+            prism_root,
+        )
+        assert result.exit_code == 0
+        assert "First Love" in result.output
+
+    def test_clear_nonexistent_song_id_clean_exit(self, prism_root):
+        """Clearing a song ID not in metadata files exits cleanly with message."""
+        result = self._run(
+            ["metadata", "clear", "song-999", "--force"],
+            prism_root,
+        )
+        assert result.exit_code == 0
+        assert "No metadata found for song ID" in result.output
+        assert "song-999" in result.output
+
+    def test_clear_nonexistent_song_id_does_not_modify_files(self, prism_root):
+        """When song ID not found, metadata files are not modified."""
+        metadata_before = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        self._run(["metadata", "clear", "song-999", "--force"], prism_root)
+        metadata_after = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert len(metadata_before) == len(metadata_after)
+
+    def test_clear_song_id_not_in_songs_json_warns(self, prism_root):
+        """Clearing a song not in songs.json prints a warning but still clears."""
+        # Add song-3 to metadata but NOT to songs.json
+        metadata_path = prism_root / "data" / "metadata" / "song-metadata.json"
+        metadata = json.loads(metadata_path.read_text())
+        metadata.append({
+            "songId": "song-3",
+            "fetchStatus": "matched",
+            "matchConfidence": "fuzzy",
+            "albumArtUrl": "https://example.com/art3.jpg",
+            "albumArtUrls": {},
+            "fetchedAt": _fresh_iso(),
+            "lastError": None,
+        })
+        metadata_path.write_text(
+            json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+
+        result = self._run(["metadata", "clear", "song-3", "--force"], prism_root)
+        assert result.exit_code == 0
+        # Should warn about song-3 not being in songs.json
+        assert "Warning" in result.output or "warning" in result.output.lower()
+        # Should still clear the entry
+        metadata_after = json.loads(metadata_path.read_text())
+        assert not any(e["songId"] == "song-3" for e in metadata_after)
+
+    def test_clear_without_force_shows_confirmation_prompt(self, prism_root):
+        """Without --force, a confirmation prompt is shown; 'n' cancels."""
+        result = self._run(
+            ["metadata", "clear", "song-1"],
+            prism_root,
+            input="n\n",  # User says no
+        )
+        assert result.exit_code == 0
+        # Should NOT have cleared anything
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert any(e["songId"] == "song-1" for e in metadata)
+
+    def test_clear_without_force_confirm_yes_clears(self, prism_root):
+        """Without --force, confirming with 'y' performs the clear."""
+        result = self._run(
+            ["metadata", "clear", "song-1"],
+            prism_root,
+            input="y\n",  # User confirms
+        )
+        assert result.exit_code == 0
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert not any(e["songId"] == "song-1" for e in metadata)
+
+    # --- Clear all ---
+
+    def test_clear_all_empties_metadata_file(self, prism_root):
+        """--all --force empties song-metadata.json to []."""
+        result = self._run(
+            ["metadata", "clear", "--all", "--force"],
+            prism_root,
+        )
+        assert result.exit_code == 0
+
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert metadata == []
+
+    def test_clear_all_empties_lyrics_file(self, prism_root):
+        """--all --force empties song-lyrics.json to []."""
+        result = self._run(
+            ["metadata", "clear", "--all", "--force"],
+            prism_root,
+        )
+        assert result.exit_code == 0
+
+        lyrics = json.loads(
+            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
+        )
+        assert lyrics == []
+
+    def test_clear_all_preserves_artist_info(self, prism_root):
+        """--all preserves artist-info.json completely."""
+        result = self._run(
+            ["metadata", "clear", "--all", "--force"],
+            prism_root,
+        )
+        assert result.exit_code == 0
+
+        artist_info = json.loads(
+            (prism_root / "data" / "metadata" / "artist-info.json").read_text()
+        )
+        # Both artist entries should still be present
+        assert len(artist_info) == 2
+        normalized = [e["normalizedArtist"] for e in artist_info]
+        assert "yoasobi" in normalized
+
+    def test_clear_all_output_shows_counts(self, prism_root):
+        """--all output mentions the number of cleared metadata and lyrics entries."""
+        result = self._run(
+            ["metadata", "clear", "--all", "--force"],
+            prism_root,
+        )
+        assert result.exit_code == 0
+        output = result.output
+        # Should mention counts (2 metadata entries, 2 lyrics entries)
+        assert "2" in output
+        assert "Cleared all" in output
+
+    def test_clear_all_no_entries_exits_cleanly(self, prism_root):
+        """--all on empty files exits cleanly with no-op message."""
+        # First clear everything
+        self._run(["metadata", "clear", "--all", "--force"], prism_root)
+        # Now clear again — files are empty
+        result = self._run(["metadata", "clear", "--all", "--force"], prism_root)
+        assert result.exit_code == 0
+        assert "No metadata" in result.output or "nothing" in result.output.lower()
+
+    def test_clear_all_without_force_shows_prompt(self, prism_root):
+        """--all without --force shows a confirmation prompt; 'n' cancels."""
+        result = self._run(
+            ["metadata", "clear", "--all"],
+            prism_root,
+            input="n\n",
+        )
+        assert result.exit_code == 0
+        # Files should be unchanged
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert len(metadata) == 2  # Both entries still present
+
+    # --- Integration with status and fetch ---
+
+    def test_after_clear_song_appears_as_pending_in_status(self, prism_root):
+        """After clearing song-1, `metadata status --filter pending` shows it as pending."""
+        # Clear song-1
+        self._run(["metadata", "clear", "song-1", "--force"], prism_root)
+
+        # Run status --filter pending
+        result = self._run(["metadata", "status", "--filter", "pending"], prism_root)
+        assert result.exit_code == 0
+        assert "First Love" in result.output
+
+    def test_after_clear_song_can_be_refetched(self, prism_root):
+        """After clearing song-1, `metadata fetch --song song-1` succeeds."""
+        # Clear song-1
+        self._run(["metadata", "clear", "song-1", "--force"], prism_root)
+
+        # Verify it's gone
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert not any(e["songId"] == "song-1" for e in metadata)
+
+        # Re-fetch
+        track = make_deezer_track()
+        lrc = make_lrclib_result()
+        with (
+            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
+        ):
+            fetch_result = self._run(
+                ["metadata", "fetch", "--song", "song-1"],
+                prism_root,
+            )
+        assert fetch_result.exit_code == 0
+
+        # Verify song-1 is now fetched again
+        metadata_after = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert any(e["songId"] == "song-1" for e in metadata_after)
+
+    # --- Argument validation ---
+
+    def test_no_song_id_no_all_flag_exits_with_error(self, prism_root):
+        """Running `metadata clear` without SONG_ID or --all exits with an error."""
+        result = self._run(["metadata", "clear"], prism_root)
+        assert result.exit_code != 0
+
+    def test_song_id_and_all_flag_together_exits_with_error(self, prism_root):
+        """Running `metadata clear SONG_ID --all` exits with an error."""
+        result = self._run(["metadata", "clear", "song-1", "--all"], prism_root)
+        assert result.exit_code != 0

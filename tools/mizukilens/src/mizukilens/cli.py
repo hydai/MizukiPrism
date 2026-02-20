@@ -891,6 +891,7 @@ def metadata_group() -> None:
       fetch    — fetch metadata from Deezer (album art) and LRCLIB (lyrics)
       status   — view metadata status for all songs
       override — manually override album art URL and/or lyrics
+      clear    — remove metadata entries so they can be re-fetched
     """
 
 
@@ -1218,6 +1219,146 @@ def metadata_status_cmd(detail: bool, filter_status: str | None) -> None:
     for key in ("matched", "no_match", "error", "manual", "pending"):
         summary_parts.append(f"{key}: {status_counts[key]}")
     console.print("[dim]" + " | ".join(summary_parts) + "[/dim]")
+
+
+@metadata_group.command("clear")
+@click.argument("song_id", metavar="SONG_ID", required=False, default=None)
+@click.option("--all", "clear_all", is_flag=True, default=False,
+              help="Clear ALL song metadata and lyrics entries.")
+@click.option("--force", is_flag=True, default=False,
+              help="Skip confirmation prompt.")
+def metadata_clear_cmd(song_id: str | None, clear_all: bool, force: bool) -> None:
+    """Clear metadata entries for a song or all songs.
+
+    \b
+    Removes SongMetadata and SongLyrics entries so the song can be re-fetched.
+    Does NOT remove ArtistInfo — artist records are shared across songs.
+
+    \b
+    Examples:
+      mizukilens metadata clear song-1              # clear one song (prompts)
+      mizukilens metadata clear song-1 --force      # clear without prompt
+      mizukilens metadata clear --all --force       # clear everything, no prompt
+    """
+    import sys
+    import json
+    from pathlib import Path
+    from mizukilens.metadata import read_metadata_file, write_metadata_file
+
+    # Validate args: either SONG_ID or --all, not both, not neither
+    if clear_all and song_id is not None:
+        console.print("[red]Error:[/red] SONG_ID and --all cannot be used together.")
+        sys.exit(1)
+    if not clear_all and song_id is None:
+        console.print(
+            "[red]Error:[/red] Provide SONG_ID or use --all to clear everything."
+        )
+        sys.exit(1)
+
+    # Locate MizukiPrism root
+    prism_root = _find_prism_root_from_cwd()
+    if prism_root is None:
+        console.print(
+            "[red]Error:[/red] Could not locate MizukiPrism project root "
+            "(expected data/songs.json). Run from inside the MizukiPrism directory."
+        )
+        sys.exit(1)
+
+    songs_path = prism_root / "data" / "songs.json"
+    metadata_dir = prism_root / "data" / "metadata"
+    metadata_path = metadata_dir / "song-metadata.json"
+    lyrics_path = metadata_dir / "song-lyrics.json"
+
+    if clear_all:
+        # --- Clear all ---
+        metadata_records = read_metadata_file(metadata_path)
+        lyrics_records = read_metadata_file(lyrics_path)
+        n_meta = len(metadata_records)
+        n_lyrics = len(lyrics_records)
+
+        if n_meta == 0 and n_lyrics == 0:
+            console.print("[dim]No metadata entries to clear.[/dim]")
+            return
+
+        if not force:
+            confirmed = click.confirm(
+                f"Clear ALL song metadata and lyrics? This will reset {n_meta} entries. [y/N]",
+                default=False,
+                prompt_suffix=" ",
+            )
+            if not confirmed:
+                console.print("[dim]Cancelled.[/dim]")
+                return
+
+        write_metadata_file(metadata_path, [])
+        write_metadata_file(lyrics_path, [])
+        console.print(
+            f"Cleared all song metadata ({n_meta} entries) and lyrics ({n_lyrics} entries)"
+        )
+
+    else:
+        # --- Clear single song ---
+        assert song_id is not None  # narrowed above
+
+        # Load metadata files
+        metadata_records = read_metadata_file(metadata_path)
+        lyrics_records = read_metadata_file(lyrics_path)
+
+        # Check if there's anything to clear
+        has_meta = any(r.get("songId") == song_id for r in metadata_records)
+        has_lyrics = any(r.get("songId") == song_id for r in lyrics_records)
+
+        if not has_meta and not has_lyrics:
+            console.print(f"No metadata found for song ID '{song_id}'")
+            return
+
+        # Look up song display info from songs.json (best effort)
+        song_title: str | None = None
+        song_artist: str | None = None
+        try:
+            songs_text = songs_path.read_text(encoding="utf-8")
+            all_songs: list[dict] = json.loads(songs_text)
+            for s in all_songs:
+                if s.get("id") == song_id:
+                    song_title = s.get("title", "")
+                    song_artist = s.get("originalArtist", "")
+                    break
+        except (OSError, json.JSONDecodeError) as exc:
+            console.print(f"[yellow]Warning:[/yellow] Could not read songs.json: {exc}")
+
+        if song_title is None:
+            console.print(
+                f"[yellow]Warning:[/yellow] Song ID [bold]{song_id}[/bold] not found in songs.json. "
+                "Proceeding with clear anyway."
+            )
+
+        # Build confirmation prompt label
+        if song_title is not None:
+            label = f"'{song_title}'"
+            if song_artist:
+                label += f" by {song_artist}"
+        else:
+            label = f"'{song_id}'"
+
+        if not force:
+            confirmed = click.confirm(
+                f"Clear metadata for {label}?",
+                default=False,
+            )
+            if not confirmed:
+                console.print("[dim]Cancelled.[/dim]")
+                return
+
+        # Remove entries
+        new_meta = [r for r in metadata_records if r.get("songId") != song_id]
+        new_lyrics = [r for r in lyrics_records if r.get("songId") != song_id]
+        write_metadata_file(metadata_path, new_meta)
+        write_metadata_file(lyrics_path, new_lyrics)
+
+        if song_title is not None:
+            console.print(f"Cleared metadata for '{song_title}'")
+        else:
+            console.print(f"Cleared metadata for '{song_id}'")
 
 
 @metadata_group.command("override")
