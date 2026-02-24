@@ -10,8 +10,8 @@ export default function MiniPlayer() {
     currentTrack,
     isPlaying,
     playerError,
-    currentTime,
-    duration,
+    trackCurrentTime,
+    trackDuration,
     togglePlayPause,
     seekTo,
     previous,
@@ -45,19 +45,19 @@ export default function MiniPlayer() {
 
   if (!currentTrack) return null;
 
-  const progress = currentTrack.timestamp
-    ? ((currentTime - currentTrack.timestamp) /
-       ((currentTrack.endTimestamp || duration) - currentTrack.timestamp)) * 100
+  const hasKnownDuration = trackDuration != null && trackDuration > 0;
+  const progress = hasKnownDuration
+    ? (trackCurrentTime / trackDuration) * 100
     : 0;
 
   const clampedProgress = Math.min(100, Math.max(0, progress));
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!hasKnownDuration) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const percentage = clickX / rect.width;
-    const totalDuration = (currentTrack.endTimestamp || duration) - currentTrack.timestamp;
-    const newTime = currentTrack.timestamp + totalDuration * percentage;
+    const newTime = currentTrack.timestamp + trackDuration * percentage;
     seekTo(newTime);
   };
 
@@ -66,9 +66,6 @@ export default function MiniPlayer() {
     const s = Math.floor(seconds % 60);
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
-
-  const trackCurrentTime = Math.max(0, currentTime - currentTrack.timestamp);
-  const trackDuration = (currentTrack.endTimestamp || duration) - currentTrack.timestamp;
 
   return (
     <div
@@ -396,7 +393,7 @@ export default function MiniPlayer() {
                 className="flex-shrink-0 font-mono"
                 style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-tertiary)', minWidth: '32px' }}
               >
-                {formatTime(Math.max(0, trackDuration))}
+                {hasKnownDuration ? formatTime(trackDuration) : '--:--'}
               </span>
             </div>
           </div>

@@ -27,6 +27,8 @@ interface PlayerContextType {
   clearSkipNotification: () => void;
   currentTime: number;
   duration: number;
+  trackCurrentTime: number;
+  trackDuration: number | null;
   playTrack: (track: Track) => void;
   togglePlayPause: () => void;
   seekTo: (seconds: number) => void;
@@ -74,6 +76,14 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [playHistory, setPlayHistory] = useState<Track[]>([]);
   const [queue, setQueue] = useState<Track[]>([]);
   const [showQueue, setShowQueue] = useState(false);
+
+  // Derived track-relative time values (never fall back to full VOD duration)
+  const trackCurrentTime = currentTrack
+    ? Math.max(0, currentTime - currentTrack.timestamp)
+    : 0;
+  const trackDuration = currentTrack?.endTimestamp != null
+    ? currentTrack.endTimestamp - currentTrack.timestamp
+    : null;
 
   const playerRef = useRef<any>(null);
   const playerDivId = 'youtube-player';
@@ -369,6 +379,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         clearSkipNotification,
         currentTime,
         duration,
+        trackCurrentTime,
+        trackDuration,
         playTrack,
         togglePlayPause,
         seekTo,

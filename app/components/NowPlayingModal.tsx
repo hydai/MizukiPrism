@@ -17,8 +17,8 @@ export default function NowPlayingModal() {
   const {
     currentTrack,
     isPlaying,
-    currentTime,
-    duration,
+    trackCurrentTime,
+    trackDuration,
     togglePlayPause,
     seekTo,
     previous,
@@ -41,17 +41,17 @@ export default function NowPlayingModal() {
 
   if (!showModal || !currentTrack) return null;
 
-  const progress = currentTrack.timestamp
-    ? ((currentTime - currentTrack.timestamp) /
-       ((currentTrack.endTimestamp || duration) - currentTrack.timestamp)) * 100
+  const hasKnownDuration = trackDuration != null && trackDuration > 0;
+  const progress = hasKnownDuration
+    ? (trackCurrentTime / trackDuration) * 100
     : 0;
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!hasKnownDuration) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const percentage = clickX / rect.width;
-    const totalDuration = (currentTrack.endTimestamp || duration) - currentTrack.timestamp;
-    const newTime = currentTrack.timestamp + totalDuration * percentage;
+    const newTime = currentTrack.timestamp + trackDuration * percentage;
     seekTo(newTime);
   };
 
@@ -60,9 +60,6 @@ export default function NowPlayingModal() {
     const s = Math.floor(seconds % 60);
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
-
-  const trackDuration = (currentTrack.endTimestamp || duration) - currentTrack.timestamp;
-  const trackCurrentTime = currentTime - currentTrack.timestamp;
 
   if (!mounted) return null;
 
@@ -130,8 +127,8 @@ export default function NowPlayingModal() {
               />
             </div>
             <div className="flex justify-between text-xs text-slate-500 mt-2 font-mono">
-              <span>{formatTime(Math.max(0, trackCurrentTime))}</span>
-              <span>{formatTime(trackDuration)}</span>
+              <span>{formatTime(trackCurrentTime)}</span>
+              <span>{hasKnownDuration ? formatTime(trackDuration) : '--:--'}</span>
             </div>
           </div>
 
