@@ -2346,6 +2346,7 @@ export default function Home() {
         show={showPlaylistPanel}
         onClose={() => setShowPlaylistPanel(false)}
         songsData={songs}
+        onToast={(msg) => { setToastMessage(msg); setShowToast(true); }}
       />
       <CreatePlaylistDialog
         show={showCreateDialog}

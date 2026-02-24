@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ListMusic, GripVertical, Trash2, Play, Edit2 } from 'lucide-react';
+import { X, ListMusic, GripVertical, Trash2, Play, Edit2, Download, Upload } from 'lucide-react';
 import { usePlaylist, type Playlist } from '../contexts/PlaylistContext';
 import { usePlayer, type Track } from '../contexts/PlayerContext';
 
@@ -10,9 +10,10 @@ interface PlaylistPanelProps {
   show: boolean;
   onClose: () => void;
   songsData: any[];
+  onToast?: (message: string) => void;
 }
 
-export default function PlaylistPanel({ show, onClose, songsData }: PlaylistPanelProps) {
+export default function PlaylistPanel({ show, onClose, songsData, onToast }: PlaylistPanelProps) {
   const [mounted, setMounted] = useState(false);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -21,8 +22,9 @@ export default function PlaylistPanel({ show, onClose, songsData }: PlaylistPane
   const [editName, setEditName] = useState('');
   const [renameError, setRenameError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
-  const { playlists, deletePlaylist, renamePlaylist, removeVersionFromPlaylist, reorderVersionsInPlaylist } = usePlaylist();
+  const { playlists, deletePlaylist, renamePlaylist, removeVersionFromPlaylist, reorderVersionsInPlaylist, exportAll, exportSingle, importPlaylists } = usePlaylist();
   const { playTrack, addToQueue } = usePlayer();
 
   // Derive selectedPlaylist from context to keep in sync with updates
@@ -135,6 +137,19 @@ export default function PlaylistPanel({ show, onClose, songsData }: PlaylistPane
     );
   };
 
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const result = await importPlaylists(file);
+    if (result.success) {
+      onToast?.(`已匯入 ${result.count} 個播放清單`);
+    } else {
+      onToast?.(result.error || '匯入失敗');
+    }
+    // Reset input so the same file can be selected again
+    if (importInputRef.current) importInputRef.current.value = '';
+  };
+
   return createPortal(
     <>
       {/* Backdrop */}
@@ -167,14 +182,45 @@ export default function PlaylistPanel({ show, onClose, songsData }: PlaylistPane
               </button>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="text-white/80 hover:text-white transition-colors"
-            aria-label="關閉播放清單"
-            data-testid="close-playlist-panel"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {!selectedPlaylist && (
+              <>
+                <button
+                  onClick={() => importInputRef.current?.click()}
+                  className="text-white/60 hover:text-white transition-colors"
+                  title="匯入播放清單"
+                  data-testid="import-playlists-button"
+                >
+                  <Upload className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={exportAll}
+                  disabled={playlists.length === 0}
+                  className="text-white/60 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="匯出全部播放清單"
+                  data-testid="export-all-button"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+              </>
+            )}
+            <button
+              onClick={onClose}
+              className="text-white/80 hover:text-white transition-colors"
+              aria-label="關閉播放清單"
+              data-testid="close-playlist-panel"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleImportFile}
+            data-testid="import-file-input"
+          />
         </div>
 
         {/* Content */}
@@ -255,6 +301,17 @@ export default function PlaylistPanel({ show, onClose, songsData }: PlaylistPane
                                 data-testid="rename-button"
                               >
                                 <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  exportSingle(playlist.id);
+                                }}
+                                className="text-white/60 hover:text-white"
+                                title="匯出此播放清單"
+                                data-testid="export-single-button"
+                              >
+                                <Download className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={(e) => {
