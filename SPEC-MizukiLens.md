@@ -56,6 +56,7 @@ MizukiLens 是 MizukiPrism 的上游資料收集管線工具，透過第三方 s
 | 資料匯出（Export） | 將審核通過的資料匯出為符合 MizukiPrism Data Contract 的 JSON | 策展人 |
 | 資料匯入（Import） | CLI 指令將匯出的 JSON 匯入 MizukiPrism 資料庫 | 策展人 |
 | 本地快取（Local Cache） | 記錄已抓取、已解析、已審核、已匯入的場次狀態，避免重複作業 | 策展人 |
+| 批次審核（Batch Review） | 非互動式 CLI 指令，可批次查看審核報告、批次核准/排除場次、清理解析資料中的 emoji 雜訊 | 策展人 |
 
 ### 2.2 User Journeys
 
@@ -98,6 +99,14 @@ MizukiLens 是 MizukiPrism 的上游資料收集管線工具，透過第三方 s
 | 情境（Context） | 某場直播的留言區事後才有人補上時間軸，策展人想重新擷取 |
 | 行動（Action） | 在 TUI 中選擇該場次 → 觸發重新擷取 → 系統重新解析留言與描述欄 → 策展人審核新結果 |
 | 結果（Outcome） | 該場次的解析結果更新，之前的「待處理」標記移除 |
+
+#### Journey 6：首次大量審核
+
+| 階段 | 內容 |
+|------|------|
+| 情境（Context） | 策展人首次全量抓取後面對數百場待審核場次 |
+| 行動（Action） | `review report` 查看分析 → `review approve --karaoke --dry-run` 預覽 → `review approve --karaoke` 批次核准 → `review exclude --non-karaoke` 排除非歌回 → `review clean` 清理 emoji → 個別場次用 TUI 微調 |
+| 結果（Outcome） | 大量場次快速分類，僅需對少數邊界案例進入 TUI 手動審核 |
 
 ## 3. Behavior
 
@@ -245,6 +254,33 @@ MizukiLens 是 MizukiPrism 的上游資料收集管線工具，透過第三方 s
 └─────────────────────────────────────────────┘
 圖例：● 已審核  ○ 待審核  ◌ 待處理  ✕ 已排除
 ```
+
+> **備註**：`review` 現為指令群組（command group）。不帶子指令的 `mizukilens review` 仍啟動 TUI 互動介面。子指令提供批次操作功能。
+
+#### 3.1.4.1 批次審核（Batch Review）
+
+| 狀態 | 操作 | 結果 |
+|------|------|------|
+| 有已擷取場次 | 執行 `review report` | 顯示場次分類統計、資料品質分析、批次審核建議 |
+| 有已擷取場次 | 執行 `review report --detail` | 列出每場已擷取場次的分類、歌曲數、品質評分 |
+| 有已擷取場次 | 執行 `review approve --karaoke` | 批次核准所有標題含歌枠/Karaoke 等關鍵字的場次 |
+| 有已擷取場次 | 執行 `review approve --category X` | 批次核准指定分類的場次 |
+| 有已擷取場次 | 執行 `review exclude --non-karaoke` | 批次排除所有非歌回場次 |
+| 有已擷取場次 | 執行 `review exclude --no-songs` | 批次排除無解析歌曲的場次 |
+| 有已擷取場次 | 執行 `review clean` | 清理歌曲資料中的 emoji/表情符號雜訊 |
+| 任意批次操作 | 加 `--dry-run` | 僅顯示將受影響的場次，不實際執行 |
+| 任意批次操作 | 加 `--yes` | 跳過確認提示直接執行 |
+
+**場次分類關鍵字**：
+
+| 分類 | 標題關鍵字 |
+|------|-----------|
+| Karaoke | 歌枠, Karaoke, うたわく, 歌回, Acoustic, 合唱, MINI LIVE |
+| ASMR | ASMR |
+| Game | Game, ゲーム |
+| FreeTalk | 雜談, Free Talk, 棉花糖 |
+| 3D/Dance | 3D, 跳舞, 練舞 |
+| Other | 無法歸類者 |
 
 #### 3.1.5 資料匯出（Export）
 

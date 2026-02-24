@@ -323,34 +323,31 @@ def extract_cmd(stream_id: str | None, extract_all: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
-# review  (TUI)
+# review  (TUI + batch subcommands)
 # ---------------------------------------------------------------------------
 
-@main.command("review")
+@main.group("review", invoke_without_command=True)
 @click.option("--all", "show_all", is_flag=True, default=False,
               help="Show all streams (including excluded/imported) instead of only reviewable ones.")
-def review_cmd(show_all: bool) -> None:
-    """Launch the interactive TUI curation interface.
+@click.pass_context
+def review_group(ctx: click.Context, show_all: bool) -> None:
+    """Curation interface — interactive TUI or batch subcommands.
 
     \b
-    Displays a split-pane terminal UI:
-      Left  — Stream list with status indicators
-      Right — Song details for the selected stream
-
-    \b
-    Keyboard shortcuts:
-      a  Approve stream        s  Skip (no change)
-      x  Exclude stream        e  Edit selected song
-      n  Add new song          d  Delete selected song
-      r  Re-fetch timestamps   ?  Help
-      q  Quit
+    Without a subcommand, launches the interactive TUI.
+    Subcommands: report, approve, exclude, clean
     """
+    ctx.ensure_object(dict)
+    ctx.obj["show_all"] = show_all
+
+    if ctx.invoked_subcommand is not None:
+        return
+
+    # Default: launch TUI
     import shutil
-    import sys
     from mizukilens.cache import open_db
     from mizukilens.tui import launch_review_tui
 
-    # Warn if terminal is too small (< 80×24)
     term_size = shutil.get_terminal_size(fallback=(0, 0))
     if term_size.columns > 0 and term_size.lines > 0:
         if term_size.columns < 80 or term_size.lines < 24:
@@ -363,6 +360,128 @@ def review_cmd(show_all: bool) -> None:
     conn = open_db()
     try:
         launch_review_tui(conn, show_all=show_all)
+    finally:
+        conn.close()
+
+
+@review_group.command("report")
+@click.option("--detail", is_flag=True, default=False,
+              help="Show per-stream detail with category, song count, and quality score.")
+def review_report_cmd(detail: bool) -> None:
+    """Show batch review analysis report."""
+    from mizukilens.cache import open_db
+    from mizukilens.review_ops import generate_report
+
+    conn = open_db()
+    try:
+        generate_report(conn, detail=detail)
+    finally:
+        conn.close()
+
+
+@review_group.command("approve")
+@click.option("--karaoke", is_flag=True, default=False,
+              help="Approve streams categorized as Karaoke.")
+@click.option("--category", type=str, default=None, metavar="CATEGORY",
+              help="Approve streams matching this category (Karaoke, ASMR, Game, FreeTalk, 3D/Dance, Other).")
+@click.option("--video", "video_id", type=str, default=None, metavar="VIDEO_ID",
+              help="Approve a specific stream by video ID.")
+@click.option("--min-songs", type=int, default=0,
+              help="Only approve streams with at least this many parsed songs.")
+@click.option("--dry-run", is_flag=True, default=False,
+              help="Show what would be approved without making changes.")
+@click.option("--yes", "-y", is_flag=True, default=False,
+              help="Skip confirmation prompt.")
+def review_approve_cmd(
+    karaoke: bool,
+    category: str | None,
+    video_id: str | None,
+    min_songs: int,
+    dry_run: bool,
+    yes: bool,
+) -> None:
+    """Batch-approve extracted streams."""
+    import sys
+
+    if not karaoke and not category and not video_id:
+        console.print("[red]エラー:[/red] Specify at least one filter: --karaoke, --category, or --video")
+        sys.exit(1)
+
+    from mizukilens.cache import open_db
+    from mizukilens.review_ops import batch_approve
+
+    conn = open_db()
+    try:
+        batch_approve(
+            conn,
+            karaoke=karaoke,
+            category=category,
+            video_id=video_id,
+            min_songs=min_songs,
+            dry_run=dry_run,
+            yes=yes,
+        )
+    finally:
+        conn.close()
+
+
+@review_group.command("exclude")
+@click.option("--non-karaoke", is_flag=True, default=False,
+              help="Exclude all non-Karaoke streams.")
+@click.option("--category", type=str, default=None, metavar="CATEGORY",
+              help="Exclude streams matching this category.")
+@click.option("--video", "video_id", type=str, default=None, metavar="VIDEO_ID",
+              help="Exclude a specific stream by video ID.")
+@click.option("--no-songs", is_flag=True, default=False,
+              help="Exclude streams with zero parsed songs.")
+@click.option("--dry-run", is_flag=True, default=False,
+              help="Show what would be excluded without making changes.")
+@click.option("--yes", "-y", is_flag=True, default=False,
+              help="Skip confirmation prompt.")
+def review_exclude_cmd(
+    non_karaoke: bool,
+    category: str | None,
+    video_id: str | None,
+    no_songs: bool,
+    dry_run: bool,
+    yes: bool,
+) -> None:
+    """Batch-exclude extracted streams."""
+    import sys
+
+    if not non_karaoke and not category and not video_id and not no_songs:
+        console.print("[red]エラー:[/red] Specify at least one filter: --non-karaoke, --category, --video, or --no-songs")
+        sys.exit(1)
+
+    from mizukilens.cache import open_db
+    from mizukilens.review_ops import batch_exclude
+
+    conn = open_db()
+    try:
+        batch_exclude(
+            conn,
+            non_karaoke=non_karaoke,
+            category=category,
+            video_id=video_id,
+            no_songs=no_songs,
+            dry_run=dry_run,
+            yes=yes,
+        )
+    finally:
+        conn.close()
+
+
+@review_group.command("clean")
+@click.option("--dry-run", is_flag=True, default=False,
+              help="Show what would be cleaned without making changes.")
+def review_clean_cmd(dry_run: bool) -> None:
+    """Clean emoji/emote artifacts from artist fields."""
+    from mizukilens.cache import open_db
+    from mizukilens.review_ops import clean_parsed_songs
+
+    conn = open_db()
+    try:
+        clean_parsed_songs(conn, dry_run=dry_run)
     finally:
         conn.close()
 
