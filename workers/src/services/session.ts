@@ -7,9 +7,6 @@ const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days in seconds
  * Uses 256 bits of randomness, encoded as Base64.
  */
 export function generateSessionToken(): string {
-  // TODO: Implement session token generation
-  // Use crypto.getRandomValues to generate 32 bytes (256 bits)
-  // Encode as Base64 string
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   return btoa(String.fromCharCode(...bytes));
@@ -25,10 +22,6 @@ export async function createSession(
   email: string,
   env: Env
 ): Promise<string> {
-  // TODO: Implement session creation
-  // 1. Generate token
-  // 2. Build SessionData with 30-day expiry
-  // 3. Store in KV: key = `session:{token}`, TTL = 30 days
   const token = generateSessionToken();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + SESSION_TTL_SECONDS * 1000);
@@ -48,21 +41,56 @@ export async function createSession(
 }
 
 /**
- * Retrieve session data for a given token.
- * Returns null if token is not found or has expired.
+ * Verify a session token and apply sliding expiry.
+ *
+ * Reads KV key `session:{token}`. If valid and not expired, applies sliding
+ * expiry: if the session expires in less than 29 days (meaning more than 1 day
+ * has passed since creation/last extension), renews to 30 days from now.
+ * Skips the KV write if 29+ days remain (throttle optimization: < 1 day since
+ * last extension).
+ *
+ * @returns { userId, email } if valid, null if missing or expired
  */
-export async function getSession(
-  token: string,
-  env: Env
-): Promise<SessionData | null> {
-  // TODO: Implement session retrieval
-  const raw = await env.KV.get(`session:${token}`);
-  if (!raw) return null;
+export async function verifySession(
+  env: Env,
+  token: string
+): Promise<{ userId: string; email: string } | null> {
+  const sessionRaw = await env.KV.get(`session:${token}`);
+  if (!sessionRaw) {
+    return null;
+  }
+
+  let session: SessionData;
   try {
-    return JSON.parse(raw) as SessionData;
+    session = JSON.parse(sessionRaw) as SessionData;
   } catch {
     return null;
   }
+
+  const now = Date.now();
+  const expiresAtMs = Date.parse(session.expiresAt);
+
+  // Expired: delete KV entry and return null
+  if (now >= expiresAtMs) {
+    await env.KV.delete(`session:${token}`);
+    return null;
+  }
+
+  // Sliding expiry: if less than 29 days remain, extend to 30 days from now.
+  // Throttle: skip the write if 29+ days remain (< 1 day since last extension).
+  const daysUntilExpiry = (expiresAtMs - now) / (1000 * 60 * 60 * 24);
+  if (daysUntilExpiry < 29) {
+    const newExpiresAt = new Date(now + 30 * 24 * 60 * 60 * 1000);
+    const updatedSession: SessionData = {
+      ...session,
+      expiresAt: newExpiresAt.toISOString(),
+    };
+    await env.KV.put(`session:${token}`, JSON.stringify(updatedSession), {
+      expirationTtl: 2592000, // 30 days in seconds
+    });
+  }
+
+  return { userId: session.userId, email: session.email };
 }
 
 /**
