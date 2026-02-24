@@ -1,6 +1,10 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { buildAuthHeaders } from './FanAuthContext';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+const TOKEN_KEY = 'mizukiprism_auth_token';
 
 export interface PlaylistVersion {
   performanceId: string;
@@ -74,6 +78,22 @@ function isLocalStorageAvailable(): boolean {
   }
 }
 
+function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function getAuthFetchHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  if (!token) {
+    return { 'Content-Type': 'application/json' };
+  }
+  return buildAuthHeaders(token);
+}
+
 export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode; isLoggedIn: boolean }) => {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [storageError, setStorageError] = useState<string | null>(null);
@@ -113,9 +133,9 @@ export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode
         if (!localPlaylistsRaw) return;
         const localPlaylists = JSON.parse(localPlaylistsRaw);
 
-        await fetch('/api/playlists', {
+        await fetch(`${API_BASE}/api/playlists/sync`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthFetchHeaders(),
           body: JSON.stringify({ playlists: localPlaylists }),
         });
         localStorage.removeItem(PENDING_SYNC_KEY);
@@ -169,7 +189,9 @@ export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode
     if (syncInProgress.current) return;
     syncInProgress.current = true;
     try {
-      const res = await fetch('/api/playlists');
+      const res = await fetch(`${API_BASE}/api/playlists`, {
+        headers: getAuthFetchHeaders(),
+      });
       if (!res.ok) {
         syncInProgress.current = false;
         return;
@@ -259,36 +281,15 @@ export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode
 
   const syncAllToCloud = async (playlistsToSync: Playlist[]) => {
     try {
-      await fetch('/api/playlists', {
+      await fetch(`${API_BASE}/api/playlists/sync`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthFetchHeaders(),
         body: JSON.stringify({ playlists: playlistsToSync }),
       });
     } catch {
       // Silently fail - will be retried
     }
   };
-
-  const flushPendingSync = useCallback(async () => {
-    if (!isLoggedIn) return;
-    try {
-      const pendingRaw = localStorage.getItem(PENDING_SYNC_KEY);
-      if (!pendingRaw) return;
-      const pending: PendingSync[] = JSON.parse(pendingRaw);
-      if (pending.length === 0) return;
-
-      // Get current local state and push to cloud
-      const localPlaylistsRaw = localStorage.getItem(STORAGE_KEY);
-      if (!localPlaylistsRaw) return;
-      const localPlaylists: Playlist[] = JSON.parse(localPlaylistsRaw);
-
-      await syncAllToCloud(localPlaylists);
-      localStorage.removeItem(PENDING_SYNC_KEY);
-      setPendingCloudSync(false);
-    } catch {
-      // Will retry on next online event
-    }
-  }, [isLoggedIn]);
 
   // Save to localStorage
   const saveToLocalStorage = (newPlaylists: Playlist[]): boolean => {
@@ -341,24 +342,22 @@ export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode
 
     try {
       if (type === 'delete' && playlistId) {
-        const res = await fetch('/api/playlists', {
+        const res = await fetch(`${API_BASE}/api/playlists/${encodeURIComponent(playlistId)}`, {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: playlistId }),
+          headers: getAuthFetchHeaders(),
         });
         if (!res.ok) throw new Error('Delete failed');
       } else if (playlist) {
-        const method = type === 'create' ? 'PUT' : 'PUT';
-        const res = await fetch('/api/playlists', {
-          method,
-          headers: { 'Content-Type': 'application/json' },
+        const res = await fetch(`${API_BASE}/api/playlists/${encodeURIComponent(playlist.id)}`, {
+          method: 'PUT',
+          headers: getAuthFetchHeaders(),
           body: JSON.stringify(playlist),
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.conflict) {
+          if (data.conflict && data.keptVersion === 'cloud') {
             setConflictNotification(
-              `衝突已解決：保留${data.keptVersion === 'cloud' ? '雲端' : '本機'}版本的「${playlist.name}」`
+              `衝突已解決：保留雲端版本的「${playlist.name}」`
             );
           }
         }
