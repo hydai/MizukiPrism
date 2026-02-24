@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, LogIn, LogOut, User, WifiOff, ChevronLeft, MoreHorizontal, House } from 'lucide-react';
+import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, LogIn, LogOut, User, WifiOff, ChevronLeft, MoreHorizontal, House } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
@@ -982,7 +982,70 @@ export default function Home() {
                   }}
                 >
                   <Twitter className="w-4 h-4" style={{ color: '#1DA1F2' }} />
-                  Twitter
+                  X
+                </a>
+                {/* Facebook SocialButton */}
+                <a
+                  href={streamerData.socialLinks.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 transition-all hover:opacity-80"
+                  style={{
+                    background: 'var(--bg-surface-glass)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: 'var(--radius-pill)',
+                    padding: '6px 14px 6px 10px',
+                    color: 'var(--text-secondary)',
+                    fontSize: 'var(--font-size-sm)',
+                    fontWeight: 600,
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                  }}
+                >
+                  <Facebook className="w-4 h-4" style={{ color: '#1877F2' }} />
+                  Facebook
+                </a>
+                {/* Instagram SocialButton */}
+                <a
+                  href={streamerData.socialLinks.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 transition-all hover:opacity-80"
+                  style={{
+                    background: 'var(--bg-surface-glass)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: 'var(--radius-pill)',
+                    padding: '6px 14px 6px 10px',
+                    color: 'var(--text-secondary)',
+                    fontSize: 'var(--font-size-sm)',
+                    fontWeight: 600,
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                  }}
+                >
+                  <Instagram className="w-4 h-4" style={{ color: '#E4405F' }} />
+                  Instagram
+                </a>
+                {/* Twitch SocialButton */}
+                <a
+                  href={streamerData.socialLinks.twitch}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 transition-all hover:opacity-80"
+                  style={{
+                    background: 'var(--bg-surface-glass)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: 'var(--radius-pill)',
+                    padding: '6px 14px 6px 10px',
+                    color: 'var(--text-secondary)',
+                    fontSize: 'var(--font-size-sm)',
+                    fontWeight: 600,
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                  }}
+                >
+                  <Twitch className="w-4 h-4" style={{ color: '#9146FF' }} />
+                  Twitch
                 </a>
               </div>
             </div>
