@@ -14,6 +14,17 @@ export interface Track {
   albumArtUrl?: string;
 }
 
+export type RepeatMode = 'off' | 'all' | 'one';
+
+function shuffleArray<T>(arr: T[]): T[] {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 interface PlayerContextType {
   currentTrack: Track | null;
   isPlaying: boolean;
@@ -42,6 +53,10 @@ interface PlayerContextType {
   reorderQueue: (fromIndex: number, toIndex: number) => void;
   showQueue: boolean;
   setShowQueue: (show: boolean) => void;
+  repeatMode: RepeatMode;
+  shuffleOn: boolean;
+  toggleRepeat: () => void;
+  toggleShuffle: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -76,6 +91,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [playHistory, setPlayHistory] = useState<Track[]>([]);
   const [queue, setQueue] = useState<Track[]>([]);
   const [showQueue, setShowQueue] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
+  const [shuffleOn, setShuffleOn] = useState(false);
+  const [allTracks, setAllTracks] = useState<Track[]>([]);
 
   // Derived track-relative time values (never fall back to full VOD duration)
   const trackCurrentTime = currentTrack
@@ -92,6 +110,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   // Refs to always have fresh values in async callbacks
   const queueRef = useRef<Track[]>([]);
   const currentTrackRef = useRef<Track | null>(null);
+  const repeatModeRef = useRef<RepeatMode>('off');
+  const shuffleOnRef = useRef(false);
+  const allTracksRef = useRef<Track[]>([]);
 
   const clearTimestampWarning = () => setTimestampWarning(null);
   const clearSkipNotification = () => setSkipNotification(null);
@@ -99,11 +120,14 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   // Keep refs in sync with state
   useEffect(() => { queueRef.current = queue; }, [queue]);
   useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
+  useEffect(() => { repeatModeRef.current = repeatMode; }, [repeatMode]);
+  useEffect(() => { shuffleOnRef.current = shuffleOn; }, [shuffleOn]);
+  useEffect(() => { allTracksRef.current = allTracks; }, [allTracks]);
 
   // Advance to next non-deleted track in queue, skipping deleted ones.
   // Returns true if a non-deleted track was found and set as current, false if all remaining are deleted or queue is empty.
   const advanceSkippingDeleted = (currentQ: Track[], fromTrack: Track | null): boolean => {
-    // Find first non-deleted track
+    // Filter out deleted tracks
     let skippedAny = false;
     let remainingQueue = currentQ;
     while (remainingQueue.length > 0 && remainingQueue[0].deleted) {
@@ -111,10 +135,19 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       remainingQueue = remainingQueue.slice(1);
     }
 
-    if (remainingQueue.length === 0) {
-      // All remaining tracks are deleted (or queue was empty)
+    // If queue empty and repeat-all is on, re-populate from allTracks
+    if (remainingQueue.length === 0 && repeatModeRef.current === 'all' && allTracksRef.current.length > 0) {
+      const tracks = allTracksRef.current.filter(t => !t.deleted);
+      if (tracks.length > 0) {
+        remainingQueue = shuffleOnRef.current ? shuffleArray(tracks) : [...tracks];
+      }
+    }
+
+    const playable = remainingQueue.filter(t => !t.deleted);
+
+    if (playable.length === 0) {
+      // Nothing playable
       if (skippedAny) {
-        // We skipped some deleted tracks but found nothing playable
         setSkipNotification('播放完畢');
       }
       setQueue([]);
@@ -125,10 +158,21 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
-    // Found a non-deleted track
-    const nextTrack = remainingQueue[0];
-    const newQueue = remainingQueue.slice(1);
+    // Shuffle: pick random track from playable queue; otherwise take first
+    let pickIndex: number;
+    if (shuffleOnRef.current) {
+      pickIndex = Math.floor(Math.random() * playable.length);
+    } else {
+      pickIndex = 0;
+    }
+    const nextTrack = playable[pickIndex];
+
+    // Remove picked track from remainingQueue (find first occurrence)
+    const actualIndex = remainingQueue.indexOf(nextTrack);
+    const newQueue = [...remainingQueue];
+    newQueue.splice(actualIndex, 1);
     setQueue(newQueue);
+
     if (fromTrack) {
       setPlayHistory(prev => [...prev, fromTrack]);
     }
@@ -239,9 +283,14 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
               // Check if reached end timestamp
               if (currentTrack.endTimestamp && current >= currentTrack.endTimestamp) {
+                // Repeat-one: loop back to start of current track
+                if (repeatModeRef.current === 'one') {
+                  playerRef.current.seekTo(currentTrack.timestamp, true);
+                  return;
+                }
                 // Auto-play next song in queue if available, skipping deleted versions
                 const freshQueue = queueRef.current;
-                if (freshQueue.length > 0) {
+                if (freshQueue.length > 0 || repeatModeRef.current === 'all') {
                   advanceSkippingDeleted(freshQueue, currentTrackRef.current);
                 } else {
                   playerRef.current.pauseVideo();
@@ -261,9 +310,15 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           } else if (event.data === 2) {
             setIsPlaying(false);
           } else if (event.data === 0) {
-            // Video ended - auto-play next in queue, skipping deleted versions
+            // Video ended — repeat-one: seek back and replay
+            if (repeatModeRef.current === 'one' && currentTrackRef.current) {
+              playerRef.current.seekTo(currentTrackRef.current.timestamp, true);
+              playerRef.current.playVideo();
+              return;
+            }
+            // Auto-play next in queue, skipping deleted versions
             const freshQueue = queueRef.current;
-            if (freshQueue.length > 0) {
+            if (freshQueue.length > 0 || repeatModeRef.current === 'all') {
               advanceSkippingDeleted(freshQueue, currentTrackRef.current);
             } else {
               setIsPlaying(false);
@@ -288,6 +343,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [isPlayerReady, currentTrack]);
 
+  const toggleRepeat = () => {
+    setRepeatMode(prev => prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off');
+  };
+
+  const toggleShuffle = () => {
+    setShuffleOn(prev => !prev);
+  };
+
+  const addToAllTracks = (track: Track) => {
+    setAllTracks(prev => prev.some(t => t.id === track.id) ? prev : [...prev, track]);
+  };
+
   const playTrack = (track: Track) => {
     // Add current track to history before switching
     if (currentTrack && currentTrack.id !== track.id) {
@@ -295,6 +362,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }
     setCurrentTrack(track);
     setCurrentTime(track.timestamp);
+    addToAllTracks(track);
   };
 
   const togglePlayPause = () => {
@@ -335,8 +403,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const next = () => {
-    // Play next song in queue if available, skipping deleted versions
-    if (queue.length > 0) {
+    // User pressed next — always advance (ignore repeat-one)
+    if (queue.length > 0 || repeatMode === 'all') {
       advanceSkippingDeleted(queue, currentTrack);
     } else {
       // No queue, stop playback
@@ -349,6 +417,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const addToQueue = (track: Track) => {
     setQueue(prev => [...prev, track]);
+    addToAllTracks(track);
   };
 
   const removeFromQueue = (index: number) => {
@@ -394,6 +463,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         reorderQueue,
         showQueue,
         setShowQueue,
+        repeatMode,
+        shuffleOn,
+        toggleRepeat,
+        toggleShuffle,
       }}
     >
       {children}

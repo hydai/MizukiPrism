@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Play, Pause, SkipBack, SkipForward, ChevronDown } from 'lucide-react';
+import { X, Play, Pause, SkipBack, SkipForward, ChevronDown, Shuffle, Repeat, Repeat1 } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import AlbumArt from './AlbumArt';
 import SyncedLyrics from './SyncedLyrics';
@@ -25,6 +25,10 @@ export default function NowPlayingModal() {
     next,
     showModal,
     setShowModal,
+    repeatMode,
+    shuffleOn,
+    toggleRepeat,
+    toggleShuffle,
   } = usePlayer();
 
   // Keyboard navigation: Escape to close modal
@@ -135,6 +139,16 @@ export default function NowPlayingModal() {
           {/* Controls */}
           <div className="flex items-center justify-center gap-6 mt-8">
             <button
+              onClick={toggleShuffle}
+              className="transition-all transform hover:scale-110"
+              aria-label="Shuffle"
+              data-testid="modal-shuffle-button"
+              style={{ color: shuffleOn ? 'var(--accent-pink)' : undefined }}
+            >
+              <Shuffle className={`w-6 h-6 ${shuffleOn ? '' : 'text-slate-600 hover:text-slate-800'}`} />
+            </button>
+
+            <button
               onClick={previous}
               className="text-slate-600 hover:text-slate-800 transition-all transform hover:scale-110"
               aria-label="Previous"
@@ -160,6 +174,19 @@ export default function NowPlayingModal() {
               aria-label="Next"
             >
               <SkipForward className="w-8 h-8" />
+            </button>
+
+            <button
+              onClick={toggleRepeat}
+              className="transition-all transform hover:scale-110"
+              aria-label="Repeat"
+              data-testid="modal-repeat-button"
+              style={{ color: repeatMode !== 'off' ? 'var(--accent-pink)' : undefined }}
+            >
+              {repeatMode === 'one'
+                ? <Repeat1 className="w-6 h-6" />
+                : <Repeat className={`w-6 h-6 ${repeatMode === 'off' ? 'text-slate-600 hover:text-slate-800' : ''}`} />
+              }
             </button>
           </div>
 

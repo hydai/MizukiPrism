@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Play, Pause, SkipBack, SkipForward, ListMusic, AlertCircle, Shuffle, Repeat, Heart, Volume2 } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, ListMusic, AlertCircle, Shuffle, Repeat, Repeat1, Heart, Volume2 } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import AlbumArt from './AlbumArt';
 
@@ -19,6 +19,10 @@ export default function MiniPlayer() {
     setShowModal,
     queue,
     setShowQueue,
+    repeatMode,
+    shuffleOn,
+    toggleRepeat,
+    toggleShuffle,
   } = usePlayer();
 
   const [volume, setVolume] = useState(75);
@@ -270,9 +274,11 @@ export default function MiniPlayer() {
               <button
                 className="transition-colors"
                 aria-label="Shuffle"
-                style={{ color: 'var(--text-tertiary)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-tertiary)')}
+                data-testid="desktop-shuffle-button"
+                onClick={(e) => { e.stopPropagation(); toggleShuffle(); }}
+                style={{ color: shuffleOn ? 'var(--accent-pink)' : 'var(--text-tertiary)' }}
+                onMouseEnter={(e) => { if (!shuffleOn) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                onMouseLeave={(e) => { if (!shuffleOn) e.currentTarget.style.color = 'var(--text-tertiary)'; }}
               >
                 <Shuffle style={{ width: '16px', height: '16px' }} />
               </button>
@@ -336,11 +342,16 @@ export default function MiniPlayer() {
               <button
                 className="transition-colors"
                 aria-label="Repeat"
-                style={{ color: 'var(--text-tertiary)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-tertiary)')}
+                data-testid="desktop-repeat-button"
+                onClick={(e) => { e.stopPropagation(); toggleRepeat(); }}
+                style={{ color: repeatMode !== 'off' ? 'var(--accent-pink)' : 'var(--text-tertiary)' }}
+                onMouseEnter={(e) => { if (repeatMode === 'off') e.currentTarget.style.color = 'var(--text-primary)'; }}
+                onMouseLeave={(e) => { if (repeatMode === 'off') e.currentTarget.style.color = 'var(--text-tertiary)'; }}
               >
-                <Repeat style={{ width: '16px', height: '16px' }} />
+                {repeatMode === 'one'
+                  ? <Repeat1 style={{ width: '16px', height: '16px' }} />
+                  : <Repeat style={{ width: '16px', height: '16px' }} />
+                }
               </button>
             </div>
 

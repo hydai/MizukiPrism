@@ -113,7 +113,7 @@ export default function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const { currentTrack, playTrack, addToQueue, apiLoadError, unavailableVideoIds, timestampWarning, clearTimestampWarning, skipNotification, clearSkipNotification } = usePlayer();
+  const { currentTrack, playTrack, addToQueue, apiLoadError, unavailableVideoIds, timestampWarning, clearTimestampWarning, skipNotification, clearSkipNotification, shuffleOn, toggleShuffle } = usePlayer();
   const { playlists, storageError, clearStorageError } = usePlaylist();
 
   const handleAddToQueue = (track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number; endTimestamp?: number; albumArtUrl?: string }) => {
@@ -1020,15 +1020,19 @@ export default function Home() {
               <Play className="w-5 h-5 fill-current" style={{ marginLeft: '2px' }} />
             </button>
 
-            {/* Shuffle button: gradient fill, cornerRadius radius-lg, padding 12/28 (visual placeholder) */}
+            {/* Shuffle button: gradient fill when active, outline when off */}
             <button
               data-testid="mobile-shuffle-button"
+              onClick={() => toggleShuffle()}
               className="flex items-center justify-center flex-shrink-0 transition-all hover:opacity-90"
               style={{
-                background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                background: shuffleOn
+                  ? 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))'
+                  : 'transparent',
+                border: shuffleOn ? 'none' : '2px solid var(--accent-pink-light)',
                 borderRadius: 'var(--radius-lg)',
                 padding: '12px 28px',
-                color: 'white',
+                color: shuffleOn ? 'white' : 'var(--accent-pink)',
               }}
               title="隨機播放"
             >
