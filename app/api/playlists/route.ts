@@ -1,28 +1,28 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifySessionToken, findUserById, FAN_COOKIE_NAME } from '@/lib/fan-auth';
 import { readUserPlaylists, writeUserPlaylists, CloudPlaylist } from '@/lib/user-playlists';
 
 export const dynamic = 'force-static';
 
-async function getAuthenticatedUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(FAN_COOKIE_NAME)?.value;
+function getUserIdFromRequest(request: Request): string | null {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  // Token format is opaque; extract user id from it for local playlist storage.
+  // In production, the Cloudflare Workers API validates the token; this local
+  // route just uses the token as a user identifier for dev/static builds.
+  const token = authHeader.slice(7);
   if (!token) return null;
-  const userId = verifySessionToken(token);
-  if (!userId) return null;
-  return findUserById(userId);
+  return token;
 }
 
 // GET /api/playlists - get user's cloud playlists
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const user = await getAuthenticatedUser();
-    if (!user) {
+    const userId = getUserIdFromRequest(request);
+    if (!userId) {
       return NextResponse.json({ error: '未登入' }, { status: 401 });
     }
 
-    const playlists = readUserPlaylists(user.id);
+    const playlists = readUserPlaylists(userId);
     return NextResponse.json({ playlists });
   } catch {
     return NextResponse.json({ error: '讀取播放清單失敗' }, { status: 500 });
@@ -32,8 +32,8 @@ export async function GET() {
 // POST /api/playlists - create or bulk update playlists
 export async function POST(request: Request) {
   try {
-    const user = await getAuthenticatedUser();
-    if (!user) {
+    const userId = getUserIdFromRequest(request);
+    if (!userId) {
       return NextResponse.json({ error: '未登入' }, { status: 401 });
     }
 
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     // Bulk replace all playlists (used for sync)
     if (body.playlists && Array.isArray(body.playlists)) {
       const playlists = body.playlists as CloudPlaylist[];
-      writeUserPlaylists(user.id, playlists);
+      writeUserPlaylists(userId, playlists);
       return NextResponse.json({ success: true, playlists });
     }
 
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '播放清單名稱不可為空' }, { status: 400 });
     }
 
-    const playlists = readUserPlaylists(user.id);
+    const playlists = readUserPlaylists(userId);
     const now = Date.now();
     const newPlaylist: CloudPlaylist = {
       id: body.id || `playlist-${now}-${Math.random().toString(36).substr(2, 9)}`,
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     };
 
     playlists.push(newPlaylist);
-    writeUserPlaylists(user.id, playlists);
+    writeUserPlaylists(userId, playlists);
 
     return NextResponse.json({ success: true, playlist: newPlaylist });
   } catch {
@@ -74,8 +74,8 @@ export async function POST(request: Request) {
 // PUT /api/playlists - update a playlist
 export async function PUT(request: Request) {
   try {
-    const user = await getAuthenticatedUser();
-    if (!user) {
+    const userId = getUserIdFromRequest(request);
+    if (!userId) {
       return NextResponse.json({ error: '未登入' }, { status: 401 });
     }
 
@@ -86,7 +86,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: '缺少播放清單 ID' }, { status: 400 });
     }
 
-    const playlists = readUserPlaylists(user.id);
+    const playlists = readUserPlaylists(userId);
     const index = playlists.findIndex(p => p.id === id);
 
     if (index === -1) {
@@ -100,7 +100,7 @@ export async function PUT(request: Request) {
         updatedAt: body.updatedAt || now,
       };
       playlists.push(newPlaylist);
-      writeUserPlaylists(user.id, playlists);
+      writeUserPlaylists(userId, playlists);
       return NextResponse.json({ success: true, playlist: newPlaylist });
     }
 
@@ -117,7 +117,7 @@ export async function PUT(request: Request) {
     };
 
     playlists[index] = updated;
-    writeUserPlaylists(user.id, playlists);
+    writeUserPlaylists(userId, playlists);
 
     return NextResponse.json({
       success: true,
@@ -133,8 +133,8 @@ export async function PUT(request: Request) {
 // DELETE /api/playlists - delete a playlist
 export async function DELETE(request: Request) {
   try {
-    const user = await getAuthenticatedUser();
-    if (!user) {
+    const userId = getUserIdFromRequest(request);
+    if (!userId) {
       return NextResponse.json({ error: '未登入' }, { status: 401 });
     }
 
@@ -145,9 +145,9 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: '缺少播放清單 ID' }, { status: 400 });
     }
 
-    const playlists = readUserPlaylists(user.id);
+    const playlists = readUserPlaylists(userId);
     const newPlaylists = playlists.filter(p => p.id !== id);
-    writeUserPlaylists(user.id, newPlaylists);
+    writeUserPlaylists(userId, newPlaylists);
 
     return NextResponse.json({ success: true });
   } catch {

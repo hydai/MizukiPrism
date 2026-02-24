@@ -574,7 +574,7 @@ export default function Home() {
                   style={{ color: 'var(--text-primary)' }}
                   data-testid="logged-in-username"
                 >
-                  {user.username}
+                  {user.email}
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   {isOnline ? (
@@ -2299,7 +2299,7 @@ export default function Home() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-base font-bold truncate" style={{ color: 'var(--text-primary)' }} data-testid="logged-in-username">
-                        {user.username}
+                        {user.email}
                       </div>
                       <div className="flex items-center gap-1.5 mt-1">
                         {isOnline ? (

@@ -9,7 +9,8 @@ function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/';
-  const { login } = useFanAuth();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { login } = useFanAuth() as any; // TODO AUTH-007: replace with requestOtp + verifyOtp
 
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
