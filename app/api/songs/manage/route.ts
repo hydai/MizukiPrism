@@ -1,33 +1,53 @@
 import { NextResponse } from 'next/server';
-import { readSongs, writeSongs } from '@/lib/data';
+import { readSongs, writeSongs, generateId } from '@/lib/data';
+import { Song } from '@/lib/types';
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: Request) {
   try {
-    const { id } = await params;
-    const songs = readSongs();
-    const song = songs.find(s => s.id === id);
+    const body = await request.json();
+    const { title, originalArtist, tags } = body;
 
-    if (!song) {
-      return NextResponse.json({ error: 'Song not found' }, { status: 404 });
+    if (!title || !originalArtist) {
+      return NextResponse.json({ error: 'title and originalArtist are required' }, { status: 400 });
     }
 
-    return NextResponse.json(song);
+    const songs = readSongs();
+
+    // Check if song with same title and artist already exists
+    const existing = songs.find(
+      s => s.title.toLowerCase() === title.toLowerCase() &&
+           s.originalArtist.toLowerCase() === originalArtist.toLowerCase()
+    );
+
+    if (existing) {
+      return NextResponse.json(existing);
+    }
+
+    const newSong: Song = {
+      id: generateId('song'),
+      title,
+      originalArtist,
+      tags: tags || [],
+      performances: [],
+    };
+
+    songs.push(newSong);
+    writeSongs(songs);
+
+    return NextResponse.json(newSong, { status: 201 });
   } catch {
-    return NextResponse.json({ error: 'Failed to read song' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create song' }, { status: 500 });
   }
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: Request) {
   try {
-    const { id } = await params;
     const body = await request.json();
-    const { title, originalArtist, tags } = body;
+    const { id, title, originalArtist, tags } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
 
     const songs = readSongs();
     const index = songs.findIndex(s => s.id === id);
@@ -36,11 +56,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Song not found' }, { status: 404 });
     }
 
-    // Compute effective title and artist (use new values if provided, fall back to existing)
     const effectiveTitle = title !== undefined ? title : songs[index].title;
     const effectiveArtist = originalArtist !== undefined ? originalArtist : songs[index].originalArtist;
 
-    // Check if another song already has the same title+artist combination
     const duplicate = songs.find(
       s => s.id !== id &&
         s.title.toLowerCase() === effectiveTitle.toLowerCase() &&
@@ -54,7 +72,6 @@ export async function PUT(
       );
     }
 
-    // Update only provided fields
     if (title !== undefined) songs[index].title = title;
     if (originalArtist !== undefined) songs[index].originalArtist = originalArtist;
     if (tags !== undefined) songs[index].tags = tags;
@@ -67,12 +84,15 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: Request) {
   try {
-    const { id } = await params;
+    const body = await request.json();
+    const { id } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
+
     const songs = readSongs();
     const index = songs.findIndex(s => s.id === id);
 

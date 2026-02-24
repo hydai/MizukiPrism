@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { SongMetadata, ArtistInfo } from '@/lib/types';
 
+export const dynamic = 'force-static';
+
 const metadataDir = path.join(process.cwd(), 'data', 'metadata');
 
 function readJsonFile<T>(filePath: string): T[] {

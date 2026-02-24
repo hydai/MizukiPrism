@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { verifySessionToken, findUserById, FAN_COOKIE_NAME } from '@/lib/fan-auth';
 import { readUserPlaylists, writeUserPlaylists, CloudPlaylist } from '@/lib/user-playlists';
 
+export const dynamic = 'force-static';
+
 async function getAuthenticatedUser() {
   const cookieStore = await cookies();
   const token = cookieStore.get(FAN_COOKIE_NAME)?.value;

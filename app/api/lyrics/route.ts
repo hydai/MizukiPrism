@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { SongLyrics } from '@/lib/types';
 
+export const dynamic = 'force-static';
+
 const lyricsPath = path.join(process.cwd(), 'data', 'metadata', 'song-lyrics.json');
 
 export async function GET() {

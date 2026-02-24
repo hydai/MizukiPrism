@@ -39,7 +39,7 @@ function StreamForm({
     setLoading(true);
 
     try {
-      const res = await fetch('/api/streams', {
+      const res = await fetch('/api/streams/manage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, date, youtubeUrl }),
@@ -170,7 +170,7 @@ function VersionForm({
     setLoading(true);
 
     try {
-      const res = await fetch('/api/versions', {
+      const res = await fetch('/api/versions/manage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -354,10 +354,11 @@ function EditVersionForm({
     setLoading(true);
 
     try {
-      const res = await fetch(`/api/versions/${performanceId}`, {
+      const res = await fetch('/api/versions/manage', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: performanceId,
           startTimestamp,
           endTimestamp: endTimestamp || undefined,
           note,
@@ -473,10 +474,11 @@ function EditSongForm({
     setLoading(true);
 
     try {
-      const res = await fetch(`/api/songs/${song.id}`, {
+      const res = await fetch('/api/songs/manage', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: song.id,
           title,
           originalArtist,
           tags: tags.split(',').map(t => t.trim()).filter(Boolean),
@@ -686,8 +688,10 @@ export default function AdminPage() {
 
   const handleDeleteVersion = async (performanceId: string) => {
     try {
-      const res = await fetch(`/api/versions/${performanceId}`, {
+      const res = await fetch('/api/versions/manage', {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: performanceId }),
       });
 
       if (res.ok) {
