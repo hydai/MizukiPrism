@@ -61,16 +61,16 @@ export default function AddToPlaylistDropdown({ version, onSuccess }: AddToPlayl
 
       {showDropdown && (
         <div
-          className="absolute right-0 mt-2 w-56 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg shadow-2xl z-30 overflow-hidden"
+          className="absolute right-0 mt-2 w-56 bg-white backdrop-blur-md border border-[--border-default] rounded-lg shadow-xl z-30 overflow-hidden"
           data-testid="playlist-dropdown"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-2 border-b border-white/20">
-            <p className="text-white/60 text-xs">加入播放清單</p>
+          <div className="p-2 border-b border-[--border-default]">
+            <p className="text-[--text-tertiary] text-xs">加入播放清單</p>
           </div>
 
           {playlists.length === 0 ? (
-            <div className="p-4 text-white/60 text-sm text-center">
+            <div className="p-4 text-[--text-tertiary] text-sm text-center">
               尚無播放清單
             </div>
           ) : (
@@ -82,19 +82,19 @@ export default function AddToPlaylistDropdown({ version, onSuccess }: AddToPlayl
                     e.stopPropagation();
                     handleAddToPlaylist(playlist.id);
                   }}
-                  className="w-full px-4 py-2 text-left text-white hover:bg-white/10 transition-colors"
+                  className="w-full px-4 py-2 text-left text-[--text-primary] hover:bg-[--bg-accent-pink] transition-colors"
                   data-testid={`playlist-option-${playlist.id}`}
                 >
                   <div className="font-medium">{playlist.name}</div>
-                  <div className="text-xs text-white/60">{playlist.versions.length} 首歌曲</div>
+                  <div className="text-xs text-[--text-tertiary]">{playlist.versions.length} 首歌曲</div>
                 </button>
               ))}
             </div>
           )}
 
           {error && (
-            <div className="p-3 bg-red-500/20 border-t border-red-500/30">
-              <p className="text-red-400 text-xs" data-testid="add-error-message">
+            <div className="p-3 bg-red-50 border-t border-red-200">
+              <p className="text-red-600 text-xs" data-testid="add-error-message">
                 {error}
               </p>
             </div>
