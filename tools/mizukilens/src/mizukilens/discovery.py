@@ -48,12 +48,18 @@ class FetchResult:
     skipped: int = 0   # failed keyword filter (keyword_only mode only)
     partial: bool = False  # True if a network error interrupted the run
     dates_resolved: int = 0  # precise dates fetched via yt-dlp
+    upcoming_skipped: int = 0  # upcoming/scheduled streams detected and skipped
+    dates_updated: int = 0  # existing NULL-date entries backfilled
 
     def summary_line(self) -> str:
         """Return a human-readable summary string (Japanese + English)."""
         line = f"新發現 {self.new} 場、已存在 {self.existing} 場、總計 {self.total} 場"
         if self.dates_resolved > 0:
             line += f"、日付解決 {self.dates_resolved} 件"
+        if self.upcoming_skipped > 0:
+            line += f"、予定スキップ {self.upcoming_skipped} 件"
+        if self.dates_updated > 0:
+            line += f"、日付補完 {self.dates_updated} 件"
         return line
 
 
@@ -246,7 +252,23 @@ def _extract_video_info(video: dict[str, Any]) -> dict[str, Any]:
     published_obj = video.get("publishedTimeText", {})
     raw_date: str | None = published_obj.get("simpleText") if published_obj else None
 
-    return {"video_id": video_id, "title": title, "raw_date": raw_date}
+    return {"video_id": video_id, "title": title, "raw_date": raw_date, "is_upcoming": _is_upcoming_stream(video)}
+
+
+def _is_upcoming_stream(video: dict[str, Any]) -> bool:
+    """Detect upcoming/scheduled streams that haven't aired yet.
+
+    Two signals from scrapetube's raw YouTube data:
+    - ``upcomingEventData`` key is present (primary signal)
+    - ``thumbnailOverlays`` contains an overlay with style ``"UPCOMING"`` (fallback)
+    """
+    if video.get("upcomingEventData") is not None:
+        return True
+    for overlay in video.get("thumbnailOverlays", []):
+        renderer = overlay.get("thumbnailOverlayTimeStatusRenderer", {})
+        if renderer.get("style") == "UPCOMING":
+            return True
+    return False
 
 
 def _build_channel_kwargs(channel_id: str) -> dict[str, Any]:
@@ -434,7 +456,7 @@ def fetch_streams(
         streams already processed before the error are committed to the cache.
     """
     import scrapetube
-    from mizukilens.cache import get_stream, upsert_stream
+    from mizukilens.cache import get_stream, update_stream_date, upsert_stream
 
     result = FetchResult()
     newly_discovered: list[str] = []
@@ -468,6 +490,14 @@ def fetch_streams(
             raw_date = info["raw_date"]
 
             if not video_id:
+                continue
+
+            # Skip upcoming/scheduled streams — they have no real date and
+            # would pollute the cache with NULL-date entries.
+            if info["is_upcoming"]:
+                result.upcoming_skipped += 1
+                if progress_callback:
+                    progress_callback(info)
                 continue
 
             # Parse and normalise date
@@ -509,6 +539,12 @@ def fetch_streams(
             existing = get_stream(conn, video_id)
 
             if existing is not None and not force:
+                # Backfill NULL dates: if we now have a date for a previously
+                # dateless entry, update it regardless of status.
+                if parsed_date is not None and existing["date"] is None:
+                    if update_stream_date(conn, video_id, parsed_date):
+                        result.dates_updated += 1
+
                 existing_status = existing["status"]
                 # Skip excluded/imported unless --force
                 if existing_status in ("excluded", "imported"):

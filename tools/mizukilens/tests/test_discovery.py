@@ -16,6 +16,7 @@ from mizukilens.cache import get_stream, list_streams, open_db
 from mizukilens.discovery import (
     FetchResult,
     NetworkError,
+    _is_upcoming_stream,
     fetch_streams,
     get_active_channel_info,
     matches_keywords,
@@ -1058,3 +1059,260 @@ class TestFetchStreamsDateSource:
         assert result.new == 1
         stream = get_stream(mem_db, "vid_ds1")
         assert stream["date_source"] == "relative"
+
+
+# ---------------------------------------------------------------------------
+# Helpers for upcoming stream tests
+# ---------------------------------------------------------------------------
+
+
+def _make_upcoming_video(
+    video_id: str,
+    title: str,
+    *,
+    has_upcoming_event_data: bool = True,
+    has_upcoming_overlay: bool = True,
+) -> dict[str, Any]:
+    """Build a fake scrapetube dict representing an upcoming/scheduled stream."""
+    video: dict[str, Any] = {
+        "videoId": video_id,
+        "title": {"runs": [{"text": title}]},
+        # Upcoming streams have no publishedTimeText
+    }
+    if has_upcoming_event_data:
+        video["upcomingEventData"] = {
+            "scheduledStartTime": "1740610800",
+            "isReminderSet": False,
+        }
+    if has_upcoming_overlay:
+        video["thumbnailOverlays"] = [
+            {
+                "thumbnailOverlayTimeStatusRenderer": {
+                    "text": {"simpleText": "UPCOMING"},
+                    "style": "UPCOMING",
+                }
+            }
+        ]
+    return video
+
+
+# ---------------------------------------------------------------------------
+# 14. _is_upcoming_stream detection
+# ---------------------------------------------------------------------------
+
+
+class TestIsUpcomingStream:
+    """Unit tests for the upcoming stream detection helper."""
+
+    def test_detects_upcoming_event_data(self) -> None:
+        video = _make_upcoming_video("up1", "Upcoming", has_upcoming_overlay=False)
+        assert _is_upcoming_stream(video) is True
+
+    def test_detects_upcoming_overlay(self) -> None:
+        video = _make_upcoming_video("up2", "Upcoming", has_upcoming_event_data=False)
+        assert _is_upcoming_stream(video) is True
+
+    def test_detects_both_signals(self) -> None:
+        video = _make_upcoming_video("up3", "Upcoming")
+        assert _is_upcoming_stream(video) is True
+
+    def test_normal_vod_not_upcoming(self) -> None:
+        video = _make_video("vod1", "Normal VOD", "3 days ago")
+        assert _is_upcoming_stream(video) is False
+
+    def test_empty_overlays_not_upcoming(self) -> None:
+        video = _make_video("vod2", "Stream", "1 day ago")
+        video["thumbnailOverlays"] = []
+        assert _is_upcoming_stream(video) is False
+
+
+# ---------------------------------------------------------------------------
+# 15. fetch_streams — upcoming stream skipping
+# ---------------------------------------------------------------------------
+
+
+class TestFetchStreamsUpcoming:
+    """Tests for skipping upcoming/scheduled streams in the fetch loop."""
+
+    def _patch_scrapetube(self, videos: list[dict]) -> Any:
+        return patch("scrapetube.get_channel", return_value=iter(videos))
+
+    def test_upcoming_streams_skipped(self, mem_db: sqlite3.Connection) -> None:
+        """Upcoming streams are not saved to cache."""
+        videos = [
+            _make_upcoming_video("up1", "予定配信"),
+            _make_video("vod1", "歌回 2024-01-01", "2024-01-01"),
+        ]
+        with self._patch_scrapetube(videos):
+            result = fetch_streams(
+                mem_db,
+                channel_id="UCtest",
+                channel_id_str="UCtest",
+                keywords=[],
+                fetch_all=True,
+            )
+
+        assert result.upcoming_skipped == 1
+        assert result.new == 1
+        assert result.total == 1  # upcoming not counted in total
+        assert get_stream(mem_db, "up1") is None
+        assert get_stream(mem_db, "vod1") is not None
+
+    def test_upcoming_not_counted_toward_recent(self, mem_db: sqlite3.Connection) -> None:
+        """Upcoming streams do not consume --recent N slots."""
+        videos = [
+            _make_upcoming_video("up1", "予定配信 1"),
+            _make_upcoming_video("up2", "予定配信 2"),
+            _make_video("vod1", "歌回 1", "2024-03-01"),
+            _make_video("vod2", "歌回 2", "2024-02-01"),
+        ]
+        # recent=2: should get both real VODs, ignoring the 2 upcoming
+        with self._patch_scrapetube(videos):
+            result = fetch_streams(
+                mem_db,
+                channel_id="UCtest",
+                channel_id_str="UCtest",
+                keywords=[],
+                recent=2,
+                after="2024-01-01",
+            )
+
+        assert result.upcoming_skipped == 2
+        assert result.new == 2
+        assert get_stream(mem_db, "vod1") is not None
+        assert get_stream(mem_db, "vod2") is not None
+
+    def test_upcoming_progress_callback_called(self, mem_db: sqlite3.Connection) -> None:
+        """Progress callback is still called for upcoming streams."""
+        videos = [_make_upcoming_video("up1", "予定配信")]
+        calls: list[dict] = []
+
+        with self._patch_scrapetube(videos):
+            fetch_streams(
+                mem_db,
+                channel_id="UCtest",
+                channel_id_str="UCtest",
+                keywords=[],
+                fetch_all=True,
+                progress_callback=calls.append,
+            )
+
+        assert len(calls) == 1
+
+    def test_all_upcoming_yields_empty_result(self, mem_db: sqlite3.Connection) -> None:
+        """If all streams are upcoming, result should have 0 new and 0 total."""
+        videos = [
+            _make_upcoming_video("up1", "予定 1"),
+            _make_upcoming_video("up2", "予定 2"),
+        ]
+        with self._patch_scrapetube(videos):
+            result = fetch_streams(
+                mem_db,
+                channel_id="UCtest",
+                channel_id_str="UCtest",
+                keywords=[],
+                fetch_all=True,
+            )
+
+        assert result.new == 0
+        assert result.total == 0
+        assert result.upcoming_skipped == 2
+
+
+# ---------------------------------------------------------------------------
+# 16. fetch_streams — NULL date backfill
+# ---------------------------------------------------------------------------
+
+
+class TestFetchStreamsDateBackfill:
+    """Tests for backfilling NULL dates on existing cache entries."""
+
+    def _patch_scrapetube(self, videos: list[dict]) -> Any:
+        return patch("scrapetube.get_channel", return_value=iter(videos))
+
+    def test_backfills_null_date(self, mem_db: sqlite3.Connection) -> None:
+        """Existing entry with NULL date gets backfilled when scrapetube provides one."""
+        from mizukilens.cache import upsert_stream
+
+        upsert_stream(mem_db, video_id="vid_null", status="discovered", title="Stream")
+        assert get_stream(mem_db, "vid_null")["date"] is None
+
+        videos = [_make_video("vid_null", "Stream", "2024-03-15")]
+        with self._patch_scrapetube(videos):
+            result = fetch_streams(
+                mem_db,
+                channel_id="UCtest",
+                channel_id_str="UCtest",
+                keywords=[],
+                fetch_all=True,
+            )
+
+        assert result.dates_updated == 1
+        assert result.existing == 1
+        stream = get_stream(mem_db, "vid_null")
+        assert stream["date"] == "2024-03-15"
+
+    def test_no_backfill_when_date_already_set(self, mem_db: sqlite3.Connection) -> None:
+        """Existing entry with a date is not backfilled."""
+        from mizukilens.cache import upsert_stream
+
+        upsert_stream(
+            mem_db, video_id="vid_dated", status="discovered",
+            title="Stream", date="2024-01-01",
+        )
+
+        videos = [_make_video("vid_dated", "Stream", "2024-03-15")]
+        with self._patch_scrapetube(videos):
+            result = fetch_streams(
+                mem_db,
+                channel_id="UCtest",
+                channel_id_str="UCtest",
+                keywords=[],
+                fetch_all=True,
+            )
+
+        assert result.dates_updated == 0
+        assert get_stream(mem_db, "vid_dated")["date"] == "2024-01-01"
+
+    def test_no_backfill_when_scrapetube_date_is_none(self, mem_db: sqlite3.Connection) -> None:
+        """No backfill when scrapetube also has no date."""
+        from mizukilens.cache import upsert_stream
+
+        upsert_stream(mem_db, video_id="vid_both_null", status="discovered", title="Stream")
+
+        videos = [_make_video("vid_both_null", "Stream", "")]  # empty date
+        with self._patch_scrapetube(videos):
+            result = fetch_streams(
+                mem_db,
+                channel_id="UCtest",
+                channel_id_str="UCtest",
+                keywords=[],
+                fetch_all=True,
+            )
+
+        assert result.dates_updated == 0
+        assert get_stream(mem_db, "vid_both_null")["date"] is None
+
+    def test_backfill_works_for_imported_status(self, mem_db: sqlite3.Connection) -> None:
+        """Backfill works even for imported streams (any status)."""
+        from mizukilens.cache import upsert_stream, update_stream_status
+
+        upsert_stream(mem_db, video_id="vid_imp", status="discovered", title="Stream")
+        update_stream_status(mem_db, "vid_imp", "extracted")
+        update_stream_status(mem_db, "vid_imp", "approved")
+        update_stream_status(mem_db, "vid_imp", "exported")
+        update_stream_status(mem_db, "vid_imp", "imported")
+        assert get_stream(mem_db, "vid_imp")["date"] is None
+
+        videos = [_make_video("vid_imp", "Stream", "2024-06-01")]
+        with self._patch_scrapetube(videos):
+            result = fetch_streams(
+                mem_db,
+                channel_id="UCtest",
+                channel_id_str="UCtest",
+                keywords=[],
+                fetch_all=True,
+            )
+
+        assert result.dates_updated == 1
+        assert get_stream(mem_db, "vid_imp")["date"] == "2024-06-01"

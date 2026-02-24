@@ -29,6 +29,7 @@ from mizukilens.cache import (
     open_db,
     save_candidate_comments,
     update_candidate_status,
+    update_stream_date,
     update_stream_status,
     upsert_parsed_songs,
     upsert_stream,
@@ -1025,3 +1026,50 @@ class TestDateSource:
         stream = get_stream(conn2, "old_vid")
         assert stream["date_source"] is None
         conn2.close()
+
+
+# ===========================================================================
+# SECTION: update_stream_date (NULL-date backfill)
+# ===========================================================================
+
+
+class TestUpdateStreamDate:
+    """Tests for the update_stream_date backfill function."""
+
+    def test_updates_null_date(self, db: sqlite3.Connection) -> None:
+        """Updates a NULL date to the given value."""
+        upsert_stream(db, video_id="bf01", status="discovered")
+        assert get_stream(db, "bf01")["date"] is None
+
+        result = update_stream_date(db, "bf01", "2024-03-15")
+        assert result is True
+        stream = get_stream(db, "bf01")
+        assert stream["date"] == "2024-03-15"
+        assert stream["date_source"] == "relative"
+
+    def test_does_not_overwrite_existing_date(self, db: sqlite3.Connection) -> None:
+        """Does not change a stream that already has a date."""
+        upsert_stream(
+            db, video_id="bf02", status="discovered",
+            date="2024-01-01", date_source="relative",
+        )
+
+        result = update_stream_date(db, "bf02", "2024-06-01")
+        assert result is False
+        assert get_stream(db, "bf02")["date"] == "2024-01-01"
+
+    def test_does_not_overwrite_precise_null_date(self, db: sqlite3.Connection) -> None:
+        """Does not overwrite if date_source is 'precise' even when date is NULL."""
+        upsert_stream(
+            db, video_id="bf03", status="discovered",
+            date_source="precise",
+        )
+
+        result = update_stream_date(db, "bf03", "2024-03-15")
+        assert result is False
+        assert get_stream(db, "bf03")["date"] is None
+
+    def test_returns_false_for_missing_stream(self, db: sqlite3.Connection) -> None:
+        """Returns False when the video_id does not exist."""
+        result = update_stream_date(db, "nonexistent", "2024-03-15")
+        assert result is False

@@ -168,6 +168,14 @@ def fetch_cmd(fetch_all: bool, recent: int | None, after: str | None,
     console.print(f"[bold green]完了![/bold green]  {result.summary_line()}")
     if result.dates_resolved > 0:
         console.print(f"[dim]正確な日付を取得: {result.dates_resolved} 件[/dim]")
+    if result.upcoming_skipped > 0:
+        console.print(
+            f"[dim]予定/未配信のストリームをスキップ: {result.upcoming_skipped} 件[/dim]"
+        )
+    if result.dates_updated > 0:
+        console.print(
+            f"[dim]既存エントリの日付を補完: {result.dates_updated} 件[/dim]"
+        )
     if result.skipped > 0:
         console.print(
             f"[dim]キーワードに一致しない動画をスキップ: {result.skipped} 件[/dim]"

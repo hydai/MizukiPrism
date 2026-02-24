@@ -336,6 +336,29 @@ def update_stream_status(
     conn.commit()
 
 
+def update_stream_date(
+    conn: sqlite3.Connection,
+    video_id: str,
+    new_date: str,
+) -> bool:
+    """Backfill a NULL date for an existing stream.
+
+    Only updates when the current ``date`` is NULL **and** ``date_source``
+    is not ``'precise'`` (precise dates should never be overwritten by a
+    relative backfill).
+
+    Returns:
+        True if the date was updated, False otherwise.
+    """
+    cur = conn.execute(
+        "UPDATE streams SET date = ?, date_source = 'relative', updated_at = ? "
+        "WHERE video_id = ? AND date IS NULL AND (date_source IS NULL OR date_source != 'precise')",
+        (new_date, _now_iso(), video_id),
+    )
+    conn.commit()
+    return cur.rowcount > 0
+
+
 def get_stream(conn: sqlite3.Connection, video_id: str) -> sqlite3.Row | None:
     """Fetch a single stream row by *video_id*, or None if not found."""
     cur = conn.execute("SELECT * FROM streams WHERE video_id = ?", (video_id,))
