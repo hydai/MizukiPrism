@@ -1,10 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
-import { buildAuthHeaders } from './FanAuthContext';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
-const TOKEN_KEY = 'mizukiprism_auth_token';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 export interface PlaylistVersion {
   performanceId: string;
@@ -23,12 +19,11 @@ export interface Playlist {
   updatedAt: number;
 }
 
-export type MergeOption = 'merge' | 'cloud' | 'local';
-
-interface PendingSync {
-  type: 'create' | 'update' | 'delete';
-  playlistId: string;
-  data?: Partial<Playlist>;
+export interface PlaylistExportEnvelope {
+  version: 1;
+  exportedAt: string;
+  source: 'MizukiPrism';
+  playlists: Playlist[];
 }
 
 interface PlaylistContextType {
@@ -41,15 +36,9 @@ interface PlaylistContextType {
   reorderVersionsInPlaylist: (playlistId: string, fromIndex: number, toIndex: number) => void;
   storageError: string | null;
   clearStorageError: () => void;
-  // Auth-aware sync
-  showMergeDialog: boolean;
-  mergeLocalCount: number;
-  mergeCloudCount: number;
-  handleMergeChoice: (option: MergeOption) => void;
-  pendingCloudSync: boolean;
-  isOnline: boolean;
-  conflictNotification: string | null;
-  clearConflictNotification: () => void;
+  exportAll: () => void;
+  exportSingle: (playlistId: string) => void;
+  importPlaylists: (file: File) => Promise<{ success: boolean; count?: number; error?: string }>;
 }
 
 const PlaylistContext = createContext<PlaylistContextType | undefined>(undefined);
@@ -63,8 +52,7 @@ export const usePlaylist = () => {
 };
 
 const STORAGE_KEY = 'mizukiprism_playlists';
-const PENDING_SYNC_KEY = 'mizukiprism_pending_sync';
-const STORAGE_QUOTA_ERROR = '本機儲存空間不足,請登入帳號以使用雲端儲存';
+const STORAGE_QUOTA_ERROR = '本機儲存空間不足';
 const STORAGE_UNSUPPORTED_ERROR = '您的瀏覽器不支援本機儲存，播放清單功能無法使用';
 
 function isLocalStorageAvailable(): boolean {
@@ -78,82 +66,83 @@ function isLocalStorageAvailable(): boolean {
   }
 }
 
-function getAuthToken(): string | null {
-  try {
-    return localStorage.getItem(TOKEN_KEY);
-  } catch {
-    return null;
-  }
+function formatDate(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function getAuthFetchHeaders(): Record<string, string> {
-  const token = getAuthToken();
-  if (!token) {
-    return { 'Content-Type': 'application/json' };
-  }
-  return buildAuthHeaders(token);
+function downloadJson(data: PlaylistExportEnvelope, filename: string) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
-export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode; isLoggedIn: boolean }) => {
+function buildEnvelope(playlists: Playlist[]): PlaylistExportEnvelope {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    source: 'MizukiPrism',
+    playlists,
+  };
+}
+
+function validateImport(data: unknown): { valid: true; playlists: Playlist[] } | { valid: false; error: string } {
+  if (!data || typeof data !== 'object') {
+    return { valid: false, error: '檔案格式無效' };
+  }
+
+  const envelope = data as Record<string, unknown>;
+
+  if (envelope.source !== 'MizukiPrism') {
+    return { valid: false, error: '非 MizukiPrism 匯出檔案' };
+  }
+
+  if (envelope.version !== 1) {
+    return { valid: false, error: '檔案版本不支援' };
+  }
+
+  if (!Array.isArray(envelope.playlists) || envelope.playlists.length === 0) {
+    return { valid: false, error: '檔案不含播放清單' };
+  }
+
+  const validPlaylists: Playlist[] = [];
+  for (const p of envelope.playlists) {
+    if (
+      typeof p.id === 'string' &&
+      typeof p.name === 'string' &&
+      Array.isArray(p.versions) &&
+      typeof p.createdAt === 'number' &&
+      typeof p.updatedAt === 'number'
+    ) {
+      validPlaylists.push({
+        id: p.id,
+        name: p.name,
+        versions: p.versions,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+      });
+    }
+  }
+
+  if (validPlaylists.length === 0) {
+    return { valid: false, error: '檔案不含有效的播放清單' };
+  }
+
+  return { valid: true, playlists: validPlaylists };
+}
+
+export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [storageError, setStorageError] = useState<string | null>(null);
   const [localStorageSupported] = useState(() =>
     typeof window !== 'undefined' ? isLocalStorageAvailable() : true
   );
-  const [showMergeDialog, setShowMergeDialog] = useState(false);
-  const [pendingMergeCloud, setPendingMergeCloud] = useState<Playlist[]>([]);
-  const [pendingCloudSync, setPendingCloudSync] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
-  const [conflictNotification, setConflictNotification] = useState<string | null>(null);
-  const prevLoggedInRef = useRef(isLoggedIn);
-  const syncInProgress = useRef(false);
-  const isLoggedInRef = useRef(isLoggedIn);
-
-  // Keep ref in sync with prop
-  useEffect(() => {
-    isLoggedInRef.current = isLoggedIn;
-  }, [isLoggedIn]);
-
-  // Track online/offline status
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    setIsOnline(navigator.onLine);
-
-    const handleOnline = async () => {
-      setIsOnline(true);
-      // Flush pending sync when back online using the ref-based version
-      if (!isLoggedInRef.current) return;
-      try {
-        const pendingRaw = localStorage.getItem(PENDING_SYNC_KEY);
-        if (!pendingRaw) return;
-        const pending = JSON.parse(pendingRaw);
-        if (pending.length === 0) return;
-
-        const localPlaylistsRaw = localStorage.getItem(STORAGE_KEY);
-        if (!localPlaylistsRaw) return;
-        const localPlaylists = JSON.parse(localPlaylistsRaw);
-
-        await fetch(`${API_BASE}/api/playlists/sync`, {
-          method: 'POST',
-          headers: getAuthFetchHeaders(),
-          body: JSON.stringify({ playlists: localPlaylists }),
-        });
-        localStorage.removeItem(PENDING_SYNC_KEY);
-        setPendingCloudSync(false);
-      } catch {
-        // Will retry on next online event
-      }
-    };
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Load playlists from localStorage on mount
   useEffect(() => {
@@ -161,7 +150,6 @@ export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Ensure all playlists have updatedAt
         const normalized = parsed.map((p: any) => ({
           ...p,
           updatedAt: p.updatedAt || p.createdAt || Date.now(),
@@ -173,202 +161,15 @@ export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode
     }
   }, []);
 
-  // When login state changes (login event)
-  useEffect(() => {
-    const wasLoggedIn = prevLoggedInRef.current;
-    prevLoggedInRef.current = isLoggedIn;
-
-    if (isLoggedIn && !wasLoggedIn) {
-      // Just logged in - fetch cloud playlists and handle merge
-      handleLoginSync();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn]);
-
-  const handleLoginSync = async () => {
-    if (syncInProgress.current) return;
-    syncInProgress.current = true;
-    try {
-      const res = await fetch(`${API_BASE}/api/playlists`, {
-        headers: getAuthFetchHeaders(),
-      });
-      if (!res.ok) {
-        syncInProgress.current = false;
-        return;
-      }
-      const data = await res.json();
-      const cloudPlaylists: Playlist[] = (data.playlists || []).map((p: any) => ({
-        ...p,
-        updatedAt: p.updatedAt || p.createdAt || Date.now(),
-      }));
-
-      const localPlaylistsRaw = localStorage.getItem(STORAGE_KEY);
-      const localPlaylists: Playlist[] = localPlaylistsRaw
-        ? JSON.parse(localPlaylistsRaw).map((p: any) => ({
-            ...p,
-            updatedAt: p.updatedAt || p.createdAt || Date.now(),
-          }))
-        : [];
-
-      if (localPlaylists.length === 0 && cloudPlaylists.length === 0) {
-        // Nothing to do
-        syncInProgress.current = false;
-        return;
-      }
-
-      if (localPlaylists.length === 0) {
-        // Use cloud playlists
-        saveToLocalStorage(cloudPlaylists);
-        setPlaylists(cloudPlaylists);
-        syncInProgress.current = false;
-        return;
-      }
-
-      if (cloudPlaylists.length === 0) {
-        // Push local to cloud
-        await syncAllToCloud(localPlaylists);
-        syncInProgress.current = false;
-        return;
-      }
-
-      // Both have playlists - show merge dialog
-      setPendingMergeCloud(cloudPlaylists);
-      setShowMergeDialog(true);
-      syncInProgress.current = false;
-    } catch {
-      syncInProgress.current = false;
-    }
-  };
-
-  const handleMergeChoice = useCallback(async (option: MergeOption) => {
-    setShowMergeDialog(false);
-
-    const localPlaylistsRaw = localStorage.getItem(STORAGE_KEY);
-    const localPlaylists: Playlist[] = localPlaylistsRaw
-      ? JSON.parse(localPlaylistsRaw).map((p: any) => ({
-          ...p,
-          updatedAt: p.updatedAt || p.createdAt || Date.now(),
-        }))
-      : [];
-
-    let finalPlaylists: Playlist[];
-
-    if (option === 'merge') {
-      // Merge: combine by ID, use newer updatedAt for conflicts
-      const mergedMap = new Map<string, Playlist>();
-      localPlaylists.forEach(p => mergedMap.set(p.id, p));
-      pendingMergeCloud.forEach(cloudP => {
-        const existing = mergedMap.get(cloudP.id);
-        if (!existing || cloudP.updatedAt > existing.updatedAt) {
-          mergedMap.set(cloudP.id, cloudP);
-        }
-      });
-      finalPlaylists = Array.from(mergedMap.values()).sort((a, b) => a.createdAt - b.createdAt);
-    } else if (option === 'cloud') {
-      finalPlaylists = pendingMergeCloud;
-    } else {
-      // local
-      finalPlaylists = localPlaylists;
-    }
-
-    saveToLocalStorage(finalPlaylists);
-    setPlaylists(finalPlaylists);
-    setPendingMergeCloud([]);
-
-    // Sync final result to cloud
-    await syncAllToCloud(finalPlaylists);
-  }, [pendingMergeCloud]);
-
-  const syncAllToCloud = async (playlistsToSync: Playlist[]) => {
-    try {
-      await fetch(`${API_BASE}/api/playlists/sync`, {
-        method: 'POST',
-        headers: getAuthFetchHeaders(),
-        body: JSON.stringify({ playlists: playlistsToSync }),
-      });
-    } catch {
-      // Silently fail - will be retried
-    }
-  };
-
-  // Save to localStorage
   const saveToLocalStorage = (newPlaylists: Playlist[]): boolean => {
     try {
-      const serialized = JSON.stringify(newPlaylists);
-      localStorage.setItem(STORAGE_KEY, serialized);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newPlaylists));
       setStorageError(null);
       return true;
     } catch (error: any) {
-      const isQuotaError = (
-        error?.name === 'QuotaExceededError' ||
-        error?.code === 22
-      );
-      if (isQuotaError) {
-        setStorageError(STORAGE_QUOTA_ERROR);
-      } else {
-        console.error('Failed to save playlists to localStorage:', error);
-        setStorageError(STORAGE_QUOTA_ERROR);
-      }
+      const isQuotaError = error?.name === 'QuotaExceededError' || error?.code === 22;
+      setStorageError(isQuotaError ? STORAGE_QUOTA_ERROR : STORAGE_QUOTA_ERROR);
       return false;
-    }
-  };
-
-  // Queue a sync operation for when back online
-  const queuePendingSync = (op: PendingSync) => {
-    try {
-      const pendingRaw = localStorage.getItem(PENDING_SYNC_KEY);
-      const pending: PendingSync[] = pendingRaw ? JSON.parse(pendingRaw) : [];
-      pending.push(op);
-      localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(pending));
-      setPendingCloudSync(true);
-    } catch {
-      // Ignore
-    }
-  };
-
-  // Sync a single playlist update to cloud
-  const syncToCloud = async (type: 'create' | 'update' | 'delete', playlist?: Playlist, playlistId?: string) => {
-    if (!isLoggedIn) return;
-
-    if (!navigator.onLine) {
-      // Queue for later
-      if (type === 'delete' && playlistId) {
-        queuePendingSync({ type: 'delete', playlistId });
-      } else if (playlist) {
-        queuePendingSync({ type, playlistId: playlist.id, data: playlist });
-      }
-      return;
-    }
-
-    try {
-      if (type === 'delete' && playlistId) {
-        const res = await fetch(`${API_BASE}/api/playlists/${encodeURIComponent(playlistId)}`, {
-          method: 'DELETE',
-          headers: getAuthFetchHeaders(),
-        });
-        if (!res.ok) throw new Error('Delete failed');
-      } else if (playlist) {
-        const res = await fetch(`${API_BASE}/api/playlists/${encodeURIComponent(playlist.id)}`, {
-          method: 'PUT',
-          headers: getAuthFetchHeaders(),
-          body: JSON.stringify(playlist),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.conflict && data.keptVersion === 'cloud') {
-            setConflictNotification(
-              `衝突已解決：保留雲端版本的「${playlist.name}」`
-            );
-          }
-        }
-      }
-    } catch {
-      // Queue for retry
-      if (type === 'delete' && playlistId) {
-        queuePendingSync({ type: 'delete', playlistId });
-      } else if (playlist) {
-        queuePendingSync({ type, playlistId: playlist.id, data: playlist });
-      }
     }
   };
 
@@ -397,18 +198,15 @@ export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode
 
     if (saved) {
       setPlaylists(newPlaylists);
-      syncToCloud('create', newPlaylist);
       return { success: true };
-    } else {
-      return { success: false, error: STORAGE_QUOTA_ERROR };
     }
+    return { success: false, error: STORAGE_QUOTA_ERROR };
   };
 
   const deletePlaylist = (id: string) => {
     const newPlaylists = playlists.filter(p => p.id !== id);
     saveToLocalStorage(newPlaylists);
     setPlaylists(newPlaylists);
-    syncToCloud('delete', undefined, id);
   };
 
   const renamePlaylist = (id: string, newName: string): { success: boolean; error?: string } => {
@@ -423,15 +221,11 @@ export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode
     );
 
     const saved = saveToLocalStorage(newPlaylists);
-
     if (saved) {
       setPlaylists(newPlaylists);
-      const updated = newPlaylists.find(p => p.id === id);
-      if (updated) syncToCloud('update', updated);
       return { success: true };
-    } else {
-      return { success: false, error: STORAGE_QUOTA_ERROR };
     }
+    return { success: false, error: STORAGE_QUOTA_ERROR };
   };
 
   const addVersionToPlaylist = (playlistId: string, version: PlaylistVersion): { success: boolean; error?: string } => {
@@ -441,7 +235,6 @@ export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode
     }
 
     const playlist = playlists.find(p => p.id === playlistId);
-
     if (!playlist) {
       return { success: false, error: '播放清單不存在' };
     }
@@ -459,15 +252,11 @@ export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode
     );
 
     const saved = saveToLocalStorage(newPlaylists);
-
     if (saved) {
       setPlaylists(newPlaylists);
-      const updated = newPlaylists.find(p => p.id === playlistId);
-      if (updated) syncToCloud('update', updated);
       return { success: true };
-    } else {
-      return { success: false, error: STORAGE_QUOTA_ERROR };
     }
+    return { success: false, error: STORAGE_QUOTA_ERROR };
   };
 
   const removeVersionFromPlaylist = (playlistId: string, performanceId: string) => {
@@ -477,11 +266,8 @@ export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode
         ? { ...p, versions: p.versions.filter(v => v.performanceId !== performanceId), updatedAt: now }
         : p
     );
-
     saveToLocalStorage(newPlaylists);
     setPlaylists(newPlaylists);
-    const updated = newPlaylists.find(p => p.id === playlistId);
-    if (updated) syncToCloud('update', updated);
   };
 
   const reorderVersionsInPlaylist = (playlistId: string, fromIndex: number, toIndex: number) => {
@@ -495,19 +281,76 @@ export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode
       }
       return p;
     });
-
     saveToLocalStorage(newPlaylists);
     setPlaylists(newPlaylists);
-    const updated = newPlaylists.find(p => p.id === playlistId);
-    if (updated) syncToCloud('update', updated);
   };
 
-  const clearStorageError = () => {
-    setStorageError(null);
+  const clearStorageError = () => setStorageError(null);
+
+  const exportAll = () => {
+    if (playlists.length === 0) return;
+    downloadJson(buildEnvelope(playlists), `mizukiprism-playlists-${formatDate()}.json`);
   };
 
-  const clearConflictNotification = () => {
-    setConflictNotification(null);
+  const exportSingle = (playlistId: string) => {
+    const playlist = playlists.find(p => p.id === playlistId);
+    if (!playlist) return;
+    downloadJson(buildEnvelope([playlist]), `mizukiprism-${playlist.name}-${formatDate()}.json`);
+  };
+
+  const importPlaylists = async (file: File): Promise<{ success: boolean; count?: number; error?: string }> => {
+    try {
+      const text = await file.text();
+      let data: unknown;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        return { success: false, error: '無法匯入：檔案格式無效' };
+      }
+
+      const result = validateImport(data);
+      if (!result.valid) {
+        return { success: false, error: `無法匯入：${result.error}` };
+      }
+
+      const incoming = result.playlists;
+      const localMap = new Map(playlists.map(p => [p.id, p]));
+      const merged: Playlist[] = [...playlists];
+
+      for (const imported of incoming) {
+        const existing = localMap.get(imported.id);
+        if (!existing) {
+          // No conflict — add directly
+          merged.push(imported);
+        } else if (imported.updatedAt > existing.updatedAt) {
+          // Imported is newer — replace existing, keep old as renamed copy
+          const idx = merged.findIndex(p => p.id === existing.id);
+          merged[idx] = imported;
+          merged.push({
+            ...existing,
+            id: `playlist-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            name: `${existing.name}（匯入）`,
+          });
+        } else {
+          // Existing is newer or same — keep existing, add imported as renamed copy
+          merged.push({
+            ...imported,
+            id: `playlist-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            name: `${imported.name}（匯入）`,
+          });
+        }
+      }
+
+      const saved = saveToLocalStorage(merged);
+      if (!saved) {
+        return { success: false, error: '本機儲存空間不足' };
+      }
+
+      setPlaylists(merged);
+      return { success: true, count: incoming.length };
+    } catch {
+      return { success: false, error: '無法匯入：檔案格式無效' };
+    }
   };
 
   return (
@@ -522,14 +365,9 @@ export const PlaylistProvider = ({ children, isLoggedIn }: { children: ReactNode
         reorderVersionsInPlaylist,
         storageError,
         clearStorageError,
-        showMergeDialog,
-        mergeLocalCount: playlists.length,
-        mergeCloudCount: pendingMergeCloud.length,
-        handleMergeChoice,
-        pendingCloudSync,
-        isOnline,
-        conflictNotification,
-        clearConflictNotification,
+        exportAll,
+        exportSingle,
+        importPlaylists,
       }}
     >
       {children}

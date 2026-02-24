@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, LogIn, LogOut, User, WifiOff, ChevronLeft, MoreHorizontal, House } from 'lucide-react';
+import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, User, WifiOff, ChevronLeft, MoreHorizontal, House } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
-import { useFanAuth } from './contexts/FanAuthContext';
 import Toast from './components/Toast';
 import PlaylistPanel from './components/PlaylistPanel';
 import CreatePlaylistDialog from './components/CreatePlaylistDialog';
@@ -114,8 +113,7 @@ export default function Home() {
   }, []);
 
   const { currentTrack, playTrack, addToQueue, apiLoadError, unavailableVideoIds, timestampWarning, clearTimestampWarning, skipNotification, clearSkipNotification } = usePlayer();
-  const { playlists, storageError, clearStorageError, isOnline, conflictNotification, clearConflictNotification } = usePlaylist();
-  const { user, isLoggedIn, logout } = useFanAuth();
+  const { playlists, storageError, clearStorageError } = usePlaylist();
 
   const handleAddToQueue = (track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number; albumArtUrl?: string }) => {
     addToQueue(track);
@@ -136,15 +134,6 @@ export default function Home() {
       clearStorageError();
     }
   }, [storageError, clearStorageError]);
-
-  // Show conflict notification toast
-  useEffect(() => {
-    if (conflictNotification) {
-      setToastMessage(conflictNotification);
-      setShowToast(true);
-      clearConflictNotification();
-    }
-  }, [conflictNotification, clearConflictNotification]);
 
   // Show timestamp warning toast
   useEffect(() => {
@@ -553,88 +542,6 @@ export default function Home() {
           className="flex-shrink-0 px-3 py-3 border-t"
           style={{ borderTop: '1px solid var(--border-glass)' }}
         >
-          {isLoggedIn && user ? (
-            <div className="flex items-center gap-3">
-              {/* Avatar with gradient border */}
-              <div
-                className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center p-0.5"
-                style={{ background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))' }}
-              >
-                <div
-                  className="w-full h-full rounded-full flex items-center justify-center"
-                  style={{ background: 'var(--bg-surface-frosted)' }}
-                >
-                  <User className="w-4 h-4" style={{ color: 'var(--accent-pink)' }} />
-                </div>
-              </div>
-              {/* Name + status */}
-              <div className="flex-1 min-w-0">
-                <div
-                  className="text-sm font-medium truncate"
-                  style={{ color: 'var(--text-primary)' }}
-                  data-testid="logged-in-username"
-                >
-                  {user.email}
-                </div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  {isOnline ? (
-                    <span
-                      className="text-xs font-medium px-1.5 py-0.5 rounded-full"
-                      style={{ background: '#DCFCE7', color: '#16A34A', fontSize: 'var(--font-size-xs)' }}
-                    >
-                      Online
-                    </span>
-                  ) : (
-                    <span
-                      className="text-xs font-medium px-1.5 py-0.5 rounded-full flex items-center gap-1"
-                      style={{ background: '#FEF9C3', color: '#CA8A04', fontSize: 'var(--font-size-xs)' }}
-                    >
-                      <WifiOff className="w-2.5 h-2.5" />
-                      離線
-                    </span>
-                  )}
-                </div>
-              </div>
-              {/* Logout button */}
-              <button
-                onClick={async () => {
-                  await logout();
-                  setToastMessage('已登出');
-                  setShowToast(true);
-                }}
-                className="p-1.5 rounded-radius-sm transition-all hover:bg-white/50"
-                style={{ color: 'var(--text-tertiary)' }}
-                data-testid="logout-button"
-                title="登出"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <a
-              href="/auth"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-radius-lg text-sm font-medium transition-all hover:bg-white/40 w-full"
-              style={{ color: 'var(--text-secondary)' }}
-              data-testid="login-button"
-            >
-              {/* Guest avatar placeholder */}
-              <div
-                className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center p-0.5"
-                style={{ background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))' }}
-              >
-                <div
-                  className="w-full h-full rounded-full flex items-center justify-center"
-                  style={{ background: 'var(--bg-surface-frosted)' }}
-                >
-                  <LogIn className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>登入</div>
-                <div className="text-xs" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}>訪客模式</div>
-              </div>
-            </a>
-          )}
           {/* Attribution */}
           <p className="text-xs mt-2 text-center" style={{ color: 'var(--text-muted)' }}>
             Made with <Heart className="w-3 h-3 inline text-pink-400 fill-current" /> for Mizuki
@@ -2286,77 +2193,18 @@ export default function Home() {
               className="lg:hidden flex-1 px-4 pt-4 pb-32"
               data-testid="mobile-profile-tab"
             >
-              {isLoggedIn && user ? (
-                <div>
-                  <div className="flex items-center gap-4 mb-6 p-4 rounded-radius-lg" style={{ background: 'var(--bg-surface-glass)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-lg)' }}>
-                    <div
-                      className="w-14 h-14 rounded-full flex-shrink-0 flex items-center justify-center p-0.5"
-                      style={{ background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))' }}
-                    >
-                      <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: 'var(--bg-surface-frosted)' }}>
-                        <User className="w-7 h-7" style={{ color: 'var(--accent-pink)' }} />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-base font-bold truncate" style={{ color: 'var(--text-primary)' }} data-testid="logged-in-username">
-                        {user.email}
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        {isOnline ? (
-                          <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: '#DCFCE7', color: '#16A34A' }}>Online</span>
-                        ) : (
-                          <span className="text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1" style={{ background: '#FEF9C3', color: '#CA8A04' }}>
-                            <WifiOff className="w-2.5 h-2.5" />離線
-                          </span>
-                        )}
-                      </div>
-                    </div>
+              <div className="text-center py-8">
+                <div
+                  className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center p-1"
+                  style={{ background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))' }}
+                >
+                  <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: 'var(--bg-surface-frosted)' }}>
+                    <Sparkles className="w-9 h-9" style={{ color: 'var(--text-tertiary)' }} />
                   </div>
-                  <button
-                    onClick={async () => {
-                      await logout();
-                      setToastMessage('已登出');
-                      setShowToast(true);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-radius-lg font-medium text-sm"
-                    style={{
-                      background: 'var(--bg-surface-glass)',
-                      border: '1px solid var(--border-glass)',
-                      color: 'var(--text-secondary)',
-                      borderRadius: 'var(--radius-lg)',
-                    }}
-                    data-testid="mobile-logout-button"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    登出
-                  </button>
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div
-                    className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center p-1"
-                    style={{ background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))' }}
-                  >
-                    <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: 'var(--bg-surface-frosted)' }}>
-                      <User className="w-9 h-9" style={{ color: 'var(--text-tertiary)' }} />
-                    </div>
-                  </div>
-                  <p className="mb-4 font-medium" style={{ color: 'var(--text-secondary)' }}>登入以使用完整功能</p>
-                  <a
-                    href="/auth"
-                    className="inline-flex items-center gap-2 px-6 py-3 font-semibold text-white"
-                    style={{
-                      background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
-                      borderRadius: 'var(--radius-pill)',
-                      fontSize: 'var(--font-size-sm)',
-                    }}
-                    data-testid="login-button"
-                  >
-                    <LogIn className="w-4 h-4" />
-                    登入
-                  </a>
-                </div>
-              )}
+                <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>帳號功能即將推出</p>
+                <p className="text-sm mt-2" style={{ color: 'var(--text-tertiary)' }}>目前可使用播放清單的匯出/匯入功能</p>
+              </div>
             </div>
           )}
         </div>
