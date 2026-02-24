@@ -4,10 +4,8 @@ import { test, expect } from '@playwright/test';
  * META-006: Synced Lyrics Display in NowPlayingModal
  *
  * Pre-conditions: The dev server must be running at localhost:3000.
- * Test lyrics are in data/metadata/song-lyrics.json:
- *   - song-1: has syncedLyrics (LRC format)
- *   - song-2: has plainLyrics only
- *   - song-3: fetchStatus 'no_match' (no lyrics)
+ * Test lyrics are in data/metadata/song-lyrics.json (initially empty).
+ * Songs come from real imported VOD data.
  */
 
 const BASE_URL = 'http://localhost:3000';

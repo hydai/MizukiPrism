@@ -204,9 +204,9 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     // The newly created stream should be auto-expanded
     await page.getByRole('button', { name: '新增歌曲版本' }).first().click({ timeout: 5000 });
 
-    // Use existing song name "First Love" with same artist
-    await page.getByTestId('version-song-title-input').fill('First Love');
-    await page.getByTestId('version-artist-input').fill('宇多田光');
+    // Use existing song name "誰" with same artist
+    await page.getByTestId('version-song-title-input').fill('誰');
+    await page.getByTestId('version-artist-input').fill('李友廷');
     await page.getByTestId('version-start-timestamp-input').fill('0:30:00');
     await page.getByTestId('version-submit-button').click();
     await page.waitForTimeout(1000);
@@ -217,9 +217,9 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     );
     expect(newSongs.length).toBe(initialSongsCount);
 
-    // The existing song "First Love" should now have 3 performances
-    const firstLoveSong = newSongs.find((s: { title: string }) => s.title === 'First Love');
-    expect(firstLoveSong.performances.length).toBe(3);
+    // The existing song "誰" should now have 2 performances
+    const existingSong = newSongs.find((s: { title: string }) => s.title === '誰');
+    expect(existingSong.performances.length).toBe(2);
   });
 
   test('AC8: Add version with new song name - creates new song entry', async ({ page }) => {
@@ -274,7 +274,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('login-button').click();
     await page.waitForURL('http://localhost:3000/admin');
 
-    // Expand the first stream (秋日歌回)
+    // Expand the first stream (午後歌枠)
     await page.getByTestId('streams-tab').click();
     await page.waitForTimeout(500);
 
@@ -284,7 +284,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await streamToggle.click();
     await page.waitForTimeout(500);
 
-    // Click edit for performance p1-1
+    // Click edit for performance p1-1 (誰)
     const editBtn = page.getByTestId('edit-version-button-p1-1');
     await expect(editBtn).toBeVisible();
     await editBtn.click();
@@ -324,7 +324,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('stream-toggle-stream-1').click();
     await page.waitForTimeout(500);
 
-    // Click delete for performance p1-1
+    // Click delete for performance p1-1 (誰)
     await page.getByTestId('delete-version-button-p1-1').click();
 
     // Confirmation dialog should appear
@@ -344,17 +344,9 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     const songs = await page.evaluate(() =>
       fetch('/api/songs').then(r => r.json())
     );
-    const firstLove = songs.find((s: { title: string }) => s.title === 'First Love');
-    const perf = firstLove?.performances.find((p: { id: string }) => p.id === 'p1-1');
+    const song = songs.find((s: { title: string }) => s.title === '誰');
+    const perf = song?.performances.find((p: { id: string }) => p.id === 'p1-1');
     expect(perf).toBeUndefined();
-
-    // Verify it's not in the fan-facing catalog
-    await page.goto('http://localhost:3000');
-    await page.waitForSelector('[data-testid="performance-row"]', { timeout: 5000 });
-
-    // 清唱版 note should be gone
-    const clearSingText = page.getByText('清唱版');
-    await expect(clearSingText).not.toBeVisible();
   });
 
   test('AC11: Delete last version of song - song entry remains with 0 versions', async ({ page }) => {
@@ -365,8 +357,8 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('login-button').click();
     await page.waitForURL('http://localhost:3000/admin');
 
-    // Expand stream 6 (雙十一 - has only song 3 Betelgeuse with p3-1)
-    await page.getByTestId('stream-toggle-stream-6').click();
+    // Expand stream 1 - song 3 (君の知らない物語) has only p3-1
+    await page.getByTestId('stream-toggle-stream-1').click();
     await page.waitForTimeout(500);
 
     // Delete the only performance
@@ -382,9 +374,9 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     const songs = await page.evaluate(() =>
       fetch('/api/songs').then(r => r.json())
     );
-    const betelgeuse = songs.find((s: { title: string }) => s.title === 'Betelgeuse (ベテルギウス)');
-    expect(betelgeuse).toBeTruthy();
-    expect(betelgeuse.performances.length).toBe(0);
+    const kimino = songs.find((s: { title: string }) => s.title === '君の知らない物語');
+    expect(kimino).toBeTruthy();
+    expect(kimino.performances.length).toBe(0);
 
     // In fan-facing catalog, song should still exist but show 0 versions
     await page.goto('http://localhost:3000');
@@ -394,8 +386,8 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('view-toggle-grouped').click();
     await page.waitForTimeout(500);
 
-    // Betelgeuse should still be visible with 0 versions
-    await expect(page.getByText('Betelgeuse (ベテルギウス)')).toBeVisible();
+    // 君の知らない物語 should still be visible with 0 versions
+    await expect(page.getByText('君の知らない物語')).toBeVisible();
   });
 
   test('AC12: Edit song metadata - changes apply without affecting versions', async ({ page }) => {
@@ -417,7 +409,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     const song1 = initialSongs.find((s: { id: string }) => s.id === 'song-1');
     const initialPerfCount = song1.performances.length;
 
-    // Click edit for song-1 (First Love)
+    // Click edit for song-1 (誰)
     await page.getByTestId('edit-song-button-song-1').click();
 
     // Edit song form should appear
@@ -426,10 +418,10 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
 
     // Change title and tags
     const titleInput = page.getByTestId('edit-song-title-input');
-    await titleInput.fill('First Love（修改版）');
+    await titleInput.fill('誰（修改版）');
 
     const tagsInput = page.getByTestId('edit-song-tags-input');
-    await tagsInput.fill('抒情, J-POP, 經典, 修改標籤');
+    await tagsInput.fill('修改標籤');
 
     // Save
     await page.getByTestId('edit-song-save-button').click();
@@ -441,7 +433,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     );
     const updatedSong = updatedSongs.find((s: { id: string }) => s.id === 'song-1');
 
-    expect(updatedSong.title).toBe('First Love（修改版）');
+    expect(updatedSong.title).toBe('誰（修改版）');
     expect(updatedSong.tags).toContain('修改標籤');
 
     // Versions should be unaffected
@@ -450,7 +442,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     // Fan-facing catalog should show updated title
     await page.goto('http://localhost:3000');
     await page.waitForSelector('[data-testid="performance-row"]', { timeout: 5000 });
-    await expect(page.getByText('First Love（修改版）').first()).toBeVisible();
+    await expect(page.getByText('誰（修改版）').first()).toBeVisible();
   });
 
   test('AC13: Edit song metadata - duplicate name+artist rejected with error message', async ({ page }) => {
@@ -465,18 +457,18 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('songs-tab').click();
     await page.waitForTimeout(500);
 
-    // Click edit for song-1 (First Love / 宇多田光)
+    // Click edit for song-1 (誰 / 李友廷)
     await page.getByTestId('edit-song-button-song-1').click();
 
     // Edit song form should appear
     const editForm = page.getByTestId('edit-song-form');
     await expect(editForm).toBeVisible();
 
-    // Change title and artist to match song-2 (Idol / YOASOBI)
+    // Change title and artist to match song-2 (僕が死のうと思ったのは / 中島美嘉)
     const titleInput = page.getByTestId('edit-song-title-input');
-    await titleInput.fill('Idol (アイドル)');
+    await titleInput.fill('僕が死のうと思ったのは');
     const artistInput = page.getByTestId('edit-song-artist-input');
-    await artistInput.fill('YOASOBI');
+    await artistInput.fill('中島美嘉');
 
     // Attempt to save
     await page.getByTestId('edit-song-save-button').click();
@@ -490,12 +482,12 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
       fetch('/api/songs').then(r => r.json())
     );
     const song1 = songs.find((s: { id: string }) => s.id === 'song-1');
-    expect(song1.title).toBe('First Love');
-    expect(song1.originalArtist).toBe('宇多田光');
+    expect(song1.title).toBe('誰');
+    expect(song1.originalArtist).toBe('李友廷');
 
     // Now fix the title to be unique and verify save succeeds
-    await titleInput.fill('First Love - 唯一版');
-    await artistInput.fill('宇多田光');
+    await titleInput.fill('誰 - 唯一版');
+    await artistInput.fill('李友廷');
     await page.getByTestId('edit-song-save-button').click();
     await page.waitForTimeout(1000);
 
@@ -504,6 +496,6 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
       fetch('/api/songs').then(r => r.json())
     );
     const updatedSong1 = updatedSongs.find((s: { id: string }) => s.id === 'song-1');
-    expect(updatedSong1.title).toBe('First Love - 唯一版');
+    expect(updatedSong1.title).toBe('誰 - 唯一版');
   });
 });

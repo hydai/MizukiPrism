@@ -56,19 +56,17 @@ test.describe('CORE-002: Song Grouped View & Dual View Toggle', () => {
     const songCards = page.getByTestId('song-card');
     await expect(songCards.first()).toBeVisible();
 
-    // Count song cards (should be 5 songs from data)
+    // Count song cards (should be 18 songs from real VOD data)
     const cardCount = await songCards.count();
-    expect(cardCount).toBe(5);
+    expect(cardCount).toBe(18);
 
     // Verify first song card shows required information
     const firstCard = songCards.first();
-    await expect(firstCard).toContainText('Betelgeuse'); // First alphabetically
-    await expect(firstCard).toContainText('Yuuri'); // Original artist
+    await expect(firstCard).toContainText('Dangerous Woman'); // First alphabetically (ASCII sort)
+    await expect(firstCard).toContainText('Ariana Grande'); // Original artist
     await expect(firstCard).toContainText('1 個版本'); // Version count
 
     // Verify songs are sorted alphabetically
-    const songTitles = await songCards.allTextContents();
-    // Extract actual titles from the card content
     const titles = [];
     for (let i = 0; i < cardCount; i++) {
       const card = songCards.nth(i);
@@ -76,65 +74,51 @@ test.describe('CORE-002: Song Grouped View & Dual View Toggle', () => {
       titles.push(await titleElement.textContent());
     }
 
-    // Expected order based on Traditional Chinese stroke order / alphabetical
-    // Betelgeuse, First Love, Idol, KICK BACK, Plastic Love
-    expect(titles[0]).toBe('Betelgeuse (ベテルギウス)');
-    expect(titles[1]).toBe('First Love');
-    expect(titles[2]).toBe('Idol (アイドル)');
-    expect(titles[3]).toBe('KICK BACK');
-    expect(titles[4]).toBe('Plastic Love');
+    // Verify alphabetical order for first few (ASCII letters before CJK)
+    expect(titles[0]).toBe('Dangerous Woman');
+    expect(titles[1]).toBe('Dear');
+    expect(titles[2]).toBe('Galaxy Anthem');
+    expect(titles[3]).toBe('Havana');
+    expect(titles[4]).toBe('Loveit?');
   });
 
-  test('AC4: Click song card with multiple versions shows expanded versions sorted by date', async ({ page }) => {
+  test('AC4: Click song card shows expanded version sorted by date', async ({ page }) => {
     await page.goto('http://localhost:3000');
 
     // Switch to grouped view
     await page.getByTestId('view-toggle-grouped').click();
     await page.waitForTimeout(300);
 
-    // Find and click "Idol" song card (has 3 versions)
+    // Find and click "Dear" song card (has 1 version)
     const songCards = page.getByTestId('song-card');
-    let idolCard = null;
+    let dearCard = null;
     for (let i = 0; i < await songCards.count(); i++) {
       const card = songCards.nth(i);
       const text = await card.textContent();
-      if (text?.includes('Idol')) {
-        idolCard = card;
+      if (text?.includes('Dear')) {
+        dearCard = card;
         break;
       }
     }
 
-    expect(idolCard).not.toBeNull();
-    await idolCard!.click();
+    expect(dearCard).not.toBeNull();
+    await dearCard!.click();
 
     // Wait for expansion
     await page.waitForTimeout(300);
 
     // Verify versions list is visible
-    const versionsList = idolCard!.getByTestId('versions-list');
+    const versionsList = dearCard!.getByTestId('versions-list');
     await expect(versionsList).toBeVisible();
 
-    // Verify all version rows are visible
+    // Verify version row is visible
     const versionRows = versionsList.getByTestId('version-row');
     const versionCount = await versionRows.count();
-    expect(versionCount).toBe(3);
+    expect(versionCount).toBe(1);
 
-    // Verify versions are sorted by date descending (newest first)
-    const dates = [];
-    for (let i = 0; i < versionCount; i++) {
-      const row = versionRows.nth(i);
-      const dateText = await row.locator('span.font-mono').first().textContent();
-      dates.push(dateText);
-    }
-
-    expect(dates[0]).toBe('2024-02-14'); // Newest
-    expect(dates[1]).toBe('2023-12-31');
-    expect(dates[2]).toBe('2023-05-01'); // Oldest
-
-    // Verify each version shows stream date and title
+    // Verify version shows stream date
     const firstVersion = versionRows.first();
-    await expect(firstVersion).toContainText('2024-02-14');
-    await expect(firstVersion).toContainText('情人節特輯');
+    await expect(firstVersion).toContainText('2025-03-26');
   });
 
   test('AC5: Click same song card again collapses version list', async ({ page }) => {
@@ -144,37 +128,37 @@ test.describe('CORE-002: Song Grouped View & Dual View Toggle', () => {
     await page.getByTestId('view-toggle-grouped').click();
     await page.waitForTimeout(300);
 
-    // Find "First Love" song card (has 2 versions)
+    // Find "Dear" song card
     const songCards = page.getByTestId('song-card');
-    let firstLoveCardIndex = -1;
+    let dearCardIndex = -1;
     for (let i = 0; i < await songCards.count(); i++) {
       const card = songCards.nth(i);
       const text = await card.textContent();
-      if (text?.includes('First Love')) {
-        firstLoveCardIndex = i;
+      if (text?.includes('Dear')) {
+        dearCardIndex = i;
         break;
       }
     }
 
-    expect(firstLoveCardIndex).toBeGreaterThanOrEqual(0);
-    const firstLoveCard = songCards.nth(firstLoveCardIndex);
+    expect(dearCardIndex).toBeGreaterThanOrEqual(0);
+    const dearCard = songCards.nth(dearCardIndex);
 
     // Get the header button specifically (not the entire card)
-    const headerButton = firstLoveCard.locator('button').first();
+    const headerButton = dearCard.locator('button').first();
 
     // Click to expand
     await headerButton.click();
     await page.waitForTimeout(300);
 
     // Verify versions list is visible
-    await expect(firstLoveCard.getByTestId('versions-list')).toBeVisible();
+    await expect(dearCard.getByTestId('versions-list')).toBeVisible();
 
     // Click again to collapse
     await headerButton.click();
     await page.waitForTimeout(300);
 
     // Verify versions list is no longer visible (should not exist in DOM)
-    await expect(firstLoveCard.getByTestId('versions-list')).toHaveCount(0);
+    await expect(dearCard.getByTestId('versions-list')).toHaveCount(0);
   });
 
   test('AC6: Click song card with single version shows that version', async ({ page }) => {
@@ -184,29 +168,29 @@ test.describe('CORE-002: Song Grouped View & Dual View Toggle', () => {
     await page.getByTestId('view-toggle-grouped').click();
     await page.waitForTimeout(300);
 
-    // Find "KICK BACK" song card (has only 1 version)
+    // Find "紅蓮華" song card (has only 1 version)
     const songCards = page.getByTestId('song-card');
-    let kickBackCard = null;
+    let gurengeCard = null;
     for (let i = 0; i < await songCards.count(); i++) {
       const card = songCards.nth(i);
       const text = await card.textContent();
-      if (text?.includes('KICK BACK')) {
-        kickBackCard = card;
+      if (text?.includes('紅蓮華')) {
+        gurengeCard = card;
         break;
       }
     }
 
-    expect(kickBackCard).not.toBeNull();
+    expect(gurengeCard).not.toBeNull();
 
     // Verify it shows "1 個版本"
-    await expect(kickBackCard!).toContainText('1 個版本');
+    await expect(gurengeCard!).toContainText('1 個版本');
 
     // Click to expand
-    await kickBackCard!.click();
+    await gurengeCard!.click();
     await page.waitForTimeout(300);
 
     // Verify versions list is visible
-    const versionsList = kickBackCard!.getByTestId('versions-list');
+    const versionsList = gurengeCard!.getByTestId('versions-list');
     await expect(versionsList).toBeVisible();
 
     // Verify exactly 1 version row is visible
@@ -216,9 +200,7 @@ test.describe('CORE-002: Song Grouped View & Dual View Toggle', () => {
 
     // Verify the single version shows correct information
     const versionRow = versionRows.first();
-    await expect(versionRow).toContainText('2023-09-09');
-    await expect(versionRow).toContainText('深夜的暴走卡拉OK');
-    await expect(versionRow).toContainText('喉嚨極限挑戰');
+    await expect(versionRow).toContainText('2025-03-26');
   });
 
   test('AC7: Switch back to timeline view restores flat timeline list', async ({ page }) => {
@@ -256,10 +238,6 @@ test.describe('CORE-002: Song Grouped View & Dual View Toggle', () => {
 
     // Verify song cards are not visible
     await expect(songCards.first()).not.toBeVisible();
-
-    // Verify performances are sorted by date descending
-    const firstRow = performanceRows.first();
-    await expect(firstRow).toContainText('Idol'); // Newest performance is Idol on 2024-02-14
   });
 
   test('AC8: View mode preference persists during current session', async ({ page }) => {

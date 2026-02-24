@@ -93,11 +93,11 @@ test.describe('CORE-001: Streamer Profile & Song Catalog (Timeline View)', () =>
     // Verify first performance has all required fields
     const firstPerformance = page.getByTestId('performance-row').first();
 
-    // Song title should be visible
-    await expect(firstPerformance).toContainText(/First Love|Idol|Betelgeuse|KICK BACK|Plastic Love/);
+    // Song title should be visible (real song from imported VOD)
+    await expect(firstPerformance).toContainText(/誰|僕が死のうと思ったのは|君の知らない物語|Dear|降雨的舒適圈|Loveit\?|愛して愛して愛して|香水|はいよろこんで|紅蓮華|季節は次々死んでいく|Dangerous Woman|Havana|分手說愛你|日不落|ラヴィ|完全感覚Dreamer|Galaxy Anthem/);
 
     // Original artist should be visible
-    await expect(firstPerformance).toContainText(/宇多田光|YOASOBI|Yuuri|Kenshi Yonezu|Mariya Takeuchi/);
+    await expect(firstPerformance).toContainText(/李友廷|中島美嘉|supercell|Mrs\. GREEN APPLE|凌潮|LOLUET|きくお|瑛人|こっちのけんと|LiSA|amazarashi|Ariana Grande|Camila Cabello|陳芳語|蔡依林|すりぃ|ONE OK ROCK|Diva/);
 
     // Check for performances with notes - some have notes, some don't
     const performanceWithNote = page.locator('span.text-blue-500').first();
