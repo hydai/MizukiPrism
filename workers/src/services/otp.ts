@@ -7,16 +7,65 @@ const MAX_ATTEMPTS = 3;
 
 /**
  * Generate a cryptographically random 6-digit OTP.
- * Zero-padded to ensure exactly 6 digits (e.g., "003847").
+ * Each digit is independently generated using crypto.getRandomValues,
+ * producing a zero-padded string (e.g., "003847").
  */
 export function generateOtp(): string {
-  // TODO: Implement OTP generation
-  // Use crypto.getRandomValues to generate a random number 0-999999
-  // Zero-pad to 6 digits
-  const bytes = new Uint32Array(1);
-  crypto.getRandomValues(bytes);
-  const code = bytes[0] % 1000000;
-  return code.toString().padStart(6, "0");
+  const digits = new Uint8Array(6);
+  for (let i = 0; i < 6; i++) {
+    const buf = new Uint8Array(1);
+    // Rejection sampling: discard values >= 250 to avoid modulo bias
+    do {
+      crypto.getRandomValues(buf);
+    } while (buf[0] >= 250);
+    digits[i] = buf[0] % 10;
+  }
+  return Array.from(digits).join("");
+}
+
+/**
+ * Check if the rate limit for OTP requests has been reached.
+ * Limit: 3 requests per email per 15 minutes.
+ *
+ * @returns { limited: false } if allowed, or { limited: true, retryAfterSeconds } if rate limited
+ */
+export async function checkRateLimit(
+  env: Env,
+  email: string
+): Promise<{ limited: false } | { limited: true; retryAfterSeconds: number }> {
+  const key = `otp_rate:${email}`;
+  const countRaw = await env.KV.get(key);
+  if (!countRaw) return { limited: false };
+  const count = parseInt(countRaw, 10);
+  if (count >= RATE_LIMIT_MAX) {
+    // Use conservative TTL since exact remaining TTL is not available from KV
+    return { limited: true, retryAfterSeconds: RATE_LIMIT_TTL_SECONDS };
+  }
+  return { limited: false };
+}
+
+/**
+ * Store a new OTP for the given email address and increment the rate limit counter.
+ * OTP TTL: 600 seconds (10 minutes).
+ * Rate limit TTL: 900 seconds (15 minutes).
+ */
+export async function storeOtp(
+  env: Env,
+  email: string,
+  code: string
+): Promise<void> {
+  const otpData: OtpData = { code, attempts: 0 };
+  await env.KV.put(`otp:${email}`, JSON.stringify(otpData), {
+    expirationTtl: OTP_TTL_SECONDS,
+  });
+
+  // Increment rate limit counter
+  const rateKey = `otp_rate:${email}`;
+  const countRaw = await env.KV.get(rateKey);
+  const count = countRaw ? parseInt(countRaw, 10) + 1 : 1;
+  await env.KV.put(rateKey, count.toString(), {
+    expirationTtl: RATE_LIMIT_TTL_SECONDS,
+  });
 }
 
 /**
@@ -24,10 +73,9 @@ export function generateOtp(): string {
  * Limit: 3 requests per email per 15 minutes.
  *
  * @returns true if rate limited, false if allowed
+ * @deprecated Use checkRateLimit instead
  */
 export async function isRateLimited(email: string, env: Env): Promise<boolean> {
-  // TODO: Implement rate limit check
-  // Read KV key `otp_rate:{email}` and check count
   const key = `otp_rate:${email}`;
   const countRaw = await env.KV.get(key);
   if (!countRaw) return false;
@@ -38,34 +86,17 @@ export async function isRateLimited(email: string, env: Env): Promise<boolean> {
 /**
  * Increment the rate limit counter for an email address.
  * Initializes to 1 if not present, increments if present.
+ * @deprecated Use storeOtp (which now also increments rate limit)
  */
 export async function incrementRateLimit(
   email: string,
   env: Env
 ): Promise<void> {
-  // TODO: Implement rate limit increment
-  // Read existing count, increment, write back with TTL = 900s
   const key = `otp_rate:${email}`;
   const countRaw = await env.KV.get(key);
   const count = countRaw ? parseInt(countRaw, 10) + 1 : 1;
   await env.KV.put(key, count.toString(), {
     expirationTtl: RATE_LIMIT_TTL_SECONDS,
-  });
-}
-
-/**
- * Store a new OTP for the given email address.
- * TTL: 600 seconds (10 minutes)
- */
-export async function storeOtp(
-  email: string,
-  code: string,
-  env: Env
-): Promise<void> {
-  // TODO: Implement OTP storage
-  const otpData: OtpData = { code, attempts: 0 };
-  await env.KV.put(`otp:${email}`, JSON.stringify(otpData), {
-    expirationTtl: OTP_TTL_SECONDS,
   });
 }
 
