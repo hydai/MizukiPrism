@@ -1425,3 +1425,203 @@ class TestTreeDrawingIntegration:
         assert result.songs[3]["artist"] == "YOASOBI"
         assert result.songs[4]["song_name"] == "廻廻奇譚"
         assert result.songs[4]["start_seconds"] == 2205
+
+
+# ---------------------------------------------------------------------------
+# §  Bullet prefix stripping
+# ---------------------------------------------------------------------------
+
+
+class TestBulletPrefixParseSongLine:
+    """Tests for bullet-prefix stripping in parse_song_line."""
+
+    def test_dash_bullet(self):
+        result = parse_song_line("- 0:30 Song Name / Artist")
+        assert result is not None
+        assert result["start_seconds"] == 30
+        assert result["song_name"] == "Song Name"
+        assert result["artist"] == "Artist"
+
+    def test_asterisk_bullet(self):
+        result = parse_song_line("* 1:00 Song Name / Artist")
+        assert result is not None
+        assert result["start_seconds"] == 60
+        assert result["song_name"] == "Song Name"
+        assert result["artist"] == "Artist"
+
+    def test_plus_bullet(self):
+        result = parse_song_line("+ 2:00 Song Name / Artist")
+        assert result is not None
+        assert result["start_seconds"] == 120
+        assert result["song_name"] == "Song Name"
+        assert result["artist"] == "Artist"
+
+    def test_no_space_after_bullet_no_match(self):
+        """Bullet without space should not be stripped (e.g. '-0:30')."""
+        result = parse_song_line("-0:30 Song Name / Artist")
+        # The dash is not stripped (no space), but _LINE_TS_RE won't match "-0:30"
+        assert result is None
+
+    def test_no_timestamp_after_bullet(self):
+        """Bullet + text but no timestamp → None."""
+        result = parse_song_line("- Just a comment")
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+# §  Range timestamp support
+# ---------------------------------------------------------------------------
+
+
+class TestRangeTimestampParseSongLine:
+    """Tests for range end-timestamp detection in parse_song_line."""
+
+    def test_tilde_range(self):
+        result = parse_song_line("00:04:23 ~ 00:08:26 誰 / 李友廷")
+        assert result is not None
+        assert result["start_seconds"] == 4 * 60 + 23
+        assert result["end_seconds"] == 8 * 60 + 26
+        assert result["song_name"] == "誰"
+        assert result["artist"] == "李友廷"
+
+    def test_dash_range(self):
+        result = parse_song_line("1:00 - 3:30 Song / Artist")
+        assert result is not None
+        assert result["start_seconds"] == 60
+        assert result["end_seconds"] == 210
+        assert result["song_name"] == "Song"
+        assert result["artist"] == "Artist"
+
+    def test_en_dash_range(self):
+        result = parse_song_line("5:00 – 7:30 Song / Artist")
+        assert result is not None
+        assert result["start_seconds"] == 300
+        assert result["end_seconds"] == 450
+        assert result["song_name"] == "Song"
+        assert result["artist"] == "Artist"
+
+    def test_em_dash_range(self):
+        result = parse_song_line("5:00 — 7:30 Song / Artist")
+        assert result is not None
+        assert result["start_seconds"] == 300
+        assert result["end_seconds"] == 450
+        assert result["song_name"] == "Song"
+        assert result["artist"] == "Artist"
+
+    def test_hms_range(self):
+        """H:MM:SS range format."""
+        result = parse_song_line("1:04:23 ~ 1:08:26 Song / Artist")
+        assert result is not None
+        assert result["start_seconds"] == 3600 + 4 * 60 + 23
+        assert result["end_seconds"] == 3600 + 8 * 60 + 26
+
+    def test_no_range_backward_compat(self):
+        """Line without range → no end_seconds key."""
+        result = parse_song_line("0:30 Song / Artist")
+        assert result is not None
+        assert result["start_seconds"] == 30
+        assert "end_seconds" not in result
+
+    def test_bullet_plus_range(self):
+        """Bullet prefix + range timestamp combo."""
+        result = parse_song_line("- 00:04:23 ~ 00:08:26 誰 / 李友廷")
+        assert result is not None
+        assert result["start_seconds"] == 4 * 60 + 23
+        assert result["end_seconds"] == 8 * 60 + 26
+        assert result["song_name"] == "誰"
+        assert result["artist"] == "李友廷"
+
+    def test_disambiguation_separator_not_range(self):
+        """'0:30 - Song Name' is a separator, not a range (no timestamp after -)."""
+        result = parse_song_line("0:30 - Song Name")
+        assert result is not None
+        assert result["start_seconds"] == 30
+        assert "end_seconds" not in result
+        assert result["song_name"] == "Song Name"
+
+    def test_tilde_no_space(self):
+        """Tilde without space before timestamp should still match."""
+        result = parse_song_line("1:00 ~2:00 Song / Artist")
+        assert result is not None
+        assert result["end_seconds"] == 120
+
+    def test_range_with_separator_after(self):
+        """Range followed by separator then song info."""
+        result = parse_song_line("0:30 ~ 1:00 - Song Name")
+        assert result is not None
+        assert result["start_seconds"] == 30
+        assert result["end_seconds"] == 60
+        assert result["song_name"] == "Song Name"
+
+
+class TestRangeTimestampParseTextToSongs:
+    """Tests for explicit end_seconds propagation in parse_text_to_songs."""
+
+    def test_explicit_end_overrides_inferred(self):
+        """Explicit range end should be used instead of next song's start."""
+        text = (
+            "0:30 ~ 1:00 Song A / Artist A\n"
+            "2:00 Song B / Artist B\n"
+        )
+        songs = parse_text_to_songs(text)
+        assert len(songs) == 2
+        # Song A: explicit end 1:00 = 60s, NOT inferred 2:00 = 120s
+        assert songs[0]["end_seconds"] == 60
+        assert songs[0]["end_timestamp"] == "1:00"
+        # Song B: no range, last song → None
+        assert songs[1]["end_seconds"] is None
+        assert songs[1]["end_timestamp"] is None
+
+    def test_mixed_range_and_single(self):
+        """Mix of range and non-range lines."""
+        text = (
+            "0:00 Intro Song / Opener\n"
+            "1:00 ~ 2:30 Range Song / Ranger\n"
+            "3:00 Normal Song / Normal\n"
+        )
+        songs = parse_text_to_songs(text)
+        assert len(songs) == 3
+        # Song 0: no range, inferred from next → 60s
+        assert songs[0]["end_seconds"] == 60
+        # Song 1: explicit range → 150s
+        assert songs[1]["end_seconds"] == 150
+        assert songs[1]["end_timestamp"] == "2:30"
+        # Song 2: last, no range → None
+        assert songs[2]["end_seconds"] is None
+
+
+class TestRangeTimestampIntegration:
+    """Integration test using the real VOD comment format."""
+
+    def test_real_vod_bullet_range_format(self, db):
+        """Full pipeline with real VOD (lVAiHsvF8z8) comment format."""
+        _add_stream(db, "vid_range")
+        text = (
+            "- 00:04:23 ~ 00:08:26 誰 / 李友廷\n"
+            "- 00:08:30 ~ 00:12:15 Lemon / 米津玄師\n"
+            "- 00:12:20 ~ 00:16:00 打上花火 / DAOKO×米津玄師\n"
+        )
+        comments = [_make_comment_dict(text, votes="50")]
+
+        result = extract_timestamps(db, "vid_range", comment_generator=iter(comments))
+
+        assert result.status == "extracted"
+        assert result.source == "comment"
+        assert len(result.songs) == 3
+
+        # First song: explicit range
+        assert result.songs[0]["song_name"] == "誰"
+        assert result.songs[0]["artist"] == "李友廷"
+        assert result.songs[0]["start_seconds"] == 4 * 60 + 23
+        assert result.songs[0]["end_seconds"] == 8 * 60 + 26
+        assert result.songs[0]["start_timestamp"] == "4:23"
+        assert result.songs[0]["end_timestamp"] == "8:26"
+
+        # Second song: explicit range
+        assert result.songs[1]["song_name"] == "Lemon"
+        assert result.songs[1]["artist"] == "米津玄師"
+        assert result.songs[1]["start_seconds"] == 8 * 60 + 30
+        assert result.songs[1]["end_seconds"] == 12 * 60 + 15
+
+        # Last song: explicit range (not None)
+        assert result.songs[2]["end_seconds"] == 16 * 60

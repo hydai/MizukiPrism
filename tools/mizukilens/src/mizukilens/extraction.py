@@ -124,6 +124,11 @@ _SEP_RE = re.compile(
 # Finds the timestamp at the start of a line
 _LINE_TS_RE = re.compile(r"^(?:(\d{1,2}):)?(\d{1,2}):(\d{2})")
 
+# Range end-timestamp: matches "~ HH:MM:SS", "- HH:MM:SS", etc.
+# Only matches when separator is immediately followed by a valid timestamp,
+# preventing false positives on "0:30 - Song Name".
+_RANGE_END_RE = re.compile(r"^(?:~|-|–|—)\s*(?:(\d{1,2}):)?(\d{1,2}):(\d{2})")
+
 # Separators for splitting artist from song name
 # Priority: " / " first (more specific), then " - " (but only when not used
 # as the timestamp-info separator itself)
@@ -201,6 +206,9 @@ def parse_song_line(line: str) -> dict[str, Any] | None:
     # Strip common numbering prefixes: "01. ", "1) ", "#3 "
     line = re.sub(r"^(?:\d+\.\s*|\d+\)\s+|#\d+\s+)", "", line)
 
+    # Strip bullet prefixes: "- ", "* ", "+ "
+    line = re.sub(r"^[-*+]\s+", "", line)
+
     # Find leading timestamp
     ts_match = _LINE_TS_RE.match(line)
     if not ts_match:
@@ -215,6 +223,18 @@ def parse_song_line(line: str) -> dict[str, Any] | None:
     # Rest of the line after the timestamp
     remainder = line[ts_end:].strip()
 
+    # Check for range end-timestamp (e.g. "~ 00:08:26" or "- 1:23:45")
+    # Must be checked BEFORE separator stripping to avoid confusing
+    # "- 00:08:26 Song" (range) with "- Song Name" (separator)
+    end_seconds = None
+    range_match = _RANGE_END_RE.match(remainder)
+    if range_match:
+        rh = int(range_match.group(1)) if range_match.group(1) is not None else 0
+        rm = int(range_match.group(2))
+        rs = int(range_match.group(3))
+        end_seconds = rh * 3600 + rm * 60 + rs
+        remainder = remainder[range_match.end():].strip()
+
     # Strip leading separator characters (" - ", " – ", " — ")
     sep_match = re.match(r"^(?:-\s+|–\s+|—\s+|)", remainder)
     if sep_match:
@@ -225,11 +245,14 @@ def parse_song_line(line: str) -> dict[str, Any] | None:
 
     song_name, artist = _split_artist(remainder)
 
-    return {
+    result = {
         "start_seconds": start_seconds,
         "song_name": song_name,
         "artist": artist,
     }
+    if end_seconds is not None:
+        result["end_seconds"] = end_seconds
+    return result
 
 
 def parse_text_to_songs(text: str) -> list[dict[str, Any]]:
@@ -264,11 +287,17 @@ def parse_text_to_songs(text: str) -> list[dict[str, Any]]:
     if not raw_songs:
         return []
 
-    # Infer end timestamps
+    # Determine end timestamps: use explicit range end if available, else infer
     result: list[dict[str, Any]] = []
     for i, song in enumerate(raw_songs):
         start_sec = song["start_seconds"]
-        end_sec = raw_songs[i + 1]["start_seconds"] if i + 1 < len(raw_songs) else None
+        explicit_end = song.get("end_seconds")
+        if explicit_end is not None:
+            end_sec = explicit_end
+        elif i + 1 < len(raw_songs):
+            end_sec = raw_songs[i + 1]["start_seconds"]
+        else:
+            end_sec = None
 
         result.append(
             {
