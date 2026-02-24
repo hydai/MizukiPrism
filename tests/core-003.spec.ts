@@ -142,28 +142,38 @@ test.describe('CORE-003: Search & Filter', () => {
     await page.screenshot({ path: screenshotPath('ac5-date-range') });
   });
 
-  test('AC6: Tag filter shows only songs with that tag', async ({ page }) => {
-    // Real data currently has no tags assigned to songs.
-    // Verify that the tag section handles empty tags gracefully.
-    const tagSection = page.getByText('風格分類');
-    await expect(tagSection).toBeVisible();
+  test('AC6: Stream filter shows only songs from that stream', async ({ page }) => {
+    // Verify stream playlist section exists in the sidebar
+    const streamSection = page.getByText('歌枠回放');
+    await expect(streamSection).toBeVisible();
 
-    // With no tags, there should be no tag filter buttons
-    const tagButtons = page.locator('[data-testid="tag-filter-button"]');
-    const tagCount = await tagButtons.count();
+    // Get stream filter buttons
+    const streamButtons = page.locator('[data-testid="stream-filter-button"]');
+    const streamCount = await streamButtons.count();
 
-    if (tagCount === 0) {
-      // No tags - test passes (graceful handling of empty tags)
+    if (streamCount === 0) {
+      // No streams loaded yet — test passes gracefully
       return;
     }
 
-    // If tags exist, click first tag and verify filtering works
-    await tagButtons.first().click();
-    const rows = page.getByTestId('performance-row');
-    const count = await rows.count();
-    expect(count).toBeGreaterThan(0);
+    // Get total rows before filtering
+    const allRows = page.getByTestId('performance-row');
+    const totalCount = await allRows.count();
 
-    await page.screenshot({ path: screenshotPath('ac6-tag-filter') });
+    // Click first stream to filter
+    await streamButtons.first().click();
+    const filteredRows = page.getByTestId('performance-row');
+    const filteredCount = await filteredRows.count();
+    expect(filteredCount).toBeGreaterThan(0);
+    expect(filteredCount).toBeLessThanOrEqual(totalCount);
+
+    // Click again to deselect
+    await streamButtons.first().click();
+    const restoredRows = page.getByTestId('performance-row');
+    const restoredCount = await restoredRows.count();
+    expect(restoredCount).toBe(totalCount);
+
+    await page.screenshot({ path: screenshotPath('ac6-stream-filter') });
   });
 
   test('AC7: Search text + artist filter applied simultaneously (AND logic)', async ({ page }) => {

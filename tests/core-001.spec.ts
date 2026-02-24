@@ -11,7 +11,7 @@ test.describe('CORE-001: Streamer Profile & Song Catalog (Timeline View)', () =>
     await expect(page.getByText('MizukiPlay')).toBeVisible();
     await expect(page.getByRole('button', { name: '首頁' })).toBeVisible();
     await expect(page.getByPlaceholder('搜尋歌曲...')).toBeVisible();
-    await expect(page.getByText('風格分類')).toBeVisible();
+    await expect(page.getByText('歌枠回放')).toBeVisible();
     await expect(page.getByText(/Made with.*for Mizuki/)).toBeVisible();
 
     // Verify main content area exists
@@ -143,7 +143,7 @@ test.describe('CORE-001: Streamer Profile & Song Catalog (Timeline View)', () =>
     // Verify key UI elements are in Traditional Chinese
     await expect(page.getByText('首頁')).toBeVisible();
     await expect(page.getByPlaceholder('搜尋歌曲...')).toBeVisible();
-    await expect(page.getByText('風格分類')).toBeVisible();
+    await expect(page.getByText('歌枠回放')).toBeVisible();
     await expect(page.getByText('全部歌曲')).toBeVisible();
     await expect(page.getByRole('link', { name: '追蹤' })).toBeVisible();
     await expect(page.getByText('標題')).toBeVisible();

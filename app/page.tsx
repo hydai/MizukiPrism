@@ -33,6 +33,7 @@ interface Song {
 
 interface FlattenedSong extends Song {
   performanceId: string;
+  streamId?: string;
   date: string;
   streamTitle: string;
   videoId: string;
@@ -53,7 +54,8 @@ type ViewMode = 'timeline' | 'grouped';
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [streams, setStreams] = useState<{id:string;title:string;date:string;videoId:string}[]>([]);
+  const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -109,6 +111,16 @@ export default function Home() {
       })
       .finally(() => {
         fetchSongs();
+      });
+
+    fetch('/api/streams')
+      .then(res => res.ok ? res.json() : [])
+      .then((data: {id:string;title:string;date:string;videoId:string}[]) => {
+        data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setStreams(data);
+      })
+      .catch(() => {
+        // streams fetch failed — continue without stream list
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -179,23 +191,17 @@ export default function Home() {
     });
   };
 
-  const allTags = useMemo(() => {
-    const tags = new Set<string>();
-    songs.forEach(song => song.tags.forEach(tag => tags.add(tag)));
-    return Array.from(tags).sort();
-  }, [songs]);
-
   const allArtists = useMemo(() => {
     const artists = new Set<string>();
     songs.forEach(song => artists.add(song.originalArtist));
     return Array.from(artists).sort((a, b) => a.localeCompare(b, 'zh-TW'));
   }, [songs]);
 
-  const hasActiveFilters = searchTerm !== '' || selectedTag !== null || selectedArtist !== null || dateFrom !== '' || dateTo !== '';
+  const hasActiveFilters = searchTerm !== '' || selectedStreamId !== null || selectedArtist !== null || dateFrom !== '' || dateTo !== '';
 
   const clearAllFilters = () => {
     setSearchTerm('');
-    setSelectedTag(null);
+    setSelectedStreamId(null);
     setSelectedArtist(null);
     setDateFrom('');
     setDateTo('');
@@ -208,6 +214,7 @@ export default function Home() {
         result.push({
           ...song,
           performanceId: perf.id,
+          streamId: perf.streamId,
           date: perf.date,
           streamTitle: perf.streamTitle,
           videoId: perf.videoId,
@@ -222,13 +229,13 @@ export default function Home() {
     return result.filter(song => {
       const lowerTerm = searchTerm.toLowerCase();
       const matchesSearch = song.searchString.includes(lowerTerm);
-      const matchesTag = selectedTag ? song.tags.includes(selectedTag) : true;
+      const matchesStream = selectedStreamId ? song.streamId === selectedStreamId : true;
       const matchesArtist = selectedArtist ? song.originalArtist === selectedArtist : true;
       const matchesDateFrom = dateFrom ? song.date >= dateFrom : true;
       const matchesDateTo = dateTo ? song.date <= dateTo : true;
-      return matchesSearch && matchesTag && matchesArtist && matchesDateFrom && matchesDateTo;
+      return matchesSearch && matchesStream && matchesArtist && matchesDateFrom && matchesDateTo;
     });
-  }, [songs, searchTerm, selectedTag, selectedArtist, dateFrom, dateTo]);
+  }, [songs, searchTerm, selectedStreamId, selectedArtist, dateFrom, dateTo]);
 
   // Grouped songs for song-grouped view
   const groupedSongs: Song[] = useMemo(() => {
@@ -236,7 +243,9 @@ export default function Home() {
       .filter(song => {
         const lowerTerm = searchTerm.toLowerCase();
         const matchesSearch = `${song.title} ${song.originalArtist}`.toLowerCase().includes(lowerTerm);
-        const matchesTag = selectedTag ? song.tags.includes(selectedTag) : true;
+        const matchesStream = selectedStreamId
+          ? song.performances.some(p => p.streamId === selectedStreamId)
+          : true;
         const matchesArtist = selectedArtist ? song.originalArtist === selectedArtist : true;
         // For grouped view, filter by date range: show song if any performance is within range
         const matchesDate = (dateFrom || dateTo) ? song.performances.some(perf => {
@@ -244,10 +253,10 @@ export default function Home() {
           const matchesDateTo = dateTo ? perf.date <= dateTo : true;
           return matchesDateFrom && matchesDateTo;
         }) : true;
-        return matchesSearch && matchesTag && matchesArtist && matchesDate;
+        return matchesSearch && matchesStream && matchesArtist && matchesDate;
       })
       .sort((a, b) => a.title.localeCompare(b.title, 'zh-TW'));
-  }, [songs, searchTerm, selectedTag, selectedArtist, dateFrom, dateTo]);
+  }, [songs, searchTerm, selectedStreamId, selectedArtist, dateFrom, dateTo]);
 
   const gradientText = "bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500";
 
@@ -501,37 +510,39 @@ export default function Home() {
             </div>
           </div>
 
-          {/* ── Tags Section ── */}
+          {/* ── Stream Playlists Section ── */}
           <div className="pt-2 pb-2">
             <div
               className="px-3 py-1.5 mb-1 font-bold uppercase tracking-widest"
               style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)', letterSpacing: '0.1em' }}
             >
-              風格分類
+              歌枠回放
             </div>
             <button
-              onClick={() => setSelectedTag(null)}
+              onClick={() => setSelectedStreamId(null)}
               className="w-full text-left px-3 py-2 rounded-radius-lg text-sm font-medium transition-all"
               style={
-                selectedTag === null
+                selectedStreamId === null
                   ? { color: 'var(--accent-pink)', background: 'var(--bg-accent-pink)' }
                   : { color: 'var(--text-secondary)', background: 'transparent' }
               }
             >
               全部歌曲
             </button>
-            {allTags.map(tag => (
+            {streams.map(stream => (
               <button
-                key={tag}
-                onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
+                key={stream.id}
+                data-testid="stream-filter-button"
+                onClick={() => setSelectedStreamId(stream.id === selectedStreamId ? null : stream.id)}
                 className="w-full text-left px-3 py-2 rounded-radius-lg text-sm font-medium transition-all hover:bg-white/40"
                 style={
-                  selectedTag === tag
+                  selectedStreamId === stream.id
                     ? { color: 'var(--accent-pink)', background: 'var(--bg-accent-pink)' }
                     : { color: 'var(--text-secondary)', background: 'transparent' }
                 }
               >
-                #{tag}
+                <div className="truncate">{stream.title}</div>
+                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{stream.date}</div>
               </button>
             ))}
           </div>
@@ -1062,9 +1073,9 @@ export default function Home() {
             </a>
           </div>
 
-          {/* Mobile Tag Scroll (§3.4.9.5) — horizontal scrolling row, mobile only */}
+          {/* Mobile Stream Scroll — horizontal scrolling row, mobile only */}
           <div
-            data-testid="mobile-tag-scroll"
+            data-testid="mobile-stream-scroll"
             className="lg:hidden flex items-center flex-shrink-0"
             style={{
               padding: '12px 20px',
@@ -1075,16 +1086,16 @@ export default function Home() {
               borderBottom: '1px solid var(--border-glass)',
             }}
           >
-            {/* All tags chip */}
+            {/* All streams chip */}
             <button
-              onClick={() => setSelectedTag(null)}
+              onClick={() => setSelectedStreamId(null)}
               className="flex-shrink-0 font-medium transition-all"
               style={{
                 height: '36px',
                 borderRadius: '12px',
                 padding: '0 16px',
                 fontSize: 'var(--font-size-sm)',
-                ...(selectedTag === null
+                ...(selectedStreamId === null
                   ? {
                       background: '#FDF2F8',
                       border: '1px solid #FBCFE8',
@@ -1099,18 +1110,20 @@ export default function Home() {
             >
               全部
             </button>
-            {allTags.map(tag => (
+            {streams.map(stream => (
               <button
-                key={tag}
-                onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
+                key={stream.id}
+                data-testid="stream-filter-button"
+                onClick={() => setSelectedStreamId(stream.id === selectedStreamId ? null : stream.id)}
                 className="flex-shrink-0 font-medium transition-all"
+                title={stream.title}
                 style={{
                   height: '36px',
                   borderRadius: '12px',
                   padding: '0 16px',
                   fontSize: 'var(--font-size-sm)',
                   whiteSpace: 'nowrap',
-                  ...(selectedTag === tag
+                  ...(selectedStreamId === stream.id
                     ? {
                         background: '#FDF2F8',
                         border: '1px solid #FBCFE8',
@@ -1123,7 +1136,7 @@ export default function Home() {
                       }),
                 }}
               >
-                {tag}
+                {stream.date}
               </button>
             ))}
           </div>
@@ -1285,17 +1298,17 @@ export default function Home() {
             {/* Flexible spacer */}
             <div className="flex-1 hidden lg:block" />
 
-            {/* Right side: Tag Filter Chips */}
+            {/* Right side: Stream Filter Chips */}
             <div className="hidden lg:flex items-center gap-1.5 flex-wrap">
               {/* "全部" chip */}
               <button
-                onClick={() => setSelectedTag(null)}
+                onClick={() => setSelectedStreamId(null)}
                 className="font-medium transition-all"
                 style={{
                   borderRadius: 'var(--radius-pill)',
                   fontSize: 'var(--font-size-sm)',
                   padding: 'var(--space-2) var(--space-4)',
-                  ...(selectedTag === null
+                  ...(selectedStreamId === null
                     ? {
                         background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
                         color: 'var(--text-on-accent)',
@@ -1308,16 +1321,18 @@ export default function Home() {
               >
                 全部
               </button>
-              {allTags.map(tag => (
+              {streams.map(stream => (
                 <button
-                  key={tag}
-                  onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
+                  key={stream.id}
+                  data-testid="stream-filter-button"
+                  onClick={() => setSelectedStreamId(stream.id === selectedStreamId ? null : stream.id)}
                   className="font-medium transition-all"
+                  title={stream.title}
                   style={{
                     borderRadius: 'var(--radius-pill)',
                     fontSize: 'var(--font-size-sm)',
                     padding: 'var(--space-2) var(--space-4)',
-                    ...(selectedTag === tag
+                    ...(selectedStreamId === stream.id
                       ? {
                           background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
                           color: 'var(--text-on-accent)',
@@ -1328,7 +1343,7 @@ export default function Home() {
                         }),
                   }}
                 >
-                  {tag}
+                  {stream.date}
                 </button>
               ))}
             </div>
