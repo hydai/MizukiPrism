@@ -37,6 +37,7 @@ interface FlattenedSong extends Song {
   streamTitle: string;
   videoId: string;
   timestamp: number;
+  endTimestamp?: number;
   note: string;
   searchString: string;
   albumArtUrl?: string;
@@ -115,7 +116,7 @@ export default function Home() {
   const { currentTrack, playTrack, addToQueue, apiLoadError, unavailableVideoIds, timestampWarning, clearTimestampWarning, skipNotification, clearSkipNotification } = usePlayer();
   const { playlists, storageError, clearStorageError } = usePlaylist();
 
-  const handleAddToQueue = (track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number; albumArtUrl?: string }) => {
+  const handleAddToQueue = (track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number; endTimestamp?: number; albumArtUrl?: string }) => {
     addToQueue(track);
     setToastMessage('已加入播放佇列');
     setShowToast(true);
@@ -211,6 +212,7 @@ export default function Home() {
           streamTitle: perf.streamTitle,
           videoId: perf.videoId,
           timestamp: perf.timestamp,
+          endTimestamp: perf.endTimestamp ?? undefined,
           note: perf.note,
           searchString: `${song.title} ${song.originalArtist} ${perf.streamTitle}`.toLowerCase()
         });
@@ -999,7 +1001,7 @@ export default function Home() {
                   const first = groupedSongs[0];
                   if (!first || !first.performances.length) return null;
                   const sorted = [...first.performances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                  return { ...first, performanceId: sorted[0].id, videoId: sorted[0].videoId, timestamp: sorted[0].timestamp };
+                  return { ...first, performanceId: sorted[0].id, videoId: sorted[0].videoId, timestamp: sorted[0].timestamp, endTimestamp: sorted[0].endTimestamp ?? undefined };
                 })();
                 if (firstSong && !unavailableVideoIds.has(firstSong.videoId)) {
                   playTrack({
@@ -1009,6 +1011,7 @@ export default function Home() {
                     originalArtist: firstSong.originalArtist,
                     videoId: firstSong.videoId,
                     timestamp: firstSong.timestamp,
+                    endTimestamp: firstSong.endTimestamp,
                     albumArtUrl: firstSong.albumArtUrl,
                   });
                 }
@@ -1155,7 +1158,7 @@ export default function Home() {
                     const first = groupedSongs[0];
                     if (!first || !first.performances.length) return null;
                     const sorted = [...first.performances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                    return { ...first, performanceId: sorted[0].id, videoId: sorted[0].videoId, timestamp: sorted[0].timestamp };
+                    return { ...first, performanceId: sorted[0].id, videoId: sorted[0].videoId, timestamp: sorted[0].timestamp, endTimestamp: sorted[0].endTimestamp ?? undefined };
                   })();
                   if (firstSong && !unavailableVideoIds.has(firstSong.videoId)) {
                     playTrack({
@@ -1165,6 +1168,7 @@ export default function Home() {
                       originalArtist: firstSong.originalArtist,
                       videoId: firstSong.videoId,
                       timestamp: firstSong.timestamp,
+                      endTimestamp: firstSong.endTimestamp,
                       albumArtUrl: firstSong.albumArtUrl,
                     });
                   }
@@ -1188,7 +1192,7 @@ export default function Home() {
                     const first = groupedSongs[0];
                     if (!first || !first.performances.length) return null;
                     const sorted = [...first.performances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                    return { ...first, performanceId: sorted[0].id, videoId: sorted[0].videoId, timestamp: sorted[0].timestamp };
+                    return { ...first, performanceId: sorted[0].id, videoId: sorted[0].videoId, timestamp: sorted[0].timestamp, endTimestamp: sorted[0].endTimestamp ?? undefined };
                   })();
                   if (firstSong && !unavailableVideoIds.has(firstSong.videoId)) {
                     playTrack({
@@ -1198,6 +1202,7 @@ export default function Home() {
                       originalArtist: firstSong.originalArtist,
                       videoId: firstSong.videoId,
                       timestamp: firstSong.timestamp,
+                      endTimestamp: firstSong.endTimestamp,
                       albumArtUrl: firstSong.albumArtUrl,
                     });
                   }
@@ -1485,6 +1490,7 @@ export default function Home() {
                                     originalArtist: song.originalArtist,
                                     videoId: song.videoId,
                                     timestamp: song.timestamp,
+                                    endTimestamp: song.endTimestamp,
                                     albumArtUrl: song.albumArtUrl,
                                   });
                                 }
@@ -1527,6 +1533,7 @@ export default function Home() {
                                   originalArtist: song.originalArtist,
                                   videoId: song.videoId,
                                   timestamp: song.timestamp,
+                                  endTimestamp: song.endTimestamp,
                                   albumArtUrl: song.albumArtUrl,
                                 });
                               }
@@ -1601,6 +1608,7 @@ export default function Home() {
                                 originalArtist: song.originalArtist,
                                 videoId: song.videoId,
                                 timestamp: song.timestamp,
+                                endTimestamp: song.endTimestamp,
                                 albumArtUrl: song.albumArtUrl,
                               })}
                               className="opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
@@ -1829,6 +1837,7 @@ export default function Home() {
                                           originalArtist: song.originalArtist,
                                           videoId: perf.videoId,
                                           timestamp: perf.timestamp,
+                                          endTimestamp: perf.endTimestamp ?? undefined,
                                           albumArtUrl: song.albumArtUrl,
                                         });
                                       }
@@ -1864,6 +1873,7 @@ export default function Home() {
                                           originalArtist: song.originalArtist,
                                           videoId: perf.videoId,
                                           timestamp: perf.timestamp,
+                                          endTimestamp: perf.endTimestamp ?? undefined,
                                           albumArtUrl: song.albumArtUrl,
                                         });
                                       }
@@ -1932,6 +1942,7 @@ export default function Home() {
                                       originalArtist: song.originalArtist,
                                       videoId: perf.videoId,
                                       timestamp: perf.timestamp,
+                                      endTimestamp: perf.endTimestamp ?? undefined,
                                       albumArtUrl: song.albumArtUrl,
                                     })}
                                     className="opacity-0 group-hover/version:opacity-100 transition-all transform hover:scale-110"
@@ -2092,6 +2103,7 @@ export default function Home() {
                               originalArtist: song.originalArtist,
                               videoId: song.videoId,
                               timestamp: song.timestamp,
+                              endTimestamp: song.endTimestamp,
                               albumArtUrl: song.albumArtUrl,
                             });
                           }
