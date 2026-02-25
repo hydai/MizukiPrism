@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Play, Pause, SkipBack, SkipForward, ListMusic, AlertCircle, Shuffle, Repeat, Repeat1, Heart, Volume2 } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Play, Pause, SkipBack, SkipForward, ListMusic, AlertCircle, Shuffle, Repeat, Repeat1, Heart, Volume2, Maximize2 } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import AlbumArt from './AlbumArt';
 
@@ -24,6 +25,9 @@ export default function MiniPlayer() {
     toggleRepeat,
     toggleShuffle,
   } = usePlayer();
+
+  const pathname = usePathname();
+  const router = useRouter();
 
   const [volume, setVolume] = useState(75);
   const [isLiked, setIsLiked] = useState(false);
@@ -48,6 +52,9 @@ export default function MiniPlayer() {
   }, [currentTrack, togglePlayPause]);
 
   if (!currentTrack) return null;
+
+  // Hide MiniPlayer on the dedicated Now Playing page (it has full controls)
+  if (pathname === '/now-playing') return null;
 
   const hasKnownDuration = trackDuration != null && trackDuration > 0;
   const progress = hasKnownDuration
@@ -415,6 +422,22 @@ export default function MiniPlayer() {
             style={{ width: '200px' }}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Expand to full Now Playing page */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push('/now-playing');
+              }}
+              className="transition-colors"
+              aria-label="Expand to full page"
+              data-testid="expand-now-playing-button"
+              style={{ color: 'var(--text-tertiary)' }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-tertiary)')}
+            >
+              <Maximize2 style={{ width: '18px', height: '18px' }} />
+            </button>
+
             {/* Queue button */}
             <button
               onClick={(e) => {

@@ -7,9 +7,13 @@ interface AlbumArtProps {
   src?: string;
   alt: string;
   size: number;
+  borderRadius?: number | string;
 }
 
-export default function AlbumArt({ src, alt, size }: AlbumArtProps) {
+export default function AlbumArt({ src, alt, size, borderRadius }: AlbumArtProps) {
+  const radius = borderRadius != null
+    ? (typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius)
+    : 'var(--radius-sm)';
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
 
@@ -18,7 +22,7 @@ export default function AlbumArt({ src, alt, size }: AlbumArtProps) {
   const placeholderStyle: React.CSSProperties = {
     width: `${size}px`,
     height: `${size}px`,
-    borderRadius: 'var(--radius-sm)',
+    borderRadius: radius,
     background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
     display: 'flex',
     alignItems: 'center',
@@ -41,7 +45,7 @@ export default function AlbumArt({ src, alt, size }: AlbumArtProps) {
       style={{
         width: `${size}px`,
         height: `${size}px`,
-        borderRadius: 'var(--radius-sm)',
+        borderRadius: radius,
         flexShrink: 0,
         position: 'relative',
         overflow: 'hidden',
@@ -72,7 +76,7 @@ export default function AlbumArt({ src, alt, size }: AlbumArtProps) {
           width: `${size}px`,
           height: `${size}px`,
           objectFit: 'cover',
-          borderRadius: 'var(--radius-sm)',
+          borderRadius: radius,
           display: 'block',
           opacity: imgLoaded ? 1 : 0,
         }}
