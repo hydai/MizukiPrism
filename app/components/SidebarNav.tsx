@@ -23,6 +23,10 @@ interface SidebarNavProps {
   onCreatePlaylist?: () => void;
   onViewPlaylists?: () => void;
   playlistCount?: number;
+  onViewLikedSongs?: () => void;
+  likedSongsCount?: number;
+  onViewRecentlyPlayed?: () => void;
+  recentlyPlayedCount?: number;
   /** Rendered between logo and scrollable body (e.g. search box). */
   searchSlot?: ReactNode;
   /** Rendered at the end of the scrollable body (e.g. filters, stream playlists). */
@@ -36,6 +40,10 @@ export default function SidebarNav({
   onCreatePlaylist,
   onViewPlaylists,
   playlistCount = 0,
+  onViewLikedSongs,
+  likedSongsCount = 0,
+  onViewRecentlyPlayed,
+  recentlyPlayedCount = 0,
   searchSlot,
   children,
 }: SidebarNavProps) {
@@ -156,20 +164,48 @@ export default function SidebarNav({
 
           {/* Liked Songs */}
           <button
-            className={inactiveNavItemClass}
+            onClick={onViewLikedSongs}
+            className={likedSongsCount > 0
+              ? "w-full flex items-center justify-between px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40"
+              : inactiveNavItemClass}
             style={inactiveStyle}
+            data-testid="view-liked-songs-button"
           >
-            <Heart className="w-4 h-4 flex-shrink-0" />
-            喜愛的歌曲
+            <span className="flex items-center gap-3">
+              <Heart className="w-4 h-4 flex-shrink-0" />
+              喜愛的歌曲
+            </span>
+            {likedSongsCount > 0 && (
+              <span
+                className="text-xs px-2 py-0.5 rounded-full font-medium"
+                style={{ background: 'var(--bg-accent-pink-muted)', color: 'var(--accent-pink)' }}
+              >
+                {likedSongsCount}
+              </span>
+            )}
           </button>
 
           {/* Recently Played */}
           <button
-            className={inactiveNavItemClass}
+            onClick={onViewRecentlyPlayed}
+            className={recentlyPlayedCount > 0
+              ? "w-full flex items-center justify-between px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40"
+              : inactiveNavItemClass}
             style={inactiveStyle}
+            data-testid="view-recently-played-button"
           >
-            <Clock className="w-4 h-4 flex-shrink-0" />
-            最近播放
+            <span className="flex items-center gap-3">
+              <Clock className="w-4 h-4 flex-shrink-0" />
+              最近播放
+            </span>
+            {recentlyPlayedCount > 0 && (
+              <span
+                className="text-xs px-2 py-0.5 rounded-full font-medium"
+                style={{ background: 'var(--bg-accent-pink-muted)', color: 'var(--accent-pink)' }}
+              >
+                {recentlyPlayedCount}
+              </span>
+            )}
           </button>
 
           {/* Create Playlist */}

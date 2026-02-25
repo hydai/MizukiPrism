@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Play, Pause, SkipBack, SkipForward, ListMusic, AlertCircle, Shuffle, Repeat, Repeat1, Heart, Volume2, Maximize2 } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
+import { useLikedSongs } from '../contexts/LikedSongsContext';
 import AlbumArt from './AlbumArt';
 
 export default function MiniPlayer() {
@@ -30,8 +31,10 @@ export default function MiniPlayer() {
   const pathname = usePathname();
   const isNowPlayingPage = pathname === '/now-playing';
 
+  const { isLiked: checkIsLiked, toggleLike } = useLikedSongs();
+
   const [volume, setVolume] = useState(75);
-  const [isLiked, setIsLiked] = useState(false);
+  const trackIsLiked = currentTrack ? checkIsLiked(currentTrack.id) : false;
 
   // Keyboard navigation: Space for play/pause when player is active
   useEffect(() => {
@@ -148,11 +151,21 @@ export default function MiniPlayer() {
             </div>
           </div>
 
-          {/* Heart icon — 20px, accent-pink (visual placeholder) */}
+          {/* Heart icon — 20px, accent-pink */}
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setIsLiked(!isLiked);
+              if (currentTrack) {
+                toggleLike({
+                  performanceId: currentTrack.id,
+                  songTitle: currentTrack.title,
+                  originalArtist: currentTrack.originalArtist,
+                  videoId: currentTrack.videoId,
+                  timestamp: currentTrack.timestamp,
+                  endTimestamp: currentTrack.endTimestamp,
+                  albumArtUrl: currentTrack.albumArtUrl,
+                });
+              }
             }}
             className="flex-shrink-0"
             aria-label="Mobile Like"
@@ -162,7 +175,7 @@ export default function MiniPlayer() {
               style={{
                 width: '20px',
                 height: '20px',
-                fill: isLiked ? 'var(--accent-pink)' : 'none',
+                fill: trackIsLiked ? 'var(--accent-pink)' : 'none',
               }}
             />
           </button>
@@ -252,17 +265,27 @@ export default function MiniPlayer() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setIsLiked(!isLiked);
+                if (currentTrack) {
+                  toggleLike({
+                    performanceId: currentTrack.id,
+                    songTitle: currentTrack.title,
+                    originalArtist: currentTrack.originalArtist,
+                    videoId: currentTrack.videoId,
+                    timestamp: currentTrack.timestamp,
+                    endTimestamp: currentTrack.endTimestamp,
+                    albumArtUrl: currentTrack.albumArtUrl,
+                  });
+                }
               }}
               className="flex-shrink-0 transition-colors"
               aria-label="Like"
-              style={{ color: isLiked ? 'var(--accent-pink)' : 'var(--text-tertiary)' }}
+              style={{ color: trackIsLiked ? 'var(--accent-pink)' : 'var(--text-tertiary)' }}
             >
               <Heart
                 style={{
                   width: '16px',
                   height: '16px',
-                  fill: isLiked ? 'var(--accent-pink)' : 'none',
+                  fill: trackIsLiked ? 'var(--accent-pink)' : 'none',
                 }}
               />
             </button>

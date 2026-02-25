@@ -4,11 +4,16 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, MoreHorizontal, Music2, Share2 } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
+import { useLikedSongs } from '../contexts/LikedSongsContext';
+import { useRecentlyPlayed } from '../contexts/RecentlyPlayedContext';
 import AlbumArt from '../components/AlbumArt';
 import NowPlayingControls from '../components/NowPlayingControls';
 import UpNextSection from '../components/UpNextSection';
 import SidebarNav from '../components/SidebarNav';
 import SyncedLyrics from '../components/SyncedLyrics';
+import LikedSongsPanel from '../components/LikedSongsPanel';
+import RecentlyPlayedPanel from '../components/RecentlyPlayedPanel';
+import Toast from '../components/Toast';
 import Link from 'next/link';
 
 const formatTime = (seconds: number): string => {
@@ -28,6 +33,12 @@ export default function NowPlayingPage() {
   } = usePlayer();
 
   const [showLyrics, setShowLyrics] = useState(false);
+  const [showLikedSongsPanel, setShowLikedSongsPanel] = useState(false);
+  const [showRecentlyPlayedPanel, setShowRecentlyPlayedPanel] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const { likedCount } = useLikedSongs();
+  const { recentCount } = useRecentlyPlayed();
 
   const hasKnownDuration = trackDuration != null && trackDuration > 0;
   const progress = hasKnownDuration
@@ -122,7 +133,13 @@ export default function NowPlayingPage() {
       }}
     >
       {/* Desktop sidebar */}
-      <SidebarNav activePage="now-playing" />
+      <SidebarNav
+        activePage="now-playing"
+        onViewLikedSongs={() => setShowLikedSongsPanel(true)}
+        likedSongsCount={likedCount}
+        onViewRecentlyPlayed={() => setShowRecentlyPlayedPanel(true)}
+        recentlyPlayedCount={recentCount}
+      />
 
       {/* ─── MOBILE LAYOUT (<lg) ─── */}
       <div className="flex flex-col flex-1 lg:hidden" style={{ minHeight: '100vh' }}>
@@ -355,6 +372,18 @@ export default function NowPlayingPage() {
         {/* Up Next section */}
         <UpNextSection />
       </main>
+
+      <Toast message={toastMessage} show={showToast} onHide={() => setShowToast(false)} />
+      <LikedSongsPanel
+        show={showLikedSongsPanel}
+        onClose={() => setShowLikedSongsPanel(false)}
+        onToast={(msg) => { setToastMessage(msg); setShowToast(true); }}
+      />
+      <RecentlyPlayedPanel
+        show={showRecentlyPlayedPanel}
+        onClose={() => setShowRecentlyPlayedPanel(false)}
+        onToast={(msg) => { setToastMessage(msg); setShowToast(true); }}
+      />
     </div>
   );
 }

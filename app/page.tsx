@@ -5,8 +5,12 @@ import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, 
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
+import { useLikedSongs } from './contexts/LikedSongsContext';
+import { useRecentlyPlayed } from './contexts/RecentlyPlayedContext';
 import Toast from './components/Toast';
 import PlaylistPanel from './components/PlaylistPanel';
+import LikedSongsPanel from './components/LikedSongsPanel';
+import RecentlyPlayedPanel from './components/RecentlyPlayedPanel';
 import CreatePlaylistDialog from './components/CreatePlaylistDialog';
 import AddToPlaylistDropdown from './components/AddToPlaylistDropdown';
 import AlbumArt from './components/AlbumArt';
@@ -65,6 +69,8 @@ export default function Home() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [showPlaylistPanel, setShowPlaylistPanel] = useState(false);
+  const [showLikedSongsPanel, setShowLikedSongsPanel] = useState(false);
+  const [showRecentlyPlayedPanel, setShowRecentlyPlayedPanel] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [mobileTab, setMobileTab] = useState<'home' | 'search' | 'library' | 'profile'>('home');
   const [songs, setSongs] = useState<Song[]>([]);
@@ -128,6 +134,8 @@ export default function Home() {
 
   const { currentTrack, playTrack, addToQueue, apiLoadError, unavailableVideoIds, timestampWarning, clearTimestampWarning, skipNotification, clearSkipNotification, shuffleOn, toggleShuffle } = usePlayer();
   const { playlists, storageError, clearStorageError } = usePlaylist();
+  const { likedCount } = useLikedSongs();
+  const { recentCount } = useRecentlyPlayed();
 
   const handleAddToQueue = (track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number; endTimestamp?: number; albumArtUrl?: string }) => {
     addToQueue(track);
@@ -283,6 +291,10 @@ export default function Home() {
         onCreatePlaylist={() => setShowCreateDialog(true)}
         onViewPlaylists={() => setShowPlaylistPanel(true)}
         playlistCount={playlists.length}
+        onViewLikedSongs={() => setShowLikedSongsPanel(true)}
+        likedSongsCount={likedCount}
+        onViewRecentlyPlayed={() => setShowRecentlyPlayedPanel(true)}
+        recentlyPlayedCount={recentCount}
         searchSlot={
           <div className="px-3 pb-3 flex-shrink-0">
             <div className="relative group">
@@ -2032,6 +2044,60 @@ export default function Home() {
             >
               <div className="mb-4">
                 <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>你的音樂庫</h2>
+
+                {/* Liked Songs */}
+                <button
+                  onClick={() => setShowLikedSongsPanel(true)}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-radius-lg font-medium text-sm transition-all mb-2"
+                  style={{
+                    background: 'var(--bg-surface-glass)',
+                    border: '1px solid var(--border-glass)',
+                    color: 'var(--text-secondary)',
+                    borderRadius: 'var(--radius-lg)',
+                  }}
+                  data-testid="mobile-liked-songs-button"
+                >
+                  <span className="flex items-center gap-3">
+                    <Heart className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-pink)' }} />
+                    喜愛的歌曲
+                  </span>
+                  {likedCount > 0 && (
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={{ background: 'var(--bg-accent-pink-muted)', color: 'var(--accent-pink)' }}
+                    >
+                      {likedCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Recently Played */}
+                <button
+                  onClick={() => setShowRecentlyPlayedPanel(true)}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-radius-lg font-medium text-sm transition-all mb-2"
+                  style={{
+                    background: 'var(--bg-surface-glass)',
+                    border: '1px solid var(--border-glass)',
+                    color: 'var(--text-secondary)',
+                    borderRadius: 'var(--radius-lg)',
+                  }}
+                  data-testid="mobile-recently-played-button"
+                >
+                  <span className="flex items-center gap-3">
+                    <Clock className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-pink)' }} />
+                    最近播放
+                  </span>
+                  {recentCount > 0 && (
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={{ background: 'var(--bg-accent-pink-muted)', color: 'var(--accent-pink)' }}
+                    >
+                      {recentCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Create Playlist */}
                 <button
                   onClick={() => setShowCreateDialog(true)}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-radius-lg font-medium text-sm transition-all"
@@ -2239,6 +2305,16 @@ export default function Home() {
         show={showPlaylistPanel}
         onClose={() => setShowPlaylistPanel(false)}
         songsData={songs}
+        onToast={(msg) => { setToastMessage(msg); setShowToast(true); }}
+      />
+      <LikedSongsPanel
+        show={showLikedSongsPanel}
+        onClose={() => setShowLikedSongsPanel(false)}
+        onToast={(msg) => { setToastMessage(msg); setShowToast(true); }}
+      />
+      <RecentlyPlayedPanel
+        show={showRecentlyPlayedPanel}
+        onClose={() => setShowRecentlyPlayedPanel(false)}
         onToast={(msg) => { setToastMessage(msg); setShowToast(true); }}
       />
       <CreatePlaylistDialog
