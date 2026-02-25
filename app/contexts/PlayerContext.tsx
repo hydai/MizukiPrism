@@ -171,6 +171,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     const actualIndex = remainingQueue.indexOf(nextTrack);
     const newQueue = [...remainingQueue];
     newQueue.splice(actualIndex, 1);
+    // Repeat-all: rotate the finished track to the end of the queue
+    if (repeatModeRef.current === 'all' && fromTrack && !fromTrack.deleted) {
+      newQueue.push(fromTrack);
+    }
     setQueue(newQueue);
 
     if (fromTrack) {
