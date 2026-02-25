@@ -7,7 +7,7 @@ import { usePlayer } from '../contexts/PlayerContext';
 import AlbumArt from '../components/AlbumArt';
 import NowPlayingControls from '../components/NowPlayingControls';
 import UpNextSection from '../components/UpNextSection';
-import NowPlayingSidebar from '../components/NowPlayingSidebar';
+import SidebarNav from '../components/SidebarNav';
 import SyncedLyrics from '../components/SyncedLyrics';
 import Link from 'next/link';
 
@@ -122,7 +122,7 @@ export default function NowPlayingPage() {
       }}
     >
       {/* Desktop sidebar */}
-      <NowPlayingSidebar />
+      <SidebarNav activePage="now-playing" />
 
       {/* ─── MOBILE LAYOUT (<lg) ─── */}
       <div className="flex flex-col flex-1 lg:hidden" style={{ minHeight: '100vh' }}>

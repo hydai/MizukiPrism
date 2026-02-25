@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, Home as HomeIcon, ListMusic, Clock, Heart, LayoutList, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, User, WifiOff, ChevronLeft, MoreHorizontal, House } from 'lucide-react';
+import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, User, WifiOff, ChevronLeft, MoreHorizontal, House } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
@@ -10,6 +10,7 @@ import PlaylistPanel from './components/PlaylistPanel';
 import CreatePlaylistDialog from './components/CreatePlaylistDialog';
 import AddToPlaylistDropdown from './components/AddToPlaylistDropdown';
 import AlbumArt from './components/AlbumArt';
+import SidebarNav from './components/SidebarNav';
 
 interface Performance {
   id: string;
@@ -275,293 +276,154 @@ export default function Home() {
       <div className="flex h-screen bg-gradient-to-br from-[#fff0f5] via-[#f0f8ff] to-[#e6e6fa] text-slate-600 font-sans selection:bg-pink-200 selection:text-pink-900 overflow-hidden" style={{ background: 'linear-gradient(135deg, var(--bg-page-start) 0%, var(--bg-page-mid) 50%, var(--bg-page-end) 100%)' }}>
 
       {/* Sidebar */}
-      <aside className="w-64 bg-white/60 backdrop-blur-xl border-r border-white/40 flex flex-col flex-shrink-0 hidden lg:flex shadow-sm z-20 overflow-hidden" style={{ background: 'var(--bg-surface-frosted)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRight: '1px solid var(--border-glass)' }}>
-
-        {/* ── 1. Logo Area ── */}
-        <div className="px-5 py-5 flex items-center gap-3 flex-shrink-0">
-          <div
-            className="w-9 h-9 rounded-radius-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))' }}
-          >
-            <Disc3 className="w-5 h-5 text-white" />
-          </div>
-          <span
-            className="font-bold text-xl tracking-tight bg-clip-text text-transparent"
-            style={{ backgroundImage: 'linear-gradient(135deg, var(--accent-pink), var(--accent-blue))' }}
-          >
-            MizukiPlay
-          </span>
-        </div>
-
-        {/* ── 2. Search Box ── */}
-        <div className="px-3 pb-3 flex-shrink-0">
-          <div className="relative group">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search
-                className="w-4 h-4 transition-colors"
-                style={{ color: 'var(--text-tertiary)' }}
+      <SidebarNav
+        activePage="home"
+        isHomeActive={!hasActiveFilters}
+        onHomeClick={clearAllFilters}
+        onCreatePlaylist={() => setShowCreateDialog(true)}
+        onViewPlaylists={() => setShowPlaylistPanel(true)}
+        playlistCount={playlists.length}
+        searchSlot={
+          <div className="px-3 pb-3 flex-shrink-0">
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search
+                  className="w-4 h-4 transition-colors"
+                  style={{ color: 'var(--text-tertiary)' }}
+                />
+              </div>
+              <input
+                type="text"
+                placeholder="搜尋歌曲..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full font-medium py-2.5 pl-9 pr-4 outline-none transition-all text-sm"
+                style={{
+                  background: 'var(--bg-surface-glass)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid var(--border-glass)',
+                  borderRadius: 'var(--radius-pill)',
+                  color: 'var(--text-primary)',
+                }}
               />
             </div>
-            <input
-              type="text"
-              placeholder="搜尋歌曲..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full font-medium py-2.5 pl-9 pr-4 outline-none transition-all text-sm"
+          </div>
+        }
+      >
+        {/* ── Filters Section ── */}
+        <div className="pt-2 pb-1">
+          <div
+            className="px-3 py-1.5 mb-1 font-bold uppercase tracking-widest flex items-center gap-2"
+            style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)', letterSpacing: '0.1em' }}
+          >
+            <SlidersHorizontal className="w-3 h-3" />
+            篩選條件
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="ml-auto text-xs font-medium transition-colors"
+                style={{ color: 'var(--accent-pink)', fontSize: 'var(--font-size-xs)' }}
+                data-testid="clear-all-filters"
+              >
+                清除全部
+              </button>
+            )}
+          </div>
+
+          {/* Artist dropdown */}
+          <div className="relative px-1 mb-2">
+            <select
+              value={selectedArtist ?? ''}
+              onChange={(e) => setSelectedArtist(e.target.value || null)}
+              className="w-full font-medium py-2 px-3 outline-none appearance-none text-sm cursor-pointer transition-all"
               style={{
                 background: 'var(--bg-surface-glass)',
-                backdropFilter: 'blur(8px)',
                 border: '1px solid var(--border-glass)',
-                borderRadius: 'var(--radius-pill)',
-                color: 'var(--text-primary)',
+                borderRadius: 'var(--radius-lg)',
+                color: 'var(--text-secondary)',
               }}
+              data-testid="artist-filter"
+            >
+              <option value="">全部歌手</option>
+              {allArtists.map(artist => (
+                <option key={artist} value={artist}>{artist}</option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+              <ChevronDown className="w-3.5 h-3.5" style={{ color: 'var(--text-tertiary)' }} />
+            </div>
+          </div>
+
+          {/* Date range */}
+          <div className="space-y-1.5 px-1">
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full font-medium py-2 px-3 outline-none text-sm transition-all"
+              style={{
+                background: 'var(--bg-surface-glass)',
+                border: '1px solid var(--border-glass)',
+                borderRadius: 'var(--radius-lg)',
+                color: 'var(--text-secondary)',
+              }}
+              data-testid="date-from"
+              placeholder="開始日期"
+            />
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full font-medium py-2 px-3 outline-none text-sm transition-all"
+              style={{
+                background: 'var(--bg-surface-glass)',
+                border: '1px solid var(--border-glass)',
+                borderRadius: 'var(--radius-lg)',
+                color: 'var(--text-secondary)',
+              }}
+              data-testid="date-to"
+              placeholder="結束日期"
             />
           </div>
         </div>
 
-        {/* ── Scrollable body ── */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 px-3 space-y-1 pb-3">
-
-          {/* ── 3. DISCOVER Section ── */}
-          <div className="pt-2 pb-1">
-            {/* Section Header */}
-            <div
-              className="px-3 py-1.5 mb-1 font-bold uppercase tracking-widest"
-              style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)', letterSpacing: '0.1em' }}
-            >
-              DISCOVER
-            </div>
-
-            {/* Home – NavItem/Active or NavItem/Default */}
+        {/* ── Stream Playlists Section ── */}
+        <div className="pt-2 pb-2">
+          <div
+            className="px-3 py-1.5 mb-1 font-bold uppercase tracking-widest"
+            style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)', letterSpacing: '0.1em' }}
+          >
+            歌枠回放
+          </div>
+          <button
+            onClick={() => setSelectedStreamId(null)}
+            className="w-full text-left px-3 py-2 rounded-radius-lg text-sm font-medium transition-all"
+            style={
+              selectedStreamId === null
+                ? { color: 'var(--accent-pink)', background: 'var(--bg-accent-pink)' }
+                : { color: 'var(--text-secondary)', background: 'transparent' }
+            }
+          >
+            全部歌曲
+          </button>
+          {streams.map(stream => (
             <button
-              onClick={clearAllFilters}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all"
+              key={stream.id}
+              data-testid="stream-filter-button"
+              onClick={() => setSelectedStreamId(stream.id === selectedStreamId ? null : stream.id)}
+              className="w-full text-left px-3 py-2 rounded-radius-lg text-sm font-medium transition-all hover:bg-white/40"
               style={
-                !hasActiveFilters
-                  ? {
-                      background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
-                      color: 'var(--text-on-accent)',
-                    }
-                  : {
-                      background: 'transparent',
-                      color: 'var(--text-secondary)',
-                    }
-              }
-            >
-              <HomeIcon className="w-4 h-4 flex-shrink-0" />
-              首頁
-            </button>
-
-            {/* Browse – NavItem/Default */}
-            <button
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40"
-              style={{ background: 'transparent', color: 'var(--text-secondary)' }}
-            >
-              <LayoutList className="w-4 h-4 flex-shrink-0" />
-              瀏覽
-            </button>
-
-            {/* Trending – NavItem/Default */}
-            <button
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40"
-              style={{ background: 'transparent', color: 'var(--text-secondary)' }}
-            >
-              <Sparkles className="w-4 h-4 flex-shrink-0" />
-              熱門
-            </button>
-          </div>
-
-          {/* ── 4. YOUR LIBRARY Section ── */}
-          <div className="pt-2 pb-1">
-            {/* Section Header */}
-            <div
-              className="px-3 py-1.5 mb-1 font-bold uppercase tracking-widest"
-              style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)', letterSpacing: '0.1em' }}
-            >
-              YOUR LIBRARY
-            </div>
-
-            {/* Liked Songs */}
-            <button
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40"
-              style={{ background: 'transparent', color: 'var(--text-secondary)' }}
-            >
-              <Heart className="w-4 h-4 flex-shrink-0" />
-              喜愛的歌曲
-            </button>
-
-            {/* Recently Played */}
-            <button
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40"
-              style={{ background: 'transparent', color: 'var(--text-secondary)' }}
-            >
-              <Clock className="w-4 h-4 flex-shrink-0" />
-              最近播放
-            </button>
-
-            {/* Create Playlist */}
-            <button
-              onClick={() => setShowCreateDialog(true)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40"
-              style={{ background: 'transparent', color: 'var(--text-secondary)' }}
-              data-testid="create-playlist-button"
-            >
-              <Plus className="w-4 h-4 flex-shrink-0" />
-              建立新播放清單
-            </button>
-
-            {/* View Playlists */}
-            {playlists.length > 0 && (
-              <button
-                onClick={() => setShowPlaylistPanel(true)}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40"
-                style={{ background: 'transparent', color: 'var(--text-secondary)' }}
-                data-testid="view-playlists-button"
-              >
-                <span className="flex items-center gap-3">
-                  <ListMusic className="w-4 h-4 flex-shrink-0" />
-                  查看播放清單
-                </span>
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full font-medium"
-                  style={{ background: 'var(--bg-accent-pink-muted)', color: 'var(--accent-pink)' }}
-                >
-                  {playlists.length}
-                </span>
-              </button>
-            )}
-
-          </div>
-
-          {/* ── Filters Section (collapsible visual, always functional) ── */}
-          <div className="pt-2 pb-1">
-            <div
-              className="px-3 py-1.5 mb-1 font-bold uppercase tracking-widest flex items-center gap-2"
-              style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)', letterSpacing: '0.1em' }}
-            >
-              <SlidersHorizontal className="w-3 h-3" />
-              篩選條件
-              {hasActiveFilters && (
-                <button
-                  onClick={clearAllFilters}
-                  className="ml-auto text-xs font-medium transition-colors"
-                  style={{ color: 'var(--accent-pink)', fontSize: 'var(--font-size-xs)' }}
-                  data-testid="clear-all-filters"
-                >
-                  清除全部
-                </button>
-              )}
-            </div>
-
-            {/* Artist dropdown */}
-            <div className="relative px-1 mb-2">
-              <select
-                value={selectedArtist ?? ''}
-                onChange={(e) => setSelectedArtist(e.target.value || null)}
-                className="w-full font-medium py-2 px-3 outline-none appearance-none text-sm cursor-pointer transition-all"
-                style={{
-                  background: 'var(--bg-surface-glass)',
-                  border: '1px solid var(--border-glass)',
-                  borderRadius: 'var(--radius-lg)',
-                  color: 'var(--text-secondary)',
-                }}
-                data-testid="artist-filter"
-              >
-                <option value="">全部歌手</option>
-                {allArtists.map(artist => (
-                  <option key={artist} value={artist}>{artist}</option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-                <ChevronDown className="w-3.5 h-3.5" style={{ color: 'var(--text-tertiary)' }} />
-              </div>
-            </div>
-
-            {/* Date range */}
-            <div className="space-y-1.5 px-1">
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full font-medium py-2 px-3 outline-none text-sm transition-all"
-                style={{
-                  background: 'var(--bg-surface-glass)',
-                  border: '1px solid var(--border-glass)',
-                  borderRadius: 'var(--radius-lg)',
-                  color: 'var(--text-secondary)',
-                }}
-                data-testid="date-from"
-                placeholder="開始日期"
-              />
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-full font-medium py-2 px-3 outline-none text-sm transition-all"
-                style={{
-                  background: 'var(--bg-surface-glass)',
-                  border: '1px solid var(--border-glass)',
-                  borderRadius: 'var(--radius-lg)',
-                  color: 'var(--text-secondary)',
-                }}
-                data-testid="date-to"
-                placeholder="結束日期"
-              />
-            </div>
-          </div>
-
-          {/* ── Stream Playlists Section ── */}
-          <div className="pt-2 pb-2">
-            <div
-              className="px-3 py-1.5 mb-1 font-bold uppercase tracking-widest"
-              style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)', letterSpacing: '0.1em' }}
-            >
-              歌枠回放
-            </div>
-            <button
-              onClick={() => setSelectedStreamId(null)}
-              className="w-full text-left px-3 py-2 rounded-radius-lg text-sm font-medium transition-all"
-              style={
-                selectedStreamId === null
+                selectedStreamId === stream.id
                   ? { color: 'var(--accent-pink)', background: 'var(--bg-accent-pink)' }
                   : { color: 'var(--text-secondary)', background: 'transparent' }
               }
             >
-              全部歌曲
+              <div className="truncate">{stream.title}</div>
+              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{stream.date}</div>
             </button>
-            {streams.map(stream => (
-              <button
-                key={stream.id}
-                data-testid="stream-filter-button"
-                onClick={() => setSelectedStreamId(stream.id === selectedStreamId ? null : stream.id)}
-                className="w-full text-left px-3 py-2 rounded-radius-lg text-sm font-medium transition-all hover:bg-white/40"
-                style={
-                  selectedStreamId === stream.id
-                    ? { color: 'var(--accent-pink)', background: 'var(--bg-accent-pink)' }
-                    : { color: 'var(--text-secondary)', background: 'transparent' }
-                }
-              >
-                <div className="truncate">{stream.title}</div>
-                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{stream.date}</div>
-              </button>
-            ))}
-          </div>
-
+          ))}
         </div>
-        {/* ── End scrollable body ── */}
-
-        {/* ── 5. User Footer ── */}
-        <div
-          className="flex-shrink-0 px-3 py-3 border-t"
-          style={{ borderTop: '1px solid var(--border-glass)' }}
-        >
-          {/* Attribution */}
-          <p className="text-xs mt-2 text-center" style={{ color: 'var(--text-muted)' }}>
-            Made with <Heart className="w-3 h-3 inline text-pink-400 fill-current" /> for Mizuki
-          </p>
-        </div>
-
-      </aside>
+      </SidebarNav>
 
       {/* Mobile TopBar — 56px, fixed top, mobile only */}
       <div
