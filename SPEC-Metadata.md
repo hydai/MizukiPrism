@@ -36,7 +36,7 @@ MizukiPrism Metadata Integration 透過外部 API（Deezer、LRCLIB）自動為�
 - **非取代策展人資料**：外部 API 的歌名、原唱者不覆寫策展人手動維護的 `title` 與 `originalArtist`
 - **非粉絲端直接 API 呼叫**：所有外部 API 呼叫由 CLI 離線完成，粉絲端僅讀取靜態檔案
 - **非伺服器端後設資料管理**：所有擷取與管理操作透過 CLI 離線完成，部署後為純靜態站
-- **非即時串流歌詞**：不提供 Mizuki 直播中的即時歌詞，僅為 VOD 回放提供原曲歌詞
+- **非即時串流歌詞**：不提供浠Mizuki 直播中的即時歌詞，僅為 VOD 回放提供原曲歌詞
 - **非歌曲辨識**：不使用音訊指紋辨識歌曲，依賴策展人已維護的 `originalArtist` + `title` 進行 API 比對
 
 ## 2. Scope

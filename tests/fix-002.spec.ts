@@ -102,7 +102,7 @@ test.describe('FIX-002: Song Data API Load Failure Error Display', () => {
     await expect(page.getByRole('button', { name: '首頁' })).toBeVisible();
 
     // Hero section still visible
-    await expect(page.getByRole('heading', { name: 'Mizuki' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '浠Mizuki' })).toBeVisible();
 
     // Error state is visible in the content area
     await expect(page.locator('[data-testid="song-load-error"]')).toBeVisible();

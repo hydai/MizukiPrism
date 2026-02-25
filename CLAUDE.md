@@ -1,6 +1,6 @@
 # MizukiPrism
 
-Fan-facing song catalog and player for VTuber Mizuki's karaoke livestream archive. Deployed as a static site on GitHub Pages.
+Fan-facing song catalog and player for VTuber 浠Mizuki's karaoke livestream archive. Deployed as a static site on GitHub Pages.
 
 ## Tech Stack
 

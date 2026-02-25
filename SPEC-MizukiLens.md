@@ -547,7 +547,7 @@ active_channel = "mizuki"
 
 [channels.mizuki]
 id = "UC..."
-name = "Mizuki"
+name = "浠Mizuki"
 keywords = ["歌回", "歌枠", "唱歌", "singing", "karaoke"]
 
 [channels.another]

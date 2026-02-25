@@ -217,7 +217,7 @@ export default function SidebarNav({
         style={{ borderTop: '1px solid var(--border-glass)' }}
       >
         <p className="text-xs mt-2 text-center" style={{ color: 'var(--text-muted)' }}>
-          Made with <Heart className="w-3 h-3 inline text-pink-400 fill-current" /> for Mizuki
+          Made with <Heart className="w-3 h-3 inline text-pink-400 fill-current" /> for 浠Mizuki
         </p>
       </div>
     </aside>

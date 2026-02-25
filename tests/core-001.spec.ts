@@ -12,7 +12,7 @@ test.describe('CORE-001: Streamer Profile & Song Catalog (Timeline View)', () =>
     await expect(page.getByRole('button', { name: '首頁' })).toBeVisible();
     await expect(page.getByPlaceholder('搜尋歌曲...')).toBeVisible();
     await expect(page.getByText('歌枠回放')).toBeVisible();
-    await expect(page.getByText(/Made with.*for Mizuki/)).toBeVisible();
+    await expect(page.getByText(/Made with.*for 浠Mizuki/)).toBeVisible();
 
     // Verify main content area exists
     await expect(page.locator('main')).toBeVisible();
@@ -22,7 +22,7 @@ test.describe('CORE-001: Streamer Profile & Song Catalog (Timeline View)', () =>
     await page.goto(BASE_URL);
 
     // Verify profile elements
-    await expect(page.getByRole('heading', { name: 'Mizuki' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '浠Mizuki' })).toBeVisible();
     await expect(page.getByText('清楚系歌勢 V-Streamer,帶給你如夢似幻的歌聲。')).toBeVisible();
     await expect(page.getByText(/\d+ 首歌曲/)).toBeVisible();
 
