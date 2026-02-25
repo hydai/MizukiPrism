@@ -719,12 +719,12 @@ export default function Home() {
                 margin: 0,
               }}
             >
-              50萬+ Followers
+              21.8萬位訂閱者
               {' '}
               <span style={{ color: 'var(--text-tertiary)' }}>·</span>
               {' '}
               Rank{' '}
-              <span style={{ color: 'var(--accent-pink)', fontWeight: 700 }}>#12</span>
+              <span style={{ color: 'var(--accent-pink)', fontWeight: 700 }}>#1</span>
             </p>
           </header>
 
@@ -835,10 +835,10 @@ export default function Home() {
                   <span
                     style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 'var(--font-size-xl)' }}
                   >
-                    50萬+
+                    21.8萬
                   </span>
                   <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}>
-                    追蹤者
+                    訂閱者
                   </span>
                 </div>
                 <div
@@ -852,7 +852,7 @@ export default function Home() {
                   <span
                     style={{ fontWeight: 700, color: 'var(--accent-pink)', fontSize: 'var(--font-size-xl)' }}
                   >
-                    #12
+                    #1
                   </span>
                   <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}>
                     排名
