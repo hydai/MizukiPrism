@@ -2,6 +2,7 @@
 
 import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1 } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
+import VolumeControl from './VolumeControl';
 
 interface NowPlayingControlsProps {
   size: 'desktop' | 'mobile';
@@ -27,6 +28,7 @@ export default function NowPlayingControls({ size }: NowPlayingControlsProps) {
   const gap = isMobile ? 40 : 32;
 
   return (
+    <div className="flex flex-col items-center" style={{ gap: '16px' }}>
     <div
       className="flex items-center justify-center"
       style={{ gap: `${gap}px` }}
@@ -99,6 +101,8 @@ export default function NowPlayingControls({ size }: NowPlayingControlsProps) {
           <Repeat style={{ width: `${shuffleSize}px`, height: `${shuffleSize}px` }} />
         )}
       </button>
+    </div>
+    <VolumeControl size="full" />
     </div>
   );
 }

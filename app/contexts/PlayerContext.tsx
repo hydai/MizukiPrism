@@ -57,6 +57,10 @@ interface PlayerContextType {
   shuffleOn: boolean;
   toggleRepeat: () => void;
   toggleShuffle: () => void;
+  volume: number;
+  isMuted: boolean;
+  setVolume: (n: number) => void;
+  toggleMute: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -94,6 +98,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   const [shuffleOn, setShuffleOn] = useState(false);
   const [allTracks, setAllTracks] = useState<Track[]>([]);
+  const [volume, setVolumeState] = useState(75);
+  const [isMuted, setIsMuted] = useState(false);
 
   // Derived track-relative time values (never fall back to full VOD duration)
   const trackCurrentTime = currentTrack
@@ -113,6 +119,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const repeatModeRef = useRef<RepeatMode>('off');
   const shuffleOnRef = useRef(false);
   const allTracksRef = useRef<Track[]>([]);
+  const volumeRef = useRef(75);
+  const isMutedRef = useRef(false);
 
   const clearTimestampWarning = () => setTimestampWarning(null);
   const clearSkipNotification = () => setSkipNotification(null);
@@ -123,6 +131,60 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => { repeatModeRef.current = repeatMode; }, [repeatMode]);
   useEffect(() => { shuffleOnRef.current = shuffleOn; }, [shuffleOn]);
   useEffect(() => { allTracksRef.current = allTracks; }, [allTracks]);
+  useEffect(() => { volumeRef.current = volume; }, [volume]);
+  useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
+
+  // Load volume/mute from localStorage on mount (SSR-safe)
+  useEffect(() => {
+    try {
+      const savedVolume = localStorage.getItem('mizuki-volume');
+      const savedMuted = localStorage.getItem('mizuki-muted');
+      if (savedVolume !== null) {
+        const v = Number(savedVolume);
+        if (!isNaN(v) && v >= 0 && v <= 100) {
+          setVolumeState(v);
+          volumeRef.current = v;
+        }
+      }
+      if (savedMuted !== null) {
+        const m = savedMuted === 'true';
+        setIsMuted(m);
+        isMutedRef.current = m;
+      }
+    } catch {
+      // localStorage unavailable — use session defaults
+    }
+  }, []);
+
+  const setVolume = (n: number) => {
+    const clamped = Math.max(0, Math.min(100, n));
+    setVolumeState(clamped);
+    if (playerRef.current && playerRef.current.setVolume) {
+      playerRef.current.setVolume(clamped);
+    }
+    // Auto-unmute when dragging above 0 while muted
+    if (clamped > 0 && isMutedRef.current) {
+      setIsMuted(false);
+      if (playerRef.current && playerRef.current.unMute) {
+        playerRef.current.unMute();
+      }
+      try { localStorage.setItem('mizuki-muted', 'false'); } catch {}
+    }
+    try { localStorage.setItem('mizuki-volume', String(clamped)); } catch {}
+  };
+
+  const toggleMute = () => {
+    const newMuted = !isMutedRef.current;
+    setIsMuted(newMuted);
+    if (playerRef.current) {
+      if (newMuted) {
+        playerRef.current.mute?.();
+      } else {
+        playerRef.current.unMute?.();
+      }
+    }
+    try { localStorage.setItem('mizuki-muted', String(newMuted)); } catch {}
+  };
 
   // Advance to next non-deleted track in queue, skipping deleted ones.
   // Returns true if a non-deleted track was found and set as current, false if all remaining are deleted or queue is empty.
@@ -271,6 +333,14 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
             setTimestampWarning('時間戳可能有誤');
           } else {
             event.target.seekTo(currentTrack.timestamp, true);
+          }
+
+          // Apply saved volume/mute settings to newly created player
+          event.target.setVolume(volumeRef.current);
+          if (isMutedRef.current) {
+            event.target.mute();
+          } else {
+            event.target.unMute();
           }
 
           event.target.playVideo();
@@ -471,6 +541,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         shuffleOn,
         toggleRepeat,
         toggleShuffle,
+        volume,
+        isMuted,
+        setVolume,
+        toggleMute,
       }}
     >
       {children}

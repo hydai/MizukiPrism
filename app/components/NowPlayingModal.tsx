@@ -6,6 +6,7 @@ import { X, Play, Pause, SkipBack, SkipForward, ChevronDown, Shuffle, Repeat, Re
 import { usePlayer } from '../contexts/PlayerContext';
 import AlbumArt from './AlbumArt';
 import SyncedLyrics from './SyncedLyrics';
+import VolumeControl from './VolumeControl';
 
 export default function NowPlayingModal() {
   const [mounted, setMounted] = useState(false);
@@ -188,6 +189,11 @@ export default function NowPlayingModal() {
                 : <Repeat className={`w-6 h-6 ${repeatMode === 'off' ? 'text-slate-600 hover:text-slate-800' : ''}`} />
               }
             </button>
+          </div>
+
+          {/* Volume control */}
+          <div className="flex justify-center mt-6">
+            <VolumeControl size="full" />
           </div>
 
           {/* Synced Lyrics */}

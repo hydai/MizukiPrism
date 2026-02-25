@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Play, Pause, SkipBack, SkipForward, ListMusic, AlertCircle, Shuffle, Repeat, Repeat1, Heart, Volume2, Maximize2 } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, ListMusic, AlertCircle, Shuffle, Repeat, Repeat1, Heart, Maximize2 } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useLikedSongs } from '../contexts/LikedSongsContext';
 import AlbumArt from './AlbumArt';
+import VolumeControl from './VolumeControl';
 
 export default function MiniPlayer() {
   const {
@@ -33,7 +34,6 @@ export default function MiniPlayer() {
 
   const { isLiked: checkIsLiked, toggleLike } = useLikedSongs();
 
-  const [volume, setVolume] = useState(75);
   const trackIsLiked = currentTrack ? checkIsLiked(currentTrack.id) : false;
 
   // Keyboard navigation: Space for play/pause when player is active
@@ -489,38 +489,8 @@ export default function MiniPlayer() {
               )}
             </button>
 
-            {/* Speaker/Device icon */}
-            <button
-              className="transition-colors"
-              aria-label="Volume"
-              style={{ color: 'var(--text-tertiary)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-tertiary)')}
-            >
-              <Volume2 style={{ width: '18px', height: '18px' }} />
-            </button>
-
-            {/* Volume slider */}
-            <div className="flex items-center" style={{ width: '80px' }}>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={volume}
-                onChange={(e) => setVolume(Number(e.target.value))}
-                className="w-full"
-                aria-label="Volume slider"
-                style={{
-                  height: '4px',
-                  borderRadius: 'var(--radius-pill)',
-                  appearance: 'none',
-                  WebkitAppearance: 'none',
-                  background: `linear-gradient(90deg, var(--accent-pink-light) ${volume}%, var(--bg-surface-muted) ${volume}%)`,
-                  outline: 'none',
-                  cursor: 'pointer',
-                }}
-              />
-            </div>
+            {/* Volume control */}
+            <VolumeControl size="compact" />
           </div>
         </div>
       </div>
