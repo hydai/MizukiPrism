@@ -170,7 +170,33 @@
 
       const name = document.createElement("span");
       name.className = "song-name";
-      name.textContent = s.songName + (s.artist ? " \u2014 " + s.artist : "");
+
+      var nameText = document.createElement("span");
+      nameText.className = "song-name-text";
+      nameText.textContent = s.songName;
+      nameText.title = "Double-click to edit song name";
+      nameText.addEventListener("dblclick", function (e) {
+        e.stopPropagation();
+        startInlineEdit(nameText, i, "songName");
+      });
+      name.appendChild(nameText);
+
+      if (s.artist) {
+        var sep = document.createElement("span");
+        sep.className = "song-separator";
+        sep.textContent = " \u2014 ";
+        name.appendChild(sep);
+
+        var artistText = document.createElement("span");
+        artistText.className = "song-artist-text";
+        artistText.textContent = s.artist;
+        artistText.title = "Double-click to edit artist";
+        artistText.addEventListener("dblclick", function (e) {
+          e.stopPropagation();
+          startInlineEdit(artistText, i, "artist");
+        });
+        name.appendChild(artistText);
+      }
 
       const start = document.createElement("span");
       start.className = "song-start";
@@ -196,6 +222,69 @@
 
       $songs.appendChild(li);
     });
+  }
+
+  // --- Inline editing ---
+
+  function startInlineEdit(span, songIndex, field) {
+    var original = span.textContent;
+    var input = document.createElement("input");
+    input.type = "text";
+    input.className = "inline-edit";
+    input.value = original;
+
+    span.textContent = "";
+    span.appendChild(input);
+    input.focus();
+    input.select();
+
+    var committed = false;
+
+    function commit() {
+      if (committed) return;
+      committed = true;
+      var value = input.value.trim();
+      if (!value || value === original) {
+        cancel();
+        return;
+      }
+      saveInlineEdit(songIndex, field, value);
+    }
+
+    function cancel() {
+      if (span.contains(input)) {
+        span.textContent = original;
+      }
+    }
+
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); commit(); }
+      if (e.key === "Escape") { e.preventDefault(); cancel(); }
+    });
+
+    input.addEventListener("blur", function () {
+      if (!committed) cancel();
+    });
+  }
+
+  async function saveInlineEdit(songIndex, field, value) {
+    var song = songs[songIndex];
+    var body = {};
+    body[field] = value;
+    try {
+      var data = await fetchJSON("/api/songs/" + song.id + "/details", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      song.songName = data.songName;
+      song.artist = data.artist;
+      renderSongs();
+      showToast("Updated " + field);
+    } catch (e) {
+      showToast("Error: " + e.message, true);
+      renderSongs();
+    }
   }
 
   function updateControls() {

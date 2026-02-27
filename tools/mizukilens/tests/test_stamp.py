@@ -14,6 +14,7 @@ from mizukilens.cache import (
     get_parsed_songs,
     get_stream,
     open_db,
+    update_song_details,
     update_song_end_timestamp,
     update_stream_status,
     upsert_parsed_songs,
@@ -554,6 +555,159 @@ class TestStampCliRegistration:
 
 # ===========================================================================
 # SECTION 12: Schema migration
+# ===========================================================================
+
+# ===========================================================================
+# SECTION 12: Cache — update_song_details
+# ===========================================================================
+
+class TestUpdateSongDetails:
+    def test_update_song_name_only(self, populated_db: sqlite3.Connection) -> None:
+        songs = get_parsed_songs(populated_db, "abc123")
+        song_id = songs[0]["id"]
+        assert update_song_details(populated_db, song_id, song_name="New Name") is True
+        updated = get_parsed_songs(populated_db, "abc123")
+        assert updated[0]["song_name"] == "New Name"
+        assert updated[0]["artist"] == "Artist 1"  # unchanged
+
+    def test_update_artist_only(self, populated_db: sqlite3.Connection) -> None:
+        songs = get_parsed_songs(populated_db, "abc123")
+        song_id = songs[0]["id"]
+        assert update_song_details(populated_db, song_id, artist="New Artist") is True
+        updated = get_parsed_songs(populated_db, "abc123")
+        assert updated[0]["artist"] == "New Artist"
+        assert updated[0]["song_name"] == "Song A"  # unchanged
+
+    def test_update_both_fields(self, populated_db: sqlite3.Connection) -> None:
+        songs = get_parsed_songs(populated_db, "abc123")
+        song_id = songs[0]["id"]
+        assert update_song_details(populated_db, song_id, song_name="X", artist="Y") is True
+        updated = get_parsed_songs(populated_db, "abc123")
+        assert updated[0]["song_name"] == "X"
+        assert updated[0]["artist"] == "Y"
+
+    def test_clear_artist(self, populated_db: sqlite3.Connection) -> None:
+        songs = get_parsed_songs(populated_db, "abc123")
+        song_id = songs[0]["id"]  # Artist 1
+        assert update_song_details(populated_db, song_id, artist=None) is True
+        updated = get_parsed_songs(populated_db, "abc123")
+        assert updated[0]["artist"] is None
+
+    def test_nonexistent_returns_false(self, populated_db: sqlite3.Connection) -> None:
+        assert update_song_details(populated_db, 99999, song_name="X") is False
+
+
+# ===========================================================================
+# SECTION 13: Flask API — PUT /api/songs/<id>/details
+# ===========================================================================
+
+class TestApiUpdateSongDetails:
+    def test_update_song_name(self, client) -> None:
+        resp = client.get("/api/streams/abc123/songs")
+        song_id = resp.get_json()[0]["id"]
+
+        resp = client.put(
+            f"/api/songs/{song_id}/details",
+            data=json.dumps({"songName": "New Name"}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["ok"] is True
+        assert data["songName"] == "New Name"
+
+        # Verify via GET
+        resp = client.get("/api/streams/abc123/songs")
+        assert resp.get_json()[0]["songName"] == "New Name"
+
+    def test_update_artist(self, client) -> None:
+        resp = client.get("/api/streams/abc123/songs")
+        song_id = resp.get_json()[0]["id"]
+
+        resp = client.put(
+            f"/api/songs/{song_id}/details",
+            data=json.dumps({"artist": "New Artist"}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 200
+        assert resp.get_json()["artist"] == "New Artist"
+
+    def test_update_both(self, client) -> None:
+        resp = client.get("/api/streams/abc123/songs")
+        song_id = resp.get_json()[0]["id"]
+
+        resp = client.put(
+            f"/api/songs/{song_id}/details",
+            data=json.dumps({"songName": "X", "artist": "Y"}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["songName"] == "X"
+        assert data["artist"] == "Y"
+
+    def test_clear_artist_with_null(self, client) -> None:
+        resp = client.get("/api/streams/abc123/songs")
+        song_id = resp.get_json()[0]["id"]
+
+        resp = client.put(
+            f"/api/songs/{song_id}/details",
+            data=json.dumps({"artist": None}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 200
+        assert resp.get_json()["artist"] is None
+
+    def test_empty_song_name_rejected(self, client) -> None:
+        resp = client.get("/api/streams/abc123/songs")
+        song_id = resp.get_json()[0]["id"]
+
+        resp = client.put(
+            f"/api/songs/{song_id}/details",
+            data=json.dumps({"songName": ""}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 400
+
+    def test_missing_both_fields(self, client) -> None:
+        resp = client.put(
+            "/api/songs/1/details",
+            data=json.dumps({"unrelated": "field"}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 400
+
+    def test_nonexistent_song(self, client) -> None:
+        resp = client.put(
+            "/api/songs/99999/details",
+            data=json.dumps({"songName": "X"}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 404
+
+    def test_reapproves_exported_stream(self, db_path: Path) -> None:
+        conn = open_db(db_path)
+        _add_stream(conn, status="approved")
+        _add_songs(conn)
+        update_stream_status(conn, "abc123", "exported")
+        conn.close()
+
+        app = create_app(db_path=db_path)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            songs = c.get("/api/streams/abc123/songs").get_json()
+            c.put(
+                f"/api/songs/{songs[0]['id']}/details",
+                data=json.dumps({"songName": "Fixed Name"}),
+                content_type="application/json",
+            )
+            conn = open_db(db_path)
+            assert get_stream(conn, "abc123")["status"] == "approved"
+            conn.close()
+
+
+# ===========================================================================
+# SECTION 14: Schema migration
 # ===========================================================================
 
 class TestSchemaMigration:

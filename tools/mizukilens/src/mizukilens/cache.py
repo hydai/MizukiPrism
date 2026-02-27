@@ -545,6 +545,45 @@ def update_song_end_timestamp(
     return cur.rowcount > 0
 
 
+_SENTINEL = object()
+
+
+def update_song_details(
+    conn: sqlite3.Connection,
+    song_id: int,
+    *,
+    song_name: str | None = None,
+    artist: object = _SENTINEL,
+) -> bool:
+    """Update song_name and/or artist for a parsed_songs row.
+
+    Args:
+        song_name: New song name (must be non-empty if provided).
+        artist: New artist value. Use ``None`` to clear; omit (sentinel)
+                to leave unchanged.
+
+    Returns:
+        True if the row was updated, False otherwise (e.g. id not found).
+    """
+    sets: list[str] = []
+    params: list[object] = []
+    if song_name is not None:
+        sets.append("song_name = ?")
+        params.append(song_name)
+    if artist is not _SENTINEL:
+        sets.append("artist = ?")
+        params.append(artist)
+    if not sets:
+        return False
+    params.append(song_id)
+    cur = conn.execute(
+        f"UPDATE parsed_songs SET {', '.join(sets)} WHERE id = ?",
+        params,
+    )
+    conn.commit()
+    return cur.rowcount > 0
+
+
 def clear_song_end_timestamp(conn: sqlite3.Connection, song_id: int) -> bool:
     """Clear end_timestamp and manual_end_ts for a specific parsed_songs row.
 

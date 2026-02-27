@@ -336,3 +336,31 @@ main {
   border-color: var(--red);
   color: var(--red);
 }
+
+/* Inline editing */
+.song-name-text,
+.song-artist-text {
+  cursor: default;
+}
+
+.song-name-text:hover,
+.song-artist-text:hover {
+  text-decoration: underline dotted var(--text-dim);
+  text-underline-offset: 3px;
+}
+
+.inline-edit {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-family: inherit;
+  font-size: inherit;
+  width: 100%;
+  outline: none;
+}
+
+.song-separator {
+  color: var(--text-dim);
+}

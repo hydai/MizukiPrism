@@ -156,6 +156,66 @@ def create_app(db_path: str | Path | None = None) -> Flask:
             conn.close()
 
     # ------------------------------------------------------------------
+    # API: update song details (name / artist)
+    # ------------------------------------------------------------------
+
+    @app.route("/api/songs/<int:song_pk>/details", methods=["PUT"])
+    def api_update_song_details(song_pk: int):
+        """Update song_name and/or artist for a parsed song."""
+        from mizukilens.cache import update_song_details
+
+        data = request.get_json(silent=True)
+        if not data:
+            return jsonify({"error": "Missing request body"}), 400
+
+        song_name = data.get("songName")
+        artist_provided = "artist" in data
+        artist = data.get("artist")
+
+        if song_name is None and not artist_provided:
+            return jsonify({"error": "At least one of songName or artist is required"}), 400
+
+        if song_name is not None:
+            if not isinstance(song_name, str) or not song_name.strip():
+                return jsonify({"error": "songName must be a non-empty string"}), 400
+            song_name = song_name.strip()
+
+        if artist_provided and artist is not None:
+            if not isinstance(artist, str):
+                return jsonify({"error": "artist must be a string or null"}), 400
+            artist = artist.strip() if artist else None
+
+        conn = _open()
+        try:
+            from mizukilens.cache import _SENTINEL
+            kwargs: dict = {}
+            if song_name is not None:
+                kwargs["song_name"] = song_name
+            if artist_provided:
+                kwargs["artist"] = artist
+            else:
+                kwargs["artist"] = _SENTINEL
+
+            updated = update_song_details(conn, song_pk, **kwargs)
+            if not updated:
+                return jsonify({"error": f"Song {song_pk} not found"}), 404
+            _maybe_reapprove_stream(conn, song_pk)
+
+            # Read back the updated row
+            row = conn.execute(
+                "SELECT song_name, artist FROM parsed_songs WHERE id = ?",
+                (song_pk,),
+            ).fetchone()
+            return jsonify({
+                "ok": True,
+                "songId": song_pk,
+                "songName": row["song_name"],
+                "artist": row["artist"],
+            })
+        finally:
+            conn.close()
+
+    # ------------------------------------------------------------------
     # API: progress stats
     # ------------------------------------------------------------------
 
