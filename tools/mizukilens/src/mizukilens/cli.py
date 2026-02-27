@@ -999,7 +999,7 @@ def candidates_reject_cmd(candidate_id: int) -> None:
 @main.command("stamp")
 @click.option("--port", default=5555, type=int, show_default=True,
               help="Port for the local web server.")
-@click.option("--host", default="127.0.0.1", show_default=True,
+@click.option("--host", default="localhost", show_default=True,
               help="Host to bind the web server to.")
 def stamp_cmd(port: int, host: str) -> None:
     """Launch the EndStamp web editor for marking song end timestamps.
