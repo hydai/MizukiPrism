@@ -609,6 +609,37 @@ def update_song_details(
     return cur.rowcount > 0
 
 
+def delete_parsed_song(conn: sqlite3.Connection, song_id: int) -> str | None:
+    """Delete a parsed song by PK and reindex remaining songs.
+
+    Returns:
+        The video_id of the deleted song's stream (for reapproval), or None
+        if the song was not found.
+    """
+    row = conn.execute(
+        "SELECT video_id FROM parsed_songs WHERE id = ?", (song_id,)
+    ).fetchone()
+    if row is None:
+        return None
+
+    video_id = row["video_id"]
+    conn.execute("DELETE FROM parsed_songs WHERE id = ?", (song_id,))
+
+    # Reindex remaining songs for this stream
+    remaining = conn.execute(
+        "SELECT id FROM parsed_songs WHERE video_id = ? ORDER BY order_index",
+        (video_id,),
+    ).fetchall()
+    for idx, r in enumerate(remaining):
+        conn.execute(
+            "UPDATE parsed_songs SET order_index = ? WHERE id = ?",
+            (idx, r["id"]),
+        )
+
+    conn.commit()
+    return video_id
+
+
 def clear_all_end_timestamps(conn: sqlite3.Connection, video_id: str) -> int:
     """Clear end_timestamp and manual_end_ts for all songs in a stream.
 

@@ -21,6 +21,7 @@
   const $btnSeekEnd = document.getElementById("btn-seek-end");
   const $btnFetch = document.getElementById("btn-fetch");
   const $btnClearAll = document.getElementById("btn-clear-all");
+  const $btnRefetch = document.getElementById("btn-refetch");
   const $placeholder = document.getElementById("player-placeholder");
 
   // --- Helpers ---
@@ -239,6 +240,16 @@
         li.appendChild(undo);
       }
 
+      const del = document.createElement("button");
+      del.className = "btn-delete";
+      del.textContent = "\u2715";
+      del.title = "Delete song (d)";
+      del.addEventListener("click", function (e) {
+        e.stopPropagation();
+        deleteSong(s.id, i);
+      });
+      li.appendChild(del);
+
       $songs.appendChild(li);
     });
   }
@@ -325,6 +336,7 @@
     $btnSeekEnd.disabled = !(hasSong && songs[selectedIndex].endTimestamp);
     $btnFetch.disabled = !hasSong;
     $btnClearAll.disabled = !currentVideoId;
+    $btnRefetch.disabled = !currentVideoId;
   }
 
   // --- API actions ---
@@ -389,6 +401,56 @@
       showToast("Cleared " + data.cleared + " end timestamps");
     } catch (e) {
       showToast("Error: " + e.message, true);
+    }
+  }
+
+  async function deleteSong(songId, idx) {
+    var song = songs[idx];
+    if (!confirm("Delete #" + (song.orderIndex + 1) + " " + song.songName + "?")) return;
+    try {
+      await fetchJSON("/api/songs/" + songId, { method: "DELETE" });
+      await loadSongs(currentVideoId);
+      loadStats();
+      loadStreams();
+      // Select next song or previous if last was deleted
+      if (songs.length === 0) {
+        selectedIndex = -1;
+      } else if (idx >= songs.length) {
+        selectedIndex = songs.length - 1;
+      } else {
+        selectedIndex = idx;
+      }
+      renderSongs();
+      updateControls();
+      showToast("Deleted " + song.songName);
+    } catch (e) {
+      showToast("Error: " + e.message, true);
+    }
+  }
+
+  async function refetchStream() {
+    if (!currentVideoId) return;
+    if (!confirm("Re-extract timestamps? Manual end stamps will be preserved.")) return;
+    $btnRefetch.disabled = true;
+    showToast("Refetching\u2026");
+    try {
+      var data = await fetchJSON("/api/streams/" + encodeURIComponent(currentVideoId) + "/refetch", {
+        method: "POST",
+      });
+      await loadSongs(currentVideoId);
+      loadStats();
+      loadStreams();
+      var msg = "Refetched: " + data.songCount + " songs";
+      if (data.source) {
+        msg += " from " + data.source;
+      } else {
+        msg += " (pending)";
+      }
+      showToast(msg);
+    } catch (e) {
+      showToast("Error: " + e.message, true);
+    } finally {
+      $btnRefetch.disabled = !currentVideoId;
     }
   }
 
@@ -466,6 +528,14 @@
       case "f":
         fetchDuration();
         break;
+      case "d":
+        if (selectedIndex >= 0 && selectedIndex < songs.length) {
+          deleteSong(songs[selectedIndex].id, selectedIndex);
+        }
+        break;
+      case "r":
+        refetchStream();
+        break;
       case "n":
         selectNext();
         break;
@@ -493,6 +563,7 @@
   $btnSeekEnd.addEventListener("click", seekToEnd);
   $btnFetch.addEventListener("click", fetchDuration);
   $btnClearAll.addEventListener("click", clearAllEndTimestamps);
+  $btnRefetch.addEventListener("click", refetchStream);
 
   // --- Status filter ---
   document.querySelectorAll(".status-btn").forEach(function (btn) {

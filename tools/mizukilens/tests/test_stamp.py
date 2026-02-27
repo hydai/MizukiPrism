@@ -1086,3 +1086,189 @@ class TestApiClearAllEndTimestamps:
     def test_clear_all_nonexistent_stream(self, client) -> None:
         resp = client.delete("/api/streams/nonexistent/end-timestamps")
         assert resp.status_code == 404
+
+
+# ===========================================================================
+# SECTION 19: Cache — delete_parsed_song
+# ===========================================================================
+
+class TestDeleteParsedSong:
+    def test_delete_returns_video_id(self, populated_db: sqlite3.Connection) -> None:
+        from mizukilens.cache import delete_parsed_song
+        songs = get_parsed_songs(populated_db, "abc123")
+        result = delete_parsed_song(populated_db, songs[1]["id"])
+        assert result == "abc123"
+
+    def test_delete_removes_song(self, populated_db: sqlite3.Connection) -> None:
+        from mizukilens.cache import delete_parsed_song
+        songs = get_parsed_songs(populated_db, "abc123")
+        delete_parsed_song(populated_db, songs[1]["id"])  # remove Song B
+        remaining = get_parsed_songs(populated_db, "abc123")
+        assert len(remaining) == 2
+        assert remaining[0]["song_name"] == "Song A"
+        assert remaining[1]["song_name"] == "Song C"
+
+    def test_delete_reindexes(self, populated_db: sqlite3.Connection) -> None:
+        from mizukilens.cache import delete_parsed_song
+        songs = get_parsed_songs(populated_db, "abc123")
+        delete_parsed_song(populated_db, songs[0]["id"])  # remove Song A
+        remaining = get_parsed_songs(populated_db, "abc123")
+        assert remaining[0]["order_index"] == 0
+        assert remaining[1]["order_index"] == 1
+
+    def test_delete_nonexistent_returns_none(self, populated_db: sqlite3.Connection) -> None:
+        from mizukilens.cache import delete_parsed_song
+        assert delete_parsed_song(populated_db, 99999) is None
+
+    def test_delete_last_song(self, populated_db: sqlite3.Connection) -> None:
+        from mizukilens.cache import delete_parsed_song
+        songs = get_parsed_songs(populated_db, "abc123")
+        for s in songs:
+            delete_parsed_song(populated_db, s["id"])
+        remaining = get_parsed_songs(populated_db, "abc123")
+        assert len(remaining) == 0
+
+
+# ===========================================================================
+# SECTION 20: Flask API — DELETE /api/songs/<id>
+# ===========================================================================
+
+class TestApiDeleteSong:
+    def test_delete_song_success(self, client) -> None:
+        resp = client.get("/api/streams/abc123/songs")
+        songs = resp.get_json()
+        song_id = songs[1]["id"]  # Song B
+
+        resp = client.delete(f"/api/songs/{song_id}")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["ok"] is True
+        assert data["songId"] == song_id
+
+        # Verify removal
+        resp = client.get("/api/streams/abc123/songs")
+        remaining = resp.get_json()
+        assert len(remaining) == 2
+        assert remaining[0]["songName"] == "Song A"
+        assert remaining[1]["songName"] == "Song C"
+
+    def test_delete_reindexes_order(self, client) -> None:
+        resp = client.get("/api/streams/abc123/songs")
+        songs = resp.get_json()
+        song_id = songs[0]["id"]  # Song A
+
+        client.delete(f"/api/songs/{song_id}")
+
+        resp = client.get("/api/streams/abc123/songs")
+        remaining = resp.get_json()
+        assert remaining[0]["orderIndex"] == 0
+        assert remaining[1]["orderIndex"] == 1
+
+    def test_delete_nonexistent_returns_404(self, client) -> None:
+        resp = client.delete("/api/songs/99999")
+        assert resp.status_code == 404
+
+    def test_delete_reapproves_exported_stream(self, db_path: Path) -> None:
+        conn = open_db(db_path)
+        _add_stream(conn, status="approved")
+        _add_songs(conn)
+        update_stream_status(conn, "abc123", "exported")
+        conn.close()
+
+        app = create_app(db_path=db_path)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            songs = c.get("/api/streams/abc123/songs").get_json()
+            c.delete(f"/api/songs/{songs[0]['id']}")
+            conn = open_db(db_path)
+            assert get_stream(conn, "abc123")["status"] == "approved"
+            conn.close()
+
+    def test_delete_updates_stats(self, client) -> None:
+        # Song C has end_timestamp, so filled=1
+        resp = client.get("/api/stats")
+        assert resp.get_json()["filled"] == 1
+
+        # Delete Song C (the one with end_timestamp)
+        resp = client.get("/api/streams/abc123/songs")
+        songs = resp.get_json()
+        song_c_id = songs[2]["id"]
+        client.delete(f"/api/songs/{song_c_id}")
+
+        resp = client.get("/api/stats")
+        assert resp.get_json()["filled"] == 0
+
+
+# ===========================================================================
+# SECTION 21: Flask API — POST /api/streams/<id>/refetch
+# ===========================================================================
+
+class TestApiRefetchStream:
+    def test_refetch_nonexistent_returns_404(self, client) -> None:
+        resp = client.post("/api/streams/nonexistent/refetch")
+        assert resp.status_code == 404
+
+    def test_refetch_calls_extract_timestamps(self, db_path: Path) -> None:
+        from dataclasses import dataclass, field
+
+        @dataclass
+        class FakeResult:
+            video_id: str = "abc123"
+            status: str = "extracted"
+            source: str | None = "comment"
+            songs: list = field(default_factory=lambda: [
+                {"order_index": 0, "song_name": "New A", "start_timestamp": "1:00"},
+                {"order_index": 1, "song_name": "New B", "start_timestamp": "5:00"},
+            ])
+
+        conn = open_db(db_path)
+        _add_stream(conn)
+        _add_songs(conn)
+        conn.close()
+
+        app = create_app(db_path=db_path)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            with patch(
+                "mizukilens.extraction.extract_timestamps",
+                return_value=FakeResult(),
+            ):
+                resp = c.post("/api/streams/abc123/refetch")
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["ok"] is True
+        assert data["source"] == "comment"
+        assert data["songCount"] == 2
+        assert data["status"] == "extracted"
+
+    def test_refetch_pending_result(self, db_path: Path) -> None:
+        from dataclasses import dataclass, field
+
+        @dataclass
+        class FakePendingResult:
+            video_id: str = "abc123"
+            status: str = "pending"
+            source: str | None = None
+            songs: list = field(default_factory=list)
+
+        conn = open_db(db_path)
+        _add_stream(conn)
+        _add_songs(conn)
+        conn.close()
+
+        app = create_app(db_path=db_path)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            with patch(
+                "mizukilens.extraction.extract_timestamps",
+                return_value=FakePendingResult(),
+            ):
+                resp = c.post("/api/streams/abc123/refetch")
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["ok"] is True
+        assert data["source"] is None
+        assert data["songCount"] == 0
+        assert data["status"] == "pending"

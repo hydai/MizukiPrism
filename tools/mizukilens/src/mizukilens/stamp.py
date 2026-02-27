@@ -294,6 +294,51 @@ def create_app(db_path: str | Path | None = None) -> Flask:
             conn.close()
 
     # ------------------------------------------------------------------
+    # API: delete a song
+    # ------------------------------------------------------------------
+
+    @app.route("/api/songs/<int:song_pk>", methods=["DELETE"])
+    def api_delete_song(song_pk: int):
+        """Delete a parsed song by PK and reindex remaining songs."""
+        from mizukilens.cache import delete_parsed_song
+
+        conn = _open()
+        try:
+            video_id = delete_parsed_song(conn, song_pk)
+            if video_id is None:
+                return jsonify({"error": f"Song {song_pk} not found"}), 404
+            _maybe_reapprove_stream_by_video_id(conn, video_id)
+            return jsonify({"ok": True, "songId": song_pk})
+        finally:
+            conn.close()
+
+    # ------------------------------------------------------------------
+    # API: refetch/re-extract stream timestamps
+    # ------------------------------------------------------------------
+
+    @app.route("/api/streams/<video_id>/refetch", methods=["POST"])
+    def api_refetch_stream(video_id: str):
+        """Re-run timestamp extraction for a stream."""
+        from mizukilens.cache import get_stream
+        from mizukilens.extraction import extract_timestamps
+
+        conn = _open()
+        try:
+            stream = get_stream(conn, video_id)
+            if not stream:
+                return jsonify({"error": f"Stream {video_id} not found"}), 404
+
+            result = extract_timestamps(conn, video_id)
+            return jsonify({
+                "ok": True,
+                "source": result.source,
+                "songCount": len(result.songs),
+                "status": result.status,
+            })
+        finally:
+            conn.close()
+
+    # ------------------------------------------------------------------
     # API: clear all end timestamps for a stream
     # ------------------------------------------------------------------
 
