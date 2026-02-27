@@ -241,6 +241,17 @@
 
   function startInlineEdit(span, songIndex, field) {
     var original = span.textContent;
+
+    // Hide siblings in the name container so the input gets full width
+    var siblings = [];
+    var parent = span.parentNode;
+    for (var j = 0; j < parent.children.length; j++) {
+      if (parent.children[j] !== span) {
+        siblings.push(parent.children[j]);
+        parent.children[j].style.display = "none";
+      }
+    }
+
     var input = document.createElement("input");
     input.type = "text";
     input.className = "inline-edit";
@@ -268,6 +279,7 @@
       if (span.contains(input)) {
         span.textContent = original;
       }
+      siblings.forEach(function (s) { s.style.display = ""; });
     }
 
     input.addEventListener("keydown", function (e) {
