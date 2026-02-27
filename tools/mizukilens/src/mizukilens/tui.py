@@ -308,6 +308,7 @@ class HelpDialog(ModalScreen[None]):
   [e]  編輯 (Edit) — 選択した曲を編集
   [n]  新增 (New) — 新しい曲エントリを追加
   [d]  刪除 (Delete) — 選択した曲を削除（確認あり）
+  [t]  終了時刻クリア (Clear Ends) — 全曲の終了時刻をクリア
 
 [bold cyan]移動 / Navigation:[/bold cyan]
   [↑/↓]   場次・曲の選択
@@ -564,6 +565,7 @@ class ReviewApp(App[None]):
         Binding("d", "delete_song", "刪除", show=True),
         Binding("r", "refetch_stream", "再擷取", show=True),
         Binding("c", "show_candidates", "候選留言", show=True),
+        Binding("t", "clear_end_timestamps", "終了時刻クリア", show=True),
         Binding("u", "copy_vod_url", "複製URL", show=True),
         Binding("question_mark", "show_help", "幫助", show=True),
         Binding("q", "quit", "終了", show=True),
@@ -1033,6 +1035,42 @@ class ReviewApp(App[None]):
             self._load_songs(self._current_stream_idx)
         except Exception as exc:  # noqa: BLE001
             self.notify(f"削除エラー: {exc}", severity="error")
+
+    def action_clear_end_timestamps(self) -> None:
+        """Clear all end timestamps for the current stream (with confirmation)."""
+        if self._current_stream_idx < 0:
+            return
+
+        stream = self._streams[self._current_stream_idx]
+
+        def _confirm_callback(confirmed: bool) -> None:
+            if confirmed:
+                self._do_clear_end_timestamps()
+
+        self.push_screen(
+            ConfirmDialog(
+                "全曲の終了時刻をクリアしますか?\n"
+                f"{stream['title'] or stream['video_id']}"
+            ),
+            _confirm_callback,
+        )
+
+    def _do_clear_end_timestamps(self) -> None:
+        """Clear all end_timestamp values for the current stream's songs."""
+        from mizukilens.cache import clear_all_end_timestamps
+
+        if self._current_stream_idx < 0:
+            return
+
+        stream = self._streams[self._current_stream_idx]
+        video_id = stream["video_id"]
+
+        try:
+            count = clear_all_end_timestamps(self._conn, video_id)
+            self.notify(f"終了時刻を{count}件クリアしました")
+            self._load_songs(self._current_stream_idx)
+        except Exception as exc:  # noqa: BLE001
+            self.notify(f"クリアエラー: {exc}", severity="error")
 
     def action_refetch_stream(self) -> None:
         """Re-fetch and re-extract timestamps for the current stream."""

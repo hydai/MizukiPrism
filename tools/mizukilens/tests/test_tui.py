@@ -1078,3 +1078,133 @@ class TestCopyVodUrl:
         """Verify help text mentions the [u] keybinding for URL copy."""
         assert "[u]" in HelpDialog.HELP_TEXT
         assert "URL" in HelpDialog.HELP_TEXT
+
+
+# ===========================================================================
+# SECTION: Clear all end timestamps TUI keybinding (t)
+# ===========================================================================
+
+
+class TestClearEndTimestamps:
+    """Tests for the clear all end timestamps TUI action."""
+
+    def test_clear_end_timestamps_binding_exists(self, db: sqlite3.Connection) -> None:
+        """Verify the 't' keybinding is registered for clear_end_timestamps."""
+        app = ReviewApp(conn=db)
+        binding_keys = [b.key for b in app.BINDINGS]
+        assert "t" in binding_keys
+
+    def test_clear_end_timestamps_action_method_exists(
+        self, db: sqlite3.Connection
+    ) -> None:
+        """Verify ReviewApp has the action_clear_end_timestamps method."""
+        app = ReviewApp(conn=db)
+        assert hasattr(app, "action_clear_end_timestamps")
+        assert callable(app.action_clear_end_timestamps)
+
+    def test_clear_end_timestamps_clears_db(self, db: sqlite3.Connection) -> None:
+        """Calling _do_clear_end_timestamps nullifies all end_timestamp values."""
+        _add_stream(db, "vid001", status="extracted")
+        # Add songs with end timestamps
+        upsert_parsed_songs(db, "vid001", [
+            {
+                "order_index": 0,
+                "song_name": "曲A",
+                "artist": "A",
+                "start_timestamp": "0:00:00",
+                "end_timestamp": "0:03:00",
+                "note": None,
+            },
+            {
+                "order_index": 1,
+                "song_name": "曲B",
+                "artist": "B",
+                "start_timestamp": "0:03:00",
+                "end_timestamp": "0:06:00",
+                "note": None,
+            },
+            {
+                "order_index": 2,
+                "song_name": "曲C",
+                "artist": "C",
+                "start_timestamp": "0:06:00",
+                "end_timestamp": None,
+                "note": None,
+            },
+        ])
+
+        app = ReviewApp(conn=db)
+        app._conn = db
+        app._streams = list(list_streams(db))
+        app._current_stream_idx = 0
+        app._songs = list(get_parsed_songs(db, "vid001"))
+
+        app._do_clear_end_timestamps()
+
+        songs = get_parsed_songs(db, "vid001")
+        assert len(songs) == 3
+        for song in songs:
+            assert song["end_timestamp"] is None
+
+    def test_clear_end_timestamps_returns_correct_count(
+        self, db: sqlite3.Connection
+    ) -> None:
+        """Verify notification contains the right count of cleared rows."""
+        _add_stream(db, "vid001", status="extracted")
+        upsert_parsed_songs(db, "vid001", [
+            {
+                "order_index": 0,
+                "song_name": "曲A",
+                "artist": "A",
+                "start_timestamp": "0:00:00",
+                "end_timestamp": "0:03:00",
+                "note": None,
+            },
+            {
+                "order_index": 1,
+                "song_name": "曲B",
+                "artist": "B",
+                "start_timestamp": "0:03:00",
+                "end_timestamp": "0:06:00",
+                "note": None,
+            },
+            {
+                "order_index": 2,
+                "song_name": "曲C",
+                "artist": "C",
+                "start_timestamp": "0:06:00",
+                "end_timestamp": None,
+                "note": None,
+            },
+        ])
+
+        app = ReviewApp(conn=db)
+        app._conn = db
+        app._streams = list(list_streams(db))
+        app._current_stream_idx = 0
+        app._songs = list(get_parsed_songs(db, "vid001"))
+
+        with patch.object(app, "notify") as mock_notify, \
+             patch.object(app, "_load_songs"):
+            app._do_clear_end_timestamps()
+            mock_notify.assert_called_once()
+            # 2 songs had end_timestamp set, 1 was already NULL
+            assert "2" in mock_notify.call_args[0][0]
+
+    def test_clear_end_timestamps_no_stream_noop(
+        self, db: sqlite3.Connection
+    ) -> None:
+        """Guard condition: no-op when no stream is selected."""
+        app = ReviewApp(conn=db)
+        app._conn = db
+        app._streams = []
+        app._current_stream_idx = -1
+
+        with patch.object(app, "notify") as mock_notify:
+            app._do_clear_end_timestamps()
+            mock_notify.assert_not_called()
+
+    def test_help_text_includes_clear_end_timestamps(self) -> None:
+        """Verify help text mentions the [t] keybinding."""
+        assert "[t]" in HelpDialog.HELP_TEXT
+        assert "終了時刻クリア" in HelpDialog.HELP_TEXT
