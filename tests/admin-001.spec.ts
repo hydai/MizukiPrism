@@ -279,7 +279,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.waitForTimeout(500);
 
     // Wait for streams to load
-    const streamToggle = page.getByTestId('stream-toggle-stream-1');
+    const streamToggle = page.getByTestId('stream-toggle-stream-2025-03-26');
     await expect(streamToggle).toBeVisible();
     await streamToggle.click();
     await page.waitForTimeout(500);
@@ -321,7 +321,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.waitForURL('http://localhost:3000/admin');
 
     // Expand stream 1
-    await page.getByTestId('stream-toggle-stream-1').click();
+    await page.getByTestId('stream-toggle-stream-2025-03-26').click();
     await page.waitForTimeout(500);
 
     // Click delete for performance p1-1 (誰)
@@ -358,7 +358,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.waitForURL('http://localhost:3000/admin');
 
     // Expand stream 1 - song 3 (君の知らない物語) has only p3-1
-    await page.getByTestId('stream-toggle-stream-1').click();
+    await page.getByTestId('stream-toggle-stream-2025-03-26').click();
     await page.waitForTimeout(500);
 
     // Delete the only performance
