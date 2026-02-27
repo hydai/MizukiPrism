@@ -252,11 +252,10 @@ def create_app(db_path: str | Path | None = None) -> Flask:
             if result is None:
                 return jsonify({"error": "iTunes API error"}), 502
 
-            track = result.get("track_result")
-            if track is None:
+            if result.get("match_confidence") is None:
                 return jsonify({"ok": True, "duration": None, "message": "No iTunes match"})
 
-            duration = track.get("trackDuration")
+            duration = result.get("trackDuration")
             if duration:
                 update_song_duration(conn, song_pk, duration)
 

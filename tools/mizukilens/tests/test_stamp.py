@@ -898,17 +898,15 @@ class TestUpdateSongDuration:
 def _mock_itunes_success(artist: str, title: str) -> dict:
     """Return a fake iTunes match with trackDuration."""
     return {
-        "track_result": {
-            "trackDuration": 225,
-            "albumTitle": "Test Album",
-            "itunesTrackId": 12345,
-        },
+        "trackDuration": 225,
+        "albumTitle": "Test Album",
+        "itunesTrackId": 12345,
         "match_confidence": "exact",
     }
 
 
 def _mock_itunes_no_match(artist: str, title: str) -> dict:
-    return {"track_result": None, "match_confidence": None}
+    return {"match_confidence": None, "last_error": None}
 
 
 class TestApiFetchDuration:
