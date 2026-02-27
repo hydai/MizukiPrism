@@ -57,7 +57,7 @@ def categorize_stream(title: str) -> str:
 # Matches patterns like ✰:_MIZUKIMilk:, ✩:_SomeThing:, ✰□, etc.
 # Two-phase approach: strip emote codes first, then clean orphaned decorations.
 _NOISE_PATTERNS = [
-    re.compile(r"^\d+\.\s+"),              # setlist number prefix: "01. ", "12. ", etc.
+    re.compile(r"^\d+\.\s*(?=\D|$)"),      # setlist number prefix: "01. ", "1.Song", etc.
     re.compile(r"[✰✩☆★]:_[^:]+:"),       # star + emote codes like ✰:_MIZUKIMilk:
     re.compile(r"[✰✩☆★][□■]"),            # star + box artifacts
     re.compile(r":_[A-Za-z0-9_]+:"),       # bare emote codes :_SomeThing:

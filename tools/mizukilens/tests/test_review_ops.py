@@ -127,6 +127,7 @@ class TestEmojiArtifacts:
         ("01. Song Name", True),
         ("12. 絕頂讚歌", True),
         ("1. Song", True),
+        ("1.Song", True),                   # no-space numbered prefix
         # Safe non-matches
         ("Normal Artist Name", False),
         ("", False),
@@ -153,6 +154,8 @@ class TestEmojiArtifacts:
         ("01. DROP", "DROP"),
         ("12. 絕頂讚歌", "絕頂讚歌"),
         ("1. Song", "Song"),
+        ("1.Song", "Song"),                     # no-space numbered prefix
+        ("01.DROP", "DROP"),                     # no-space numbered prefix
         ("0.5倍速帶音樂練習跳一下", "0.5倍速帶音樂練習跳一下"),  # no change
     ])
     def test_clean_artist_field(self, artist: str, expected: str) -> None:
@@ -487,10 +490,12 @@ class TestCleanParsedSongs:
             _make_song(1, "01. DROP", artist="Clean"),
             _make_song(2, "12. 絕頂讚歌", artist="Clean"),
             _make_song(3, "0.5倍速帶音樂練習跳一下", artist="Clean"),
+            _make_song(4, "1.Song", artist="Clean"),         # no-space prefix
+            _make_song(5, "01.DROP", artist="Clean"),        # no-space prefix
         ])
 
         count = clean_parsed_songs(db)
-        assert count == 2
+        assert count == 4
 
         songs = get_parsed_songs(db, "vid1")
         assert songs[0]["song_name"] == "DROP"
@@ -498,6 +503,8 @@ class TestCleanParsedSongs:
         assert songs[1]["song_name"] == "絕頂讚歌"
         assert songs[1]["order_index"] == 2  # preserved
         assert songs[2]["song_name"] == "0.5倍速帶音樂練習跳一下"  # unchanged
+        assert songs[3]["song_name"] == "Song"               # no-space cleaned
+        assert songs[4]["song_name"] == "DROP"               # no-space cleaned
 
     def test_clean_song_name_dry_run(self, db: sqlite3.Connection) -> None:
         _add_stream(db, "vid1", "歌枠")
