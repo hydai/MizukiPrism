@@ -306,8 +306,8 @@ def parse_text_to_songs(text: str) -> list[dict[str, Any]]:
                 "artist": song["artist"],
                 "start_seconds": start_sec,
                 "end_seconds": end_sec,
-                "start_timestamp": _seconds_to_timestamp(start_sec),
-                "end_timestamp": _seconds_to_timestamp(end_sec) if end_sec is not None else None,
+                "start_timestamp": seconds_to_timestamp(start_sec),
+                "end_timestamp": seconds_to_timestamp(end_sec) if end_sec is not None else None,
                 "suspicious": is_suspicious_timestamp(start_sec),
             }
         )
@@ -315,7 +315,7 @@ def parse_text_to_songs(text: str) -> list[dict[str, Any]]:
     return result
 
 
-def _seconds_to_timestamp(seconds: int) -> str:
+def seconds_to_timestamp(seconds: int) -> str:
     """Convert *seconds* (int) to ``H:MM:SS`` / ``MM:SS`` string."""
     h, rem = divmod(seconds, 3600)
     m, s = divmod(rem, 60)

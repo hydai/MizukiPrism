@@ -30,7 +30,7 @@ from mizukilens.extraction import (
     parse_text_to_songs,
     parse_timestamp,
     _parse_vote_count,
-    _seconds_to_timestamp,
+    seconds_to_timestamp,
     _split_artist,
 )
 
@@ -871,27 +871,27 @@ class TestSuspiciousTimestamps:
 
 
 # ---------------------------------------------------------------------------
-# §5  _seconds_to_timestamp helper
+# §5  seconds_to_timestamp helper
 # ---------------------------------------------------------------------------
 
 
 class TestSecondsToTimestamp:
-    """Tests for :func:`_seconds_to_timestamp`."""
+    """Tests for :func:`seconds_to_timestamp`."""
 
     def test_zero(self):
-        assert _seconds_to_timestamp(0) == "0:00"
+        assert seconds_to_timestamp(0) == "0:00"
 
     def test_minutes_only(self):
-        assert _seconds_to_timestamp(150) == "2:30"
+        assert seconds_to_timestamp(150) == "2:30"
 
     def test_hours_minutes_seconds(self):
-        assert _seconds_to_timestamp(5025) == "1:23:45"
+        assert seconds_to_timestamp(5025) == "1:23:45"
 
     def test_exact_one_hour(self):
-        assert _seconds_to_timestamp(3600) == "1:00:00"
+        assert seconds_to_timestamp(3600) == "1:00:00"
 
     def test_exactly_12h(self):
-        assert _seconds_to_timestamp(43200) == "12:00:00"
+        assert seconds_to_timestamp(43200) == "12:00:00"
 
 
 # ---------------------------------------------------------------------------
