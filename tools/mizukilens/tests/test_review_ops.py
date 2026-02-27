@@ -118,6 +118,11 @@ class TestEmojiArtifacts:
         ("✰□ performer", True),
         ("✩■ vocalist", True),
         (":_CustomEmote: name", True),
+        # New prefix variants
+        ("ʚ♡⃛ɞ:_MIZUKIMilk: doriko", True),
+        ("🍪:_MIZUKIMilk: song", True),
+        ("🍮:_MIZUKIMilk: song", True),
+        ("✿:_MIZUKIMilk: artist", True),
         ("Normal Artist Name", False),
         ("", False),
         ("DAOKO×米津玄師", False),
@@ -132,6 +137,12 @@ class TestEmojiArtifacts:
         ("Normal Name", "Normal Name"),
         ("  Extra  Spaces  ", "Extra Spaces"),
         ("✰□✩■ leftovers", "leftovers"),
+        # New prefix variants
+        ("doriko     ʚ♡⃛ɞ:_MIZUKIMilk:", "doriko"),
+        ("🍪:_MIZUKIMilk: title", "title"),
+        ("🍮:_MIZUKIMilk: title", "title"),
+        ("✿:_MIZUKIMilk: artist", "artist"),
+        ("artist ✩:_MIZUKIMilk:", "artist"),
     ])
     def test_clean_artist_field(self, artist: str, expected: str) -> None:
         assert _clean_artist_field(artist) == expected
@@ -406,6 +417,47 @@ class TestCleanParsedSongs:
         assert count == 2
         assert get_parsed_songs(db, "vid1")[0]["artist"] == "A"
         assert get_parsed_songs(db, "vid2")[0]["artist"] == "B"
+
+    def test_clean_song_name(self, db: sqlite3.Connection) -> None:
+        _add_stream(db, "vid1", "歌枠")
+        _add_songs(db, "vid1", [
+            _make_song(1, "喝水🍪:_MIZUKIMilk:", artist="Clean Artist"),
+            _make_song(2, "いーあるふぁんくらぶ       ✩:_MIZUKIMilk:", artist="Clean"),
+        ])
+
+        count = clean_parsed_songs(db)
+        assert count == 2
+
+        songs = get_parsed_songs(db, "vid1")
+        assert songs[0]["song_name"] == "喝水"
+        assert songs[0]["artist"] == "Clean Artist"
+        assert songs[1]["song_name"] == "いーあるふぁんくらぶ"
+
+    def test_clean_both_artist_and_song_name(self, db: sqlite3.Connection) -> None:
+        _add_stream(db, "vid1", "歌枠")
+        _add_songs(db, "vid1", [
+            _make_song(1, "Song🍮:_MIZUKIMilk:", artist="doriko ʚ♡⃛ɞ:_MIZUKIMilk:"),
+        ])
+
+        count = clean_parsed_songs(db)
+        assert count == 1
+
+        songs = get_parsed_songs(db, "vid1")
+        assert songs[0]["song_name"] == "Song"
+        assert songs[0]["artist"] == "doriko"
+
+    def test_clean_song_name_dry_run(self, db: sqlite3.Connection) -> None:
+        _add_stream(db, "vid1", "歌枠")
+        _add_songs(db, "vid1", [
+            _make_song(1, "喝水:_MIZUKIMilk:", artist="Clean"),
+        ])
+
+        count = clean_parsed_songs(db, dry_run=True)
+        assert count == 1
+
+        # Should not have changed
+        songs = get_parsed_songs(db, "vid1")
+        assert songs[0]["song_name"] == "喝水:_MIZUKIMilk:"
 
 
 # ===========================================================================

@@ -55,16 +55,18 @@ def categorize_stream(title: str) -> str:
 # ---------------------------------------------------------------------------
 
 # Matches patterns like ✰:_MIZUKIMilk:, ✩:_SomeThing:, ✰□, etc.
+# Two-phase approach: strip emote codes first, then clean orphaned decorations.
 _EMOJI_PATTERNS = [
-    re.compile(r"[✰✩☆★]:_[^:]+:"),  # emote codes like ✰:_MIZUKIMilk:
-    re.compile(r"[✰✩☆★][□■]"),       # star + box artifacts
-    re.compile(r":_[A-Za-z0-9_]+:"),  # bare emote codes :_SomeThing:
+    re.compile(r"[✰✩☆★]:_[^:]+:"),       # star + emote codes like ✰:_MIZUKIMilk:
+    re.compile(r"[✰✩☆★][□■]"),            # star + box artifacts
+    re.compile(r":_[A-Za-z0-9_]+:"),       # bare emote codes :_SomeThing:
+    re.compile(r"[✰✩☆★✿🍪🍮ʚɞ♡⃛]+"),    # leftover decorative chars (ʚ♡⃛ɞ, 🍪, ✿, etc.)
 ]
 
 
-def _clean_artist_field(artist: str) -> str:
-    """Remove emoji/emote artifacts from an artist string."""
-    cleaned = artist
+def _clean_text_field(text: str) -> str:
+    """Remove emoji/emote artifacts from a text string."""
+    cleaned = text
     for pat in _EMOJI_PATTERNS:
         cleaned = pat.sub("", cleaned)
     # Collapse multiple spaces and strip
@@ -72,9 +74,13 @@ def _clean_artist_field(artist: str) -> str:
     return cleaned
 
 
-def _has_emoji_artifacts(artist: str) -> bool:
-    """Return True if the artist field contains emoji/emote artifacts."""
-    return any(pat.search(artist) for pat in _EMOJI_PATTERNS)
+# Keep backward-compatible alias used by tests
+_clean_artist_field = _clean_text_field
+
+
+def _has_emoji_artifacts(text: str) -> bool:
+    """Return True if the text contains emoji/emote artifacts."""
+    return any(pat.search(text) for pat in _EMOJI_PATTERNS)
 
 
 # ---------------------------------------------------------------------------
@@ -381,7 +387,7 @@ def clean_parsed_songs(
     *,
     dry_run: bool = False,
 ) -> int:
-    """Strip emoji/emote artifacts from artist fields across all streams.
+    """Strip emoji/emote artifacts from artist and song_name fields across all streams.
 
     Returns the count of songs cleaned (or that would be cleaned in dry-run).
     """
@@ -396,7 +402,8 @@ def clean_parsed_songs(
         dirty = []
         for song in songs:
             artist = song["artist"] or ""
-            if _has_emoji_artifacts(artist):
+            song_name = song["song_name"] or ""
+            if _has_emoji_artifacts(artist) or _has_emoji_artifacts(song_name):
                 dirty.append(song)
 
         if not dirty:
@@ -404,25 +411,38 @@ def clean_parsed_songs(
 
         if dry_run:
             for song in dirty:
-                original = song["artist"] or ""
-                cleaned = _clean_artist_field(original)
-                console.print(
-                    f"  [cyan]{stream['video_id']}[/cyan] #{song['order_index']}: "
-                    f"[red]{original!r}[/red] → [green]{cleaned!r}[/green]"
-                )
+                artist = song["artist"] or ""
+                song_name = song["song_name"] or ""
+                if _has_emoji_artifacts(artist):
+                    console.print(
+                        f"  [cyan]{stream['video_id']}[/cyan] #{song['order_index']} artist: "
+                        f"[red]{artist!r}[/red] → [green]{_clean_text_field(artist)!r}[/green]"
+                    )
+                if _has_emoji_artifacts(song_name):
+                    console.print(
+                        f"  [cyan]{stream['video_id']}[/cyan] #{song['order_index']} song_name: "
+                        f"[red]{song_name!r}[/red] → [green]{_clean_text_field(song_name)!r}[/green]"
+                    )
             cleaned_total += len(dirty)
             continue
 
-        # Rebuild the full song list with cleaned artists
+        # Rebuild the full song list with cleaned fields
         updated_songs = []
         for song in songs:
             artist = song["artist"] or ""
+            song_name = song["song_name"] or ""
+            song_dirty = False
             if _has_emoji_artifacts(artist):
-                artist = _clean_artist_field(artist)
+                artist = _clean_text_field(artist)
+                song_dirty = True
+            if _has_emoji_artifacts(song_name):
+                song_name = _clean_text_field(song_name)
+                song_dirty = True
+            if song_dirty:
                 cleaned_total += 1
             updated_songs.append({
                 "order_index": song["order_index"],
-                "song_name": song["song_name"],
+                "song_name": song_name if song_name else song["song_name"],
                 "artist": artist if artist else None,
                 "start_timestamp": song["start_timestamp"],
                 "end_timestamp": song["end_timestamp"],
