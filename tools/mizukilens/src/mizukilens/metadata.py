@@ -8,6 +8,12 @@ Public API
 normalize_artist(name: str) -> str
     Normalize an artist name for use as an ArtistInfo lookup key.
 
+_strip_featuring(artist: str) -> str
+    Remove feat./ft. suffix from artist name for cleaner search queries.
+
+_clean_title(title: str) -> str
+    Remove CJK/special punctuation from title for cleaner search queries.
+
 is_lrc_format(content: str) -> bool
     Return True if the content contains at least one LRC timestamp line.
 
@@ -92,6 +98,43 @@ def _wait_lrclib() -> None:
     if elapsed < _MIN_INTERVAL_SEC:
         time.sleep(_MIN_INTERVAL_SEC - elapsed)
     _last_lrclib_call = time.monotonic()
+
+
+# ---------------------------------------------------------------------------
+# Search query helpers
+# ---------------------------------------------------------------------------
+
+# Pattern for "feat." / "ft." and everything after (with optional parentheses)
+_FEAT_RE = re.compile(r"\s*[\(（]?\s*(?:feat\.?|ft\.?)\s+.+[\)）]?\s*$", re.IGNORECASE)
+
+# CJK and special punctuation that pollutes Deezer search queries
+_CJK_PUNCT_RE = re.compile(r"[？！♪☆★〜~・「」『』【】（）《》〈〉♡♥→←↑↓…‥、。]+")
+
+
+def _strip_featuring(artist: str) -> str:
+    """Remove 'feat.'/'ft.' suffix and everything after.
+
+    Examples::
+
+        _strip_featuring("きくお feat. 初音ミク")  -> "きくお"
+        _strip_featuring("Ado ft. hatsune miku")   -> "Ado"
+        _strip_featuring("YOASOBI")                -> "YOASOBI"
+        _strip_featuring("A (feat. B)")            -> "A"
+    """
+    return _FEAT_RE.sub("", artist).strip()
+
+
+def _clean_title(title: str) -> str:
+    """Remove CJK/special punctuation and collapse whitespace.
+
+    Examples::
+
+        _clean_title("夜に駆ける♪")       -> "夜に駆ける"
+        _clean_title("うっせぇわ！！")     -> "うっせぇわ"
+        _clean_title("Hello 〜 World")     -> "Hello World"
+    """
+    cleaned = _CJK_PUNCT_RE.sub(" ", title)
+    return " ".join(cleaned.split()).strip()
 
 
 # ---------------------------------------------------------------------------
@@ -204,13 +247,16 @@ def _extract_deezer_metadata(track: dict) -> dict:
 
 
 def fetch_deezer_metadata(original_artist: str, title: str) -> dict | None:
-    """Search Deezer for a track using 4 fallback strategies.
+    """Search Deezer for a track using up to 7 fallback strategies.
 
-    Strategy order:
-      1. Structured: ``artist:"<artist>" track:"<title>"``
-      2. Romanized:  convert artist to romaji (currently skipped; reserved slot)
-      3. Simple:     ``<artist> <title>``
-      4. Title-only: ``track:"<title>"``
+    Strategy order (conditional strategies only added when relevant):
+      1. Structured: ``artist:"<artist>" track:"<title>"`` → exact
+      2. Cleaned artist (if feat.): ``artist:"<cleaned>" track:"<title>"`` → exact
+      3. Simple: ``<artist> <title>`` → fuzzy
+      4. Title-only structured: ``track:"<title>"`` → fuzzy
+      5. Bare title: ``<title>`` → fuzzy_title
+      6. Cleaned title (if special punct): ``<cleaned_title>`` → fuzzy_cleaned
+      7. Cleaned artist simple (if feat.): ``<cleaned_artist> <title>`` → fuzzy
 
     Returns a dict with keys: track_result, match_confidence, and the
     extracted Deezer metadata. Returns None only when no API call succeeded
@@ -219,14 +265,23 @@ def fetch_deezer_metadata(original_artist: str, title: str) -> dict | None:
     On no-match (all strategies return 0 results), returns a dict with
     ``match_confidence=None`` and ``track_result=None``.
     """
-    strategies = [
+    cleaned_artist = _strip_featuring(original_artist)
+    has_feat = cleaned_artist != original_artist
+    cleaned_title = _clean_title(title)
+    has_special_punct = cleaned_title != title
+
+    strategies: list[tuple[str, str]] = [
         (f'artist:"{original_artist}" track:"{title}"', "exact"),
-        # Strategy 2: Romanized — reserved for future implementation.
-        # Skipped because adding a romanization dependency (cutlet/pykakasi)
-        # is complex and the simple fallback (strategy 3) often suffices.
-        (f"{original_artist} {title}", "fuzzy"),
-        (f'track:"{title}"', "fuzzy"),
     ]
+    if has_feat:
+        strategies.append((f'artist:"{cleaned_artist}" track:"{title}"', "exact"))
+    strategies.append((f"{original_artist} {title}", "fuzzy"))
+    strategies.append((f'track:"{title}"', "fuzzy"))
+    strategies.append((title, "fuzzy_title"))
+    if has_special_punct:
+        strategies.append((cleaned_title, "fuzzy_cleaned"))
+    if has_feat:
+        strategies.append((f"{cleaned_artist} {title}", "fuzzy"))
 
     last_error: str | None = None
 

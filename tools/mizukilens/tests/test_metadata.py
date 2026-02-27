@@ -35,6 +35,8 @@ from mizukilens.metadata import (
     STALE_DAYS,
     FetchResult,
     SongStatusRecord,
+    _clean_title,
+    _strip_featuring,
     fetch_deezer_metadata,
     fetch_lrclib_lyrics,
     fetch_song_metadata,
@@ -253,6 +255,146 @@ class TestFetchDeezerMetadata:
 
         # Strategy 2 (simple) should have succeeded
         assert result["match_confidence"] == "fuzzy"
+
+
+# ---------------------------------------------------------------------------
+# _strip_featuring / _clean_title helpers
+# ---------------------------------------------------------------------------
+
+class TestStripFeaturing:
+    def test_removes_feat_dot(self):
+        assert _strip_featuring("きくお feat. 初音ミク") == "きくお"
+
+    def test_removes_ft_dot(self):
+        assert _strip_featuring("Ado ft. hatsune miku") == "Ado"
+
+    def test_noop_when_no_feat(self):
+        assert _strip_featuring("YOASOBI") == "YOASOBI"
+
+    def test_removes_parenthesized_feat(self):
+        assert _strip_featuring("A (feat. B)") == "A"
+
+    def test_removes_fullwidth_paren_feat(self):
+        assert _strip_featuring("アーティスト（feat. ゲスト）") == "アーティスト"
+
+    def test_empty_string(self):
+        assert _strip_featuring("") == ""
+
+    def test_case_insensitive(self):
+        assert _strip_featuring("Singer FEAT. Other") == "Singer"
+
+
+class TestCleanTitle:
+    def test_removes_musical_note(self):
+        assert _clean_title("夜に駆ける♪") == "夜に駆ける"
+
+    def test_removes_exclamation(self):
+        assert _clean_title("うっせぇわ！！") == "うっせぇわ"
+
+    def test_removes_tilde(self):
+        assert _clean_title("Hello 〜 World") == "Hello World"
+
+    def test_noop_plain_text(self):
+        assert _clean_title("Simple Title") == "Simple Title"
+
+    def test_removes_brackets(self):
+        assert _clean_title("Song「挿入歌」") == "Song 挿入歌"
+
+    def test_collapses_whitespace(self):
+        assert _clean_title("A ♪♪ B") == "A B"
+
+    def test_empty_string(self):
+        assert _clean_title("") == ""
+
+
+# ---------------------------------------------------------------------------
+# fetch_deezer_metadata — conditional strategy tests
+# ---------------------------------------------------------------------------
+
+class TestDeezerConditionalStrategies:
+    """Tests for the new conditional strategies (feat. stripping, bare title, etc.)."""
+
+    def test_feat_artist_adds_extra_strategies(self):
+        """Artist with 'feat.' triggers strategies 2 and 7 (cleaned artist)."""
+        track = make_deezer_track()
+        queries: list[str] = []
+        def side_effect(query):
+            queries.append(query)
+            return []  # no match for any
+
+        with patch("mizukilens.metadata._deezer_search", side_effect=side_effect):
+            result = fetch_deezer_metadata("きくお feat. 初音ミク", "テスト曲")
+
+        assert result["match_confidence"] is None
+        # Should have: exact, cleaned-exact, fuzzy, track:"title", bare-title, cleaned-artist-fuzzy = 6
+        assert len(queries) == 6
+        # Strategy 2: cleaned artist exact
+        assert 'artist:"きくお"' in queries[1]
+        # Strategy 7: cleaned artist fuzzy (last one)
+        assert queries[-1] == "きくお テスト曲"
+
+    def test_special_punct_title_adds_cleaned_strategy(self):
+        """Title with CJK punctuation triggers strategy 6 (cleaned title)."""
+        track = make_deezer_track()
+        queries: list[str] = []
+        def side_effect(query):
+            queries.append(query)
+            return []
+
+        with patch("mizukilens.metadata._deezer_search", side_effect=side_effect):
+            result = fetch_deezer_metadata("Artist", "うっせぇわ！")
+
+        assert result["match_confidence"] is None
+        # exact, fuzzy, track:"title", bare-title, cleaned-title = 5
+        assert len(queries) == 5
+        # Strategy 6: cleaned title
+        assert "うっせぇわ" in queries[4]
+        assert "！" not in queries[4]
+
+    def test_bare_title_strategy_matches(self):
+        """Bare title strategy (no Deezer operators) can find matches."""
+        track = make_deezer_track()
+        call_count = [0]
+        def side_effect(query):
+            call_count[0] += 1
+            if call_count[0] <= 3:  # exact, fuzzy, track:"title" fail
+                return []
+            return [track]  # bare title succeeds
+
+        with patch("mizukilens.metadata._deezer_search", side_effect=side_effect):
+            result = fetch_deezer_metadata("Artist", "Test Song")
+
+        assert result["match_confidence"] == "fuzzy_title"
+        assert call_count[0] == 4
+
+    def test_cleaned_title_strategy_matches(self):
+        """Cleaned title strategy can find matches when title has punctuation."""
+        track = make_deezer_track()
+        call_count = [0]
+        def side_effect(query):
+            call_count[0] += 1
+            if call_count[0] <= 4:  # exact, fuzzy, track:"title", bare-title fail
+                return []
+            return [track]  # cleaned title succeeds
+
+        with patch("mizukilens.metadata._deezer_search", side_effect=side_effect):
+            result = fetch_deezer_metadata("Artist", "うっせぇわ！")
+
+        assert result["match_confidence"] == "fuzzy_cleaned"
+
+    def test_no_extra_strategies_for_plain_input(self):
+        """Plain artist + title (no feat, no special punct) → 4 strategies."""
+        queries: list[str] = []
+        def side_effect(query):
+            queries.append(query)
+            return []
+
+        with patch("mizukilens.metadata._deezer_search", side_effect=side_effect):
+            fetch_deezer_metadata("Test Artist", "Test Song")
+
+        # exact, fuzzy, track:"title", bare-title = 4
+        # (cleaned title == title, so no extra; no feat in artist, so no extra)
+        assert len(queries) == 4
 
 
 # ---------------------------------------------------------------------------
