@@ -282,20 +282,44 @@ def create_app(db_path: str | Path | None = None) -> Flask:
             conn.close()
 
     # ------------------------------------------------------------------
+    # API: clear all end timestamps for a stream
+    # ------------------------------------------------------------------
+
+    @app.route("/api/streams/<video_id>/end-timestamps", methods=["DELETE"])
+    def api_clear_all_end_timestamps(video_id: str):
+        """Clear all end_timestamp + manual flags for every song in a stream."""
+        from mizukilens.cache import clear_all_end_timestamps, get_stream
+
+        conn = _open()
+        try:
+            stream = get_stream(conn, video_id)
+            if not stream:
+                return jsonify({"error": f"Stream {video_id} not found"}), 404
+            cleared = clear_all_end_timestamps(conn, video_id)
+            _maybe_reapprove_stream_by_video_id(conn, video_id)
+            return jsonify({"ok": True, "cleared": cleared})
+        finally:
+            conn.close()
+
+    # ------------------------------------------------------------------
     # Helper: re-approve stream after stamp edit
     # ------------------------------------------------------------------
 
-    def _maybe_reapprove_stream(conn, song_pk: int) -> None:
-        """Transition the song's parent stream back to 'approved' if needed."""
+    def _maybe_reapprove_stream_by_video_id(conn, video_id: str) -> None:
+        """Transition a stream back to 'approved' if it was exported/imported."""
         from mizukilens.cache import get_stream, update_stream_status
 
+        stream = get_stream(conn, video_id)
+        if stream and stream["status"] in ("exported", "imported"):
+            update_stream_status(conn, video_id, "approved")
+
+    def _maybe_reapprove_stream(conn, song_pk: int) -> None:
+        """Transition the song's parent stream back to 'approved' if needed."""
         row = conn.execute(
             "SELECT video_id FROM parsed_songs WHERE id = ?", (song_pk,)
         ).fetchone()
         if not row:
             return
-        stream = get_stream(conn, row["video_id"])
-        if stream and stream["status"] in ("exported", "imported"):
-            update_stream_status(conn, row["video_id"], "approved")
+        _maybe_reapprove_stream_by_video_id(conn, row["video_id"])
 
     return app

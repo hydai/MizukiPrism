@@ -312,6 +312,18 @@ main {
   background: var(--bg-active);
 }
 
+.btn-clear-all {
+  background: var(--bg-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-clear-all:hover:not(:disabled) {
+  background: rgba(240, 96, 96, 0.15);
+  border-color: var(--red);
+  color: var(--red);
+}
+
 .nav-hint {
   margin-left: auto;
   font-size: 11px;

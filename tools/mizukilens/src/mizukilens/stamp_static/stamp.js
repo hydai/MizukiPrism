@@ -18,6 +18,7 @@
   const $btnMark = document.getElementById("btn-mark");
   const $btnSeek = document.getElementById("btn-seek");
   const $btnFetch = document.getElementById("btn-fetch");
+  const $btnClearAll = document.getElementById("btn-clear-all");
   const $placeholder = document.getElementById("player-placeholder");
 
   // --- Helpers ---
@@ -303,6 +304,7 @@
     $btnMark.disabled = !hasSong;
     $btnSeek.disabled = !hasSong;
     $btnFetch.disabled = !hasSong;
+    $btnClearAll.disabled = !currentVideoId;
   }
 
   // --- API actions ---
@@ -350,6 +352,21 @@
       renderSongs();
       loadStats();
       showToast("Cleared end timestamp");
+    } catch (e) {
+      showToast("Error: " + e.message, true);
+    }
+  }
+
+  async function clearAllEndTimestamps() {
+    if (!currentVideoId) return;
+    if (!confirm("Clear all end timestamps for this stream?")) return;
+    try {
+      var data = await fetchJSON("/api/streams/" + encodeURIComponent(currentVideoId) + "/end-timestamps", {
+        method: "DELETE",
+      });
+      await loadSongs(currentVideoId);
+      loadStats();
+      showToast("Cleared " + data.cleared + " end timestamps");
     } catch (e) {
       showToast("Error: " + e.message, true);
     }
@@ -440,6 +457,7 @@
   $btnMark.addEventListener("click", markEndTimestamp);
   $btnSeek.addEventListener("click", seekToStart);
   $btnFetch.addEventListener("click", fetchDuration);
+  $btnClearAll.addEventListener("click", clearAllEndTimestamps);
 
   // --- Init ---
   loadStats();

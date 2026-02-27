@@ -609,6 +609,23 @@ def update_song_details(
     return cur.rowcount > 0
 
 
+def clear_all_end_timestamps(conn: sqlite3.Connection, video_id: str) -> int:
+    """Clear end_timestamp and manual_end_ts for all songs in a stream.
+
+    Only touches rows that actually have an end_timestamp set (idempotent).
+
+    Returns:
+        Number of rows cleared.
+    """
+    cur = conn.execute(
+        "UPDATE parsed_songs SET end_timestamp = NULL, manual_end_ts = 0 "
+        "WHERE video_id = ? AND end_timestamp IS NOT NULL",
+        (video_id,),
+    )
+    conn.commit()
+    return cur.rowcount
+
+
 def clear_song_end_timestamp(conn: sqlite3.Connection, song_id: int) -> bool:
     """Clear end_timestamp and manual_end_ts for a specific parsed_songs row.
 

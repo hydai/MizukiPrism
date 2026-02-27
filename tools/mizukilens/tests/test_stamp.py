@@ -12,6 +12,7 @@ import pytest
 from unittest.mock import patch
 
 from mizukilens.cache import (
+    clear_all_end_timestamps,
     clear_song_end_timestamp,
     get_parsed_songs,
     get_stream,
@@ -913,3 +914,94 @@ class TestApiFetchDuration:
             data = resp.get_json()
             assert data[0]["duration"] == 225
             assert data[1]["duration"] is None
+
+
+# ===========================================================================
+# SECTION 17: Cache — clear_all_end_timestamps
+# ===========================================================================
+
+class TestClearAllEndTimestamps:
+    def test_clear_all_returns_count(self, populated_db: sqlite3.Connection) -> None:
+        # Song C has end_timestamp="16:30", so 1 row should be cleared
+        count = clear_all_end_timestamps(populated_db, "abc123")
+        assert count == 1
+
+    def test_clear_all_clears_manual_flag(self, populated_db: sqlite3.Connection) -> None:
+        songs = get_parsed_songs(populated_db, "abc123")
+        # Manually stamp Song A and Song B
+        update_song_end_timestamp(populated_db, songs[0]["id"], "5:00", manual=True)
+        update_song_end_timestamp(populated_db, songs[1]["id"], "10:00", manual=True)
+
+        clear_all_end_timestamps(populated_db, "abc123")
+        updated = get_parsed_songs(populated_db, "abc123")
+        for s in updated:
+            assert s["end_timestamp"] is None
+            assert s["manual_end_ts"] == 0
+
+    def test_clear_all_preserves_duration(self, populated_db: sqlite3.Connection) -> None:
+        songs = get_parsed_songs(populated_db, "abc123")
+        update_song_duration(populated_db, songs[0]["id"], 225)
+        update_song_end_timestamp(populated_db, songs[0]["id"], "5:00", manual=True)
+
+        clear_all_end_timestamps(populated_db, "abc123")
+        updated = get_parsed_songs(populated_db, "abc123")
+        assert updated[0]["duration"] == 225
+        assert updated[0]["end_timestamp"] is None
+
+    def test_clear_all_idempotent(self, populated_db: sqlite3.Connection) -> None:
+        clear_all_end_timestamps(populated_db, "abc123")  # clears Song C
+        count = clear_all_end_timestamps(populated_db, "abc123")  # nothing left
+        assert count == 0
+
+    def test_clear_all_nonexistent_stream(self, populated_db: sqlite3.Connection) -> None:
+        count = clear_all_end_timestamps(populated_db, "nonexistent")
+        assert count == 0
+
+
+# ===========================================================================
+# SECTION 18: Flask API — DELETE /api/streams/<id>/end-timestamps
+# ===========================================================================
+
+class TestApiClearAllEndTimestamps:
+    def test_clear_all_success(self, client) -> None:
+        # Song C already has end_timestamp="16:30"
+        resp = client.delete("/api/streams/abc123/end-timestamps")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["ok"] is True
+        assert data["cleared"] == 1
+
+        # Verify songs are actually cleared
+        resp = client.get("/api/streams/abc123/songs")
+        songs = resp.get_json()
+        for s in songs:
+            assert s["endTimestamp"] is None
+
+    def test_clear_all_reapproves_exported_stream(self, db_path: Path) -> None:
+        conn = open_db(db_path)
+        _add_stream(conn, status="approved")
+        _add_songs(conn)
+        update_stream_status(conn, "abc123", "exported")
+        conn.close()
+
+        app = create_app(db_path=db_path)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            c.delete("/api/streams/abc123/end-timestamps")
+            conn = open_db(db_path)
+            assert get_stream(conn, "abc123")["status"] == "approved"
+            conn.close()
+
+    def test_clear_all_updates_stats(self, client) -> None:
+        # Before: 1 filled (Song C)
+        resp = client.get("/api/stats")
+        assert resp.get_json()["filled"] == 1
+
+        client.delete("/api/streams/abc123/end-timestamps")
+
+        resp = client.get("/api/stats")
+        assert resp.get_json()["filled"] == 0
+
+    def test_clear_all_nonexistent_stream(self, client) -> None:
+        resp = client.delete("/api/streams/nonexistent/end-timestamps")
+        assert resp.status_code == 404
