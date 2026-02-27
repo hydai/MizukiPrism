@@ -245,13 +245,14 @@ def batch_approve(
     dry_run: bool = False,
     yes: bool = False,
 ) -> int:
-    """Batch-approve extracted or pending streams matching the given filters.
+    """Batch-approve extracted, pending, or imported streams matching the given filters.
 
     Returns the number of streams approved (or that would be approved in dry-run).
     """
     extracted = list_streams(conn, status="extracted")
     pending = list_streams(conn, status="pending")
-    candidates = extracted + pending
+    imported = list_streams(conn, status="imported")
+    candidates = extracted + pending + imported
     targets: list[sqlite3.Row] = []
 
     for stream in candidates:

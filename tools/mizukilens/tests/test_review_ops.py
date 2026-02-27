@@ -249,17 +249,21 @@ class TestBatchApprove:
         count = batch_approve(db, karaoke=True, yes=True)
         assert count == 0
 
-    def test_approve_only_extracted_and_pending(self, db: sqlite3.Connection) -> None:
-        """Only extracted and pending streams should be eligible for batch approve."""
+    def test_approve_eligible_statuses(self, db: sqlite3.Connection) -> None:
+        """Only extracted, pending, and imported streams should be eligible for batch approve."""
         _add_stream(db, "k1", "歌枠", status="discovered")
         _add_stream(db, "k2", "歌枠 2", status="approved")
         _add_stream(db, "k3", "歌枠 3", status="pending")
+        _add_stream(db, "k4", "歌枠 4", status="imported")
+        _add_stream(db, "k5", "歌枠 5", status="exported")
 
         count = batch_approve(db, karaoke=True, yes=True)
-        assert count == 1
+        assert count == 2
         assert get_stream(db, "k1")["status"] == "discovered"
         assert get_stream(db, "k2")["status"] == "approved"
         assert get_stream(db, "k3")["status"] == "approved"
+        assert get_stream(db, "k4")["status"] == "approved"
+        assert get_stream(db, "k5")["status"] == "exported"
 
     def test_approve_pending_by_video_id(self, db: sqlite3.Connection) -> None:
         """A pending stream matched via video_id should be approved."""
@@ -268,6 +272,14 @@ class TestBatchApprove:
         count = batch_approve(db, video_id="p1", yes=True)
         assert count == 1
         assert get_stream(db, "p1")["status"] == "approved"
+
+    def test_approve_imported_by_video_id(self, db: sqlite3.Connection) -> None:
+        """An imported stream matched via video_id should be approved."""
+        _add_stream(db, "i1", "歌枠 imported", status="imported")
+
+        count = batch_approve(db, video_id="i1", yes=True)
+        assert count == 1
+        assert get_stream(db, "i1")["status"] == "approved"
 
     def test_approve_confirmation_declined(self, db: sqlite3.Connection) -> None:
         _add_stream(db, "k1", "歌枠")
