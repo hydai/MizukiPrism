@@ -21,6 +21,7 @@
   const $btnSeekEnd = document.getElementById("btn-seek-end");
   const $btnFetch = document.getElementById("btn-fetch");
   const $btnClearAll = document.getElementById("btn-clear-all");
+  const $btnFetchAll = document.getElementById("btn-fetch-all");
   const $btnRefetch = document.getElementById("btn-refetch");
   const $placeholder = document.getElementById("player-placeholder");
 
@@ -333,6 +334,7 @@
     $btnSeek.disabled = !hasSong;
     $btnSeekEnd.disabled = !(hasSong && songs[selectedIndex].endTimestamp);
     $btnFetch.disabled = !hasSong;
+    $btnFetchAll.disabled = !currentVideoId;
     $btnClearAll.disabled = !currentVideoId;
     $btnRefetch.disabled = !currentVideoId;
   }
@@ -481,6 +483,7 @@
       });
       if (data.duration) {
         song.duration = data.duration;
+        if (data.end_timestamp) song.endTimestamp = data.end_timestamp;
         renderSongs();
         showToast("Duration: " + formatDuration(data.duration));
       } else {
@@ -491,6 +494,41 @@
     } finally {
       $btnFetch.disabled = false;
     }
+  }
+
+  async function fetchAllDurations() {
+    if (!currentVideoId) return;
+    var missing = songs.filter(function (s) { return !s.duration; });
+    if (missing.length === 0) {
+      showToast("All songs already have durations");
+      return;
+    }
+    $btnFetch.disabled = true;
+    $btnFetchAll.disabled = true;
+    var fetched = 0, noMatch = 0, errors = 0;
+    for (var i = 0; i < missing.length; i++) {
+      var song = missing[i];
+      showToast("Fetching " + (i + 1) + "/" + missing.length + ": " + song.songName + "\u2026");
+      try {
+        var data = await fetchJSON("/api/songs/" + song.id + "/fetch-duration", {
+          method: "POST",
+        });
+        if (data.duration) {
+          song.duration = data.duration;
+          if (data.end_timestamp) song.endTimestamp = data.end_timestamp;
+          fetched++;
+        } else {
+          noMatch++;
+        }
+        renderSongs();
+      } catch (e) {
+        errors++;
+      }
+    }
+    $btnFetch.disabled = selectedIndex < 0;
+    $btnFetchAll.disabled = !currentVideoId;
+    loadStats();
+    showToast("Fetched " + fetched + "/" + missing.length + ", " + noMatch + " no match, " + errors + " errors");
   }
 
   function selectNext() {
@@ -526,6 +564,9 @@
       case "f":
         fetchDuration();
         break;
+      case "F":
+        fetchAllDurations();
+        break;
       case "d":
         if (selectedIndex >= 0 && selectedIndex < songs.length) {
           deleteSong(songs[selectedIndex].id, selectedIndex);
@@ -560,6 +601,7 @@
   $btnSeek.addEventListener("click", seekToStart);
   $btnSeekEnd.addEventListener("click", seekToEnd);
   $btnFetch.addEventListener("click", fetchDuration);
+  $btnFetchAll.addEventListener("click", fetchAllDurations);
   $btnClearAll.addEventListener("click", clearAllEndTimestamps);
   $btnRefetch.addEventListener("click", refetchStream);
 
