@@ -235,13 +235,15 @@ def create_app(db_path: str | Path | None = None) -> Flask:
     @app.route("/api/songs/<int:song_pk>/fetch-duration", methods=["POST"])
     def api_fetch_duration(song_pk: int):
         """Fetch duration from iTunes and store it for a parsed song."""
-        from mizukilens.cache import update_song_duration
+        from mizukilens.cache import update_song_duration, update_song_end_timestamp
+        from mizukilens.extraction import parse_timestamp, seconds_to_timestamp
         from mizukilens.metadata import fetch_itunes_metadata
 
         conn = _open()
         try:
             row = conn.execute(
-                "SELECT song_name, artist FROM parsed_songs WHERE id = ?",
+                "SELECT song_name, artist, start_timestamp, end_timestamp"
+                " FROM parsed_songs WHERE id = ?",
                 (song_pk,),
             ).fetchone()
             if not row:
@@ -256,10 +258,16 @@ def create_app(db_path: str | Path | None = None) -> Flask:
                 return jsonify({"ok": True, "duration": None, "message": "No iTunes match"})
 
             duration = result.get("trackDuration")
+            end_ts = None
             if duration:
                 update_song_duration(conn, song_pk, duration)
+                if row["end_timestamp"] is None:
+                    start_sec = parse_timestamp(row["start_timestamp"])
+                    if start_sec is not None:
+                        end_ts = seconds_to_timestamp(start_sec + duration)
+                        update_song_end_timestamp(conn, song_pk, end_ts)
 
-            return jsonify({"ok": True, "duration": duration})
+            return jsonify({"ok": True, "duration": duration, "end_timestamp": end_ts})
         except Exception as exc:
             return jsonify({"error": str(exc)}), 502
         finally:

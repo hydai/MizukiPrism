@@ -928,11 +928,14 @@ class TestApiFetchDuration:
         data = resp.get_json()
         assert data["ok"] is True
         assert data["duration"] == 225
+        # Song A: start=4:23 (263s) + 225s = 488s = 8:08
+        assert data["end_timestamp"] == "8:08"
 
-        # Verify duration is stored in DB
+        # Verify duration and end_timestamp are stored in DB
         conn = open_db(db_path)
         songs_db = get_parsed_songs(conn, "abc123")
         assert songs_db[0]["duration"] == 225
+        assert songs_db[0]["end_timestamp"] == "8:08"
         conn.close()
 
     def test_fetch_duration_no_match(self, db_path: Path) -> None:
@@ -960,7 +963,9 @@ class TestApiFetchDuration:
         assert resp.status_code == 404
 
     def test_fetch_duration_null_artist(self, db_path: Path) -> None:
-        """Works when artist is None (Song C in test data)."""
+        """Works when artist is None (Song C in test data).
+        Song C already has end_timestamp='16:30', so it must NOT be overwritten.
+        """
         conn = open_db(db_path)
         _add_stream(conn)
         _add_songs(conn)
@@ -976,7 +981,16 @@ class TestApiFetchDuration:
                 resp = c.post(f"/api/songs/{song_c_id}/fetch-duration")
 
         assert resp.status_code == 200
-        assert resp.get_json()["duration"] == 225
+        data = resp.get_json()
+        assert data["duration"] == 225
+        # end_timestamp was already set — no fill happened
+        assert data["end_timestamp"] is None
+
+        # Verify DB still has original end_timestamp
+        conn = open_db(db_path)
+        songs_db = get_parsed_songs(conn, "abc123")
+        assert songs_db[2]["end_timestamp"] == "16:30"
+        conn.close()
 
     def test_duration_in_song_list(self, db_path: Path) -> None:
         conn = open_db(db_path)
