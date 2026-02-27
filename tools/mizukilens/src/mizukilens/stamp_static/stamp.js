@@ -294,6 +294,18 @@
       case "p":
         selectPrev();
         break;
+      case "ArrowLeft":
+        if (playerReady && player) {
+          e.preventDefault();
+          player.seekTo(player.getCurrentTime() - 5, true);
+        }
+        break;
+      case "ArrowRight":
+        if (playerReady && player) {
+          e.preventDefault();
+          player.seekTo(player.getCurrentTime() + 5, true);
+        }
+        break;
     }
   });
 
