@@ -197,22 +197,20 @@
       });
       name.appendChild(nameText);
 
-      if (s.artist) {
-        var sep = document.createElement("span");
-        sep.className = "song-separator";
-        sep.textContent = " \u2014 ";
-        name.appendChild(sep);
+      var sep = document.createElement("span");
+      sep.className = "song-separator";
+      sep.textContent = " \u2014 ";
+      name.appendChild(sep);
 
-        var artistText = document.createElement("span");
-        artistText.className = "song-artist-text";
-        artistText.textContent = s.artist;
-        artistText.title = "Double-click to edit artist";
-        artistText.addEventListener("dblclick", function (e) {
-          e.stopPropagation();
-          startInlineEdit(artistText, i, "artist");
-        });
-        name.appendChild(artistText);
-      }
+      var artistText = document.createElement("span");
+      artistText.className = "song-artist-text" + (s.artist ? "" : " placeholder");
+      artistText.textContent = s.artist || "add artist";
+      artistText.title = "Double-click to edit artist";
+      artistText.addEventListener("dblclick", function (e) {
+        e.stopPropagation();
+        startInlineEdit(artistText, i, "artist");
+      });
+      name.appendChild(artistText);
 
       const start = document.createElement("span");
       start.className = "song-start";
@@ -272,7 +270,7 @@
     var input = document.createElement("input");
     input.type = "text";
     input.className = "inline-edit";
-    input.value = original;
+    input.value = span.classList.contains("placeholder") ? "" : original;
 
     span.textContent = "";
     span.appendChild(input);

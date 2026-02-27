@@ -462,3 +462,9 @@ main {
 .song-separator {
   color: var(--text-dim);
 }
+
+.song-artist-text.placeholder {
+  color: var(--text-dim);
+  font-style: italic;
+  opacity: 0.6;
+}
