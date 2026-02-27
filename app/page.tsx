@@ -143,6 +143,31 @@ export default function Home() {
     setShowToast(true);
   };
 
+  const handlePlayAll = () => {
+    type TrackInfo = { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number; endTimestamp?: number; albumArtUrl?: string };
+    let tracks: TrackInfo[];
+    if (viewMode === 'timeline') {
+      tracks = flattenedSongs.map(s => ({
+        id: s.performanceId, songId: s.id, title: s.title,
+        originalArtist: s.originalArtist, videoId: s.videoId,
+        timestamp: s.timestamp, endTimestamp: s.endTimestamp, albumArtUrl: s.albumArtUrl,
+      }));
+    } else {
+      tracks = groupedSongs.flatMap(song => {
+        if (!song.performances.length) return [];
+        const latest = [...song.performances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+        return [{ id: latest.id, songId: song.id, title: song.title,
+          originalArtist: song.originalArtist, videoId: latest.videoId,
+          timestamp: latest.timestamp, endTimestamp: latest.endTimestamp ?? undefined, albumArtUrl: song.albumArtUrl,
+        }];
+      });
+    }
+    const available = tracks.filter(t => !unavailableVideoIds.has(t.videoId));
+    if (available.length === 0) return;
+    playTrack(available[0]);
+    available.slice(1).forEach(t => addToQueue(t));
+  };
+
   const handleAddToPlaylistSuccess = () => {
     setToastMessage('已加入播放清單');
     setShowToast(true);
@@ -881,26 +906,7 @@ export default function Home() {
                 boxShadow: '0 4px 16px rgba(244, 114, 182, 0.35)',
               }}
               title="播放全部"
-              onClick={() => {
-                const firstSong = viewMode === 'timeline' ? flattenedSongs[0] : (() => {
-                  const first = groupedSongs[0];
-                  if (!first || !first.performances.length) return null;
-                  const sorted = [...first.performances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                  return { ...first, performanceId: sorted[0].id, videoId: sorted[0].videoId, timestamp: sorted[0].timestamp, endTimestamp: sorted[0].endTimestamp ?? undefined };
-                })();
-                if (firstSong && !unavailableVideoIds.has(firstSong.videoId)) {
-                  playTrack({
-                    id: firstSong.performanceId,
-                    songId: firstSong.id,
-                    title: firstSong.title,
-                    originalArtist: firstSong.originalArtist,
-                    videoId: firstSong.videoId,
-                    timestamp: firstSong.timestamp,
-                    endTimestamp: firstSong.endTimestamp,
-                    albumArtUrl: firstSong.albumArtUrl,
-                  });
-                }
-              }}
+              onClick={handlePlayAll}
             >
               <Play className="w-5 h-5 fill-current" style={{ marginLeft: '2px' }} />
             </button>
@@ -1044,26 +1050,7 @@ export default function Home() {
                   boxShadow: '0 4px 16px rgba(244, 114, 182, 0.35)',
                 }}
                 title="播放全部"
-                onClick={() => {
-                  const firstSong = viewMode === 'timeline' ? flattenedSongs[0] : (() => {
-                    const first = groupedSongs[0];
-                    if (!first || !first.performances.length) return null;
-                    const sorted = [...first.performances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                    return { ...first, performanceId: sorted[0].id, videoId: sorted[0].videoId, timestamp: sorted[0].timestamp, endTimestamp: sorted[0].endTimestamp ?? undefined };
-                  })();
-                  if (firstSong && !unavailableVideoIds.has(firstSong.videoId)) {
-                    playTrack({
-                      id: firstSong.performanceId,
-                      songId: firstSong.id,
-                      title: firstSong.title,
-                      originalArtist: firstSong.originalArtist,
-                      videoId: firstSong.videoId,
-                      timestamp: firstSong.timestamp,
-                      endTimestamp: firstSong.endTimestamp,
-                      albumArtUrl: firstSong.albumArtUrl,
-                    });
-                  }
-                }}
+                onClick={handlePlayAll}
               >
                 <Play className="w-5 h-5 fill-current" style={{ marginLeft: '2px' }} />
               </button>
@@ -1078,26 +1065,7 @@ export default function Home() {
                   padding: 'var(--space-3) var(--space-5)',
                   color: 'var(--text-on-accent)',
                 }}
-                onClick={() => {
-                  const firstSong = viewMode === 'timeline' ? flattenedSongs[0] : (() => {
-                    const first = groupedSongs[0];
-                    if (!first || !first.performances.length) return null;
-                    const sorted = [...first.performances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                    return { ...first, performanceId: sorted[0].id, videoId: sorted[0].videoId, timestamp: sorted[0].timestamp, endTimestamp: sorted[0].endTimestamp ?? undefined };
-                  })();
-                  if (firstSong && !unavailableVideoIds.has(firstSong.videoId)) {
-                    playTrack({
-                      id: firstSong.performanceId,
-                      songId: firstSong.id,
-                      title: firstSong.title,
-                      originalArtist: firstSong.originalArtist,
-                      videoId: firstSong.videoId,
-                      timestamp: firstSong.timestamp,
-                      endTimestamp: firstSong.endTimestamp,
-                      albumArtUrl: firstSong.albumArtUrl,
-                    });
-                  }
-                }}
+                onClick={handlePlayAll}
               >
                 播放全部
               </button>
