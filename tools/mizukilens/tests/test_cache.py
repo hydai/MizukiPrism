@@ -113,6 +113,7 @@ class TestDatabaseCreation:
         expected = {
             "id", "video_id", "order_index", "song_name", "artist",
             "start_timestamp", "end_timestamp", "note", "manual_end_ts",
+            "duration",
         }
         assert expected == columns
 

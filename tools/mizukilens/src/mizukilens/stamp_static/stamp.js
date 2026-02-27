@@ -17,6 +17,7 @@
   const $stats = document.getElementById("stats");
   const $btnMark = document.getElementById("btn-mark");
   const $btnSeek = document.getElementById("btn-seek");
+  const $btnFetch = document.getElementById("btn-fetch");
   const $placeholder = document.getElementById("player-placeholder");
 
   // --- Helpers ---
@@ -33,6 +34,12 @@
     if (h > 0) {
       return h + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
     }
+    return m + ":" + String(s).padStart(2, "0");
+  }
+
+  function formatDuration(sec) {
+    var m = Math.floor(sec / 60);
+    var s = sec % 60;
     return m + ":" + String(s).padStart(2, "0");
   }
 
@@ -202,11 +209,15 @@
       start.className = "song-start";
       start.textContent = s.startTimestamp;
 
+      const dur = document.createElement("span");
+      dur.className = "song-duration";
+      dur.textContent = s.duration ? formatDuration(s.duration) : "";
+
       const end = document.createElement("span");
       end.className = "song-end " + (s.endTimestamp ? "filled" : "empty");
       end.textContent = s.endTimestamp || "\u2014";
 
-      li.append(idx, name, start, end);
+      li.append(idx, name, start, dur, end);
 
       if (s.endTimestamp) {
         const undo = document.createElement("button");
@@ -291,6 +302,7 @@
     const hasSong = selectedIndex >= 0 && selectedIndex < songs.length;
     $btnMark.disabled = !hasSong;
     $btnSeek.disabled = !hasSong;
+    $btnFetch.disabled = !hasSong;
   }
 
   // --- API actions ---
@@ -350,6 +362,29 @@
     player.seekTo(sec, true);
   }
 
+  async function fetchDuration() {
+    if (selectedIndex < 0) return;
+    const song = songs[selectedIndex];
+    $btnFetch.disabled = true;
+    showToast("Fetching duration\u2026");
+    try {
+      var data = await fetchJSON("/api/songs/" + song.id + "/fetch-duration", {
+        method: "POST",
+      });
+      if (data.duration) {
+        song.duration = data.duration;
+        renderSongs();
+        showToast("Duration: " + formatDuration(data.duration));
+      } else {
+        showToast(data.message || "No iTunes match");
+      }
+    } catch (e) {
+      showToast("Error: " + e.message, true);
+    } finally {
+      $btnFetch.disabled = false;
+    }
+  }
+
   function selectNext() {
     if (songs.length === 0) return;
     selectedIndex = Math.min(selectedIndex + 1, songs.length - 1);
@@ -377,6 +412,9 @@
       case "s":
         seekToStart();
         break;
+      case "f":
+        fetchDuration();
+        break;
       case "n":
         selectNext();
         break;
@@ -401,6 +439,7 @@
   // --- Button handlers ---
   $btnMark.addEventListener("click", markEndTimestamp);
   $btnSeek.addEventListener("click", seekToStart);
+  $btnFetch.addEventListener("click", fetchDuration);
 
   // --- Init ---
   loadStats();

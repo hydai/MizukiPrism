@@ -220,6 +220,13 @@ main {
   min-width: 50px;
 }
 
+.song-panel li .song-duration {
+  color: var(--text-dim);
+  font-family: monospace;
+  font-size: 12px;
+  min-width: 40px;
+}
+
 .song-panel li .song-end {
   font-family: monospace;
   font-size: 12px;
@@ -292,6 +299,16 @@ main {
 }
 
 .btn-seek:hover:not(:disabled) {
+  background: var(--bg-active);
+}
+
+.btn-fetch {
+  background: var(--bg-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-fetch:hover:not(:disabled) {
   background: var(--bg-active);
 }
 

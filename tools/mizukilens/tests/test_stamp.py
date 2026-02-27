@@ -9,12 +9,15 @@ from typing import Any
 
 import pytest
 
+from unittest.mock import patch
+
 from mizukilens.cache import (
     clear_song_end_timestamp,
     get_parsed_songs,
     get_stream,
     open_db,
     update_song_details,
+    update_song_duration,
     update_song_end_timestamp,
     update_stream_status,
     upsert_parsed_songs,
@@ -757,3 +760,156 @@ class TestSchemaMigration:
         columns = {row[1] for row in cur.fetchall()}
         assert "manual_end_ts" in columns
         conn.close()
+
+    def test_duration_column_exists_in_fresh_db(self, tmp_path: Path) -> None:
+        conn = open_db(tmp_path / "fresh2.db")
+        cur = conn.execute("PRAGMA table_info(parsed_songs)")
+        columns = {row[1] for row in cur.fetchall()}
+        assert "duration" in columns
+        conn.close()
+
+
+# ===========================================================================
+# SECTION 15: Cache — update_song_duration
+# ===========================================================================
+
+class TestUpdateSongDuration:
+    def test_update_duration(self, populated_db: sqlite3.Connection) -> None:
+        songs = get_parsed_songs(populated_db, "abc123")
+        song_id = songs[0]["id"]
+        assert update_song_duration(populated_db, song_id, 225) is True
+        updated = get_parsed_songs(populated_db, "abc123")
+        assert updated[0]["duration"] == 225
+
+    def test_clear_duration(self, populated_db: sqlite3.Connection) -> None:
+        songs = get_parsed_songs(populated_db, "abc123")
+        song_id = songs[0]["id"]
+        update_song_duration(populated_db, song_id, 225)
+        assert update_song_duration(populated_db, song_id, None) is True
+        updated = get_parsed_songs(populated_db, "abc123")
+        assert updated[0]["duration"] is None
+
+    def test_nonexistent_returns_false(self, populated_db: sqlite3.Connection) -> None:
+        assert update_song_duration(populated_db, 99999, 180) is False
+
+    def test_duration_preserved_on_reextraction(self, populated_db: sqlite3.Connection) -> None:
+        songs = get_parsed_songs(populated_db, "abc123")
+        update_song_duration(populated_db, songs[0]["id"], 225)
+
+        # Re-extract: same songs
+        upsert_parsed_songs(populated_db, "abc123", [
+            {"order_index": 0, "song_name": "Song A", "artist": "Artist 1",
+             "start_timestamp": "4:23", "end_timestamp": None, "note": None},
+            {"order_index": 1, "song_name": "Song B", "artist": "Artist 2",
+             "start_timestamp": "8:12", "end_timestamp": None, "note": None},
+        ])
+
+        updated = get_parsed_songs(populated_db, "abc123")
+        assert updated[0]["duration"] == 225
+        assert updated[1]["duration"] is None
+
+
+# ===========================================================================
+# SECTION 16: Flask API — POST /api/songs/<id>/fetch-duration
+# ===========================================================================
+
+def _mock_itunes_success(artist: str, title: str) -> dict:
+    """Return a fake iTunes match with trackDuration."""
+    return {
+        "track_result": {
+            "trackDuration": 225,
+            "albumTitle": "Test Album",
+            "itunesTrackId": 12345,
+        },
+        "match_confidence": "exact",
+    }
+
+
+def _mock_itunes_no_match(artist: str, title: str) -> dict:
+    return {"track_result": None, "match_confidence": None}
+
+
+class TestApiFetchDuration:
+    def test_fetch_duration_success(self, db_path: Path) -> None:
+        conn = open_db(db_path)
+        _add_stream(conn)
+        _add_songs(conn)
+        conn.close()
+
+        app = create_app(db_path=db_path)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            songs = c.get("/api/streams/abc123/songs").get_json()
+            song_id = songs[0]["id"]
+            with patch("mizukilens.metadata.fetch_itunes_metadata", _mock_itunes_success):
+                resp = c.post(f"/api/songs/{song_id}/fetch-duration")
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["ok"] is True
+        assert data["duration"] == 225
+
+        # Verify duration is stored in DB
+        conn = open_db(db_path)
+        songs_db = get_parsed_songs(conn, "abc123")
+        assert songs_db[0]["duration"] == 225
+        conn.close()
+
+    def test_fetch_duration_no_match(self, db_path: Path) -> None:
+        conn = open_db(db_path)
+        _add_stream(conn)
+        _add_songs(conn)
+        conn.close()
+
+        app = create_app(db_path=db_path)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            songs = c.get("/api/streams/abc123/songs").get_json()
+            song_id = songs[0]["id"]
+            with patch("mizukilens.metadata.fetch_itunes_metadata", _mock_itunes_no_match):
+                resp = c.post(f"/api/songs/{song_id}/fetch-duration")
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["ok"] is True
+        assert data["duration"] is None
+        assert "No iTunes match" in data["message"]
+
+    def test_fetch_duration_nonexistent_song(self, client) -> None:
+        resp = client.post("/api/songs/99999/fetch-duration")
+        assert resp.status_code == 404
+
+    def test_fetch_duration_null_artist(self, db_path: Path) -> None:
+        """Works when artist is None (Song C in test data)."""
+        conn = open_db(db_path)
+        _add_stream(conn)
+        _add_songs(conn)
+        conn.close()
+
+        app = create_app(db_path=db_path)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            songs = c.get("/api/streams/abc123/songs").get_json()
+            # Song C has artist=None
+            song_c_id = songs[2]["id"]
+            with patch("mizukilens.metadata.fetch_itunes_metadata", _mock_itunes_success):
+                resp = c.post(f"/api/songs/{song_c_id}/fetch-duration")
+
+        assert resp.status_code == 200
+        assert resp.get_json()["duration"] == 225
+
+    def test_duration_in_song_list(self, db_path: Path) -> None:
+        conn = open_db(db_path)
+        _add_stream(conn)
+        _add_songs(conn)
+        songs = get_parsed_songs(conn, "abc123")
+        update_song_duration(conn, songs[0]["id"], 225)
+        conn.close()
+
+        app = create_app(db_path=db_path)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            resp = c.get("/api/streams/abc123/songs")
+            data = resp.get_json()
+            assert data[0]["duration"] == 225
+            assert data[1]["duration"] is None

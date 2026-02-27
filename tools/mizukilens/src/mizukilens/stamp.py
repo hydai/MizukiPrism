@@ -86,7 +86,7 @@ def create_app(db_path: str | Path | None = None) -> Flask:
         try:
             cur = conn.execute(
                 "SELECT id, order_index, song_name, artist, "
-                "       start_timestamp, end_timestamp, note, manual_end_ts "
+                "       start_timestamp, end_timestamp, note, manual_end_ts, duration "
                 "FROM parsed_songs WHERE video_id = ? ORDER BY order_index",
                 (video_id,),
             )
@@ -101,6 +101,7 @@ def create_app(db_path: str | Path | None = None) -> Flask:
                     "endTimestamp": r["end_timestamp"],
                     "note": r["note"],
                     "manualEndTs": bool(r["manual_end_ts"]),
+                    "duration": r["duration"],
                 }
                 for r in rows
             ])
@@ -212,6 +213,44 @@ def create_app(db_path: str | Path | None = None) -> Flask:
                 "songName": row["song_name"],
                 "artist": row["artist"],
             })
+        finally:
+            conn.close()
+
+    # ------------------------------------------------------------------
+    # API: fetch song duration from iTunes
+    # ------------------------------------------------------------------
+
+    @app.route("/api/songs/<int:song_pk>/fetch-duration", methods=["POST"])
+    def api_fetch_duration(song_pk: int):
+        """Fetch duration from iTunes and store it for a parsed song."""
+        from mizukilens.cache import update_song_duration
+        from mizukilens.metadata import fetch_itunes_metadata
+
+        conn = _open()
+        try:
+            row = conn.execute(
+                "SELECT song_name, artist FROM parsed_songs WHERE id = ?",
+                (song_pk,),
+            ).fetchone()
+            if not row:
+                return jsonify({"error": f"Song {song_pk} not found"}), 404
+
+            result = fetch_itunes_metadata(row["artist"] or "", row["song_name"])
+
+            if result is None:
+                return jsonify({"error": "iTunes API error"}), 502
+
+            track = result.get("track_result")
+            if track is None:
+                return jsonify({"ok": True, "duration": None, "message": "No iTunes match"})
+
+            duration = track.get("trackDuration")
+            if duration:
+                update_song_duration(conn, song_pk, duration)
+
+            return jsonify({"ok": True, "duration": duration})
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 502
         finally:
             conn.close()
 

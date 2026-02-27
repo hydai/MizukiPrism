@@ -202,6 +202,12 @@ def _init_schema(conn: sqlite3.Connection) -> None:
     except sqlite3.OperationalError:
         pass  # column already exists
 
+    # Migration: add duration column to parsed_songs for fetched song duration.
+    try:
+        conn.execute("ALTER TABLE parsed_songs ADD COLUMN duration INTEGER")
+    except sqlite3.OperationalError:
+        pass  # column already exists
+
     conn.commit()
 
 
@@ -458,6 +464,17 @@ def upsert_parsed_songs(
         for row in cur.fetchall()
     }
 
+    # Preserve fetched durations before delete.
+    cur = conn.execute(
+        "SELECT song_name, artist, start_timestamp, duration "
+        "FROM parsed_songs WHERE video_id = ? AND duration IS NOT NULL",
+        (video_id,),
+    )
+    saved_durations: dict[tuple[str, str | None, str], int] = {
+        (row["song_name"], row["artist"], row["start_timestamp"]): row["duration"]
+        for row in cur.fetchall()
+    }
+
     conn.execute("DELETE FROM parsed_songs WHERE video_id = ?", (video_id,))
     conn.executemany(
         """
@@ -489,6 +506,14 @@ def upsert_parsed_songs(
             "UPDATE parsed_songs SET end_timestamp = ?, manual_end_ts = 1 "
             "WHERE video_id = ? AND song_name = ? AND artist IS ? AND start_timestamp = ?",
             (end_ts, video_id, song_name, artist, start_ts),
+        )
+
+    # Restore fetched durations after re-insertion.
+    for (song_name, artist, start_ts), dur in saved_durations.items():
+        conn.execute(
+            "UPDATE parsed_songs SET duration = ? "
+            "WHERE video_id = ? AND song_name = ? AND artist IS ? AND start_timestamp = ?",
+            (dur, video_id, song_name, artist, start_ts),
         )
 
     conn.commit()
@@ -595,6 +620,27 @@ def clear_song_end_timestamp(conn: sqlite3.Connection, song_id: int) -> bool:
     cur = conn.execute(
         "UPDATE parsed_songs SET end_timestamp = NULL, manual_end_ts = 0 WHERE id = ?",
         (song_id,),
+    )
+    conn.commit()
+    return cur.rowcount > 0
+
+
+def update_song_duration(
+    conn: sqlite3.Connection,
+    song_id: int,
+    duration: int | None,
+) -> bool:
+    """Set the duration (in seconds) for a parsed_songs row.
+
+    Args:
+        duration: Duration in seconds, or None to clear.
+
+    Returns:
+        True if the row was updated, False otherwise (e.g. id not found).
+    """
+    cur = conn.execute(
+        "UPDATE parsed_songs SET duration = ? WHERE id = ?",
+        (duration, song_id),
     )
     conn.commit()
     return cur.rowcount > 0
