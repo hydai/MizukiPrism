@@ -2240,6 +2240,138 @@ class TestCLIMetadataOverride:
         assert song1_after["fetchStatus"] == "manual"
         assert song1_after["albumArtUrl"] == url
 
+    # --- Duration override ---
+
+    def test_override_duration_updates_metadata(self, prism_root):
+        """--duration creates/updates song-metadata.json with the given duration."""
+        result = self._run(
+            ["metadata", "override", "song-1", "--duration", "243"],
+            prism_root,
+        )
+        assert result.exit_code == 0
+
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert len(metadata) == 1
+        entry = metadata[0]
+        assert entry["songId"] == "song-1"
+        assert entry["trackDuration"] == 243
+
+    def test_override_duration_preserves_existing_album_art(self, prism_root):
+        """Duration-only override preserves existing album art data."""
+        # First set album art
+        url = "https://example.com/cover.jpg"
+        self._run(
+            ["metadata", "override", "song-1", "--album-art-url", url],
+            prism_root,
+        )
+
+        # Now override only duration
+        result = self._run(
+            ["metadata", "override", "song-1", "--duration", "180"],
+            prism_root,
+        )
+        assert result.exit_code == 0
+
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert len(metadata) == 1
+        entry = metadata[0]
+        assert entry["trackDuration"] == 180
+        assert entry["albumArtUrl"] == url
+        assert entry["albumArtUrls"]["small"] == url
+
+    def test_override_duration_with_album_art(self, prism_root):
+        """Providing both --album-art-url and --duration sets both."""
+        url = "https://example.com/cover.jpg"
+        result = self._run(
+            [
+                "metadata", "override", "song-1",
+                "--album-art-url", url,
+                "--duration", "300",
+            ],
+            prism_root,
+        )
+        assert result.exit_code == 0
+
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert len(metadata) == 1
+        entry = metadata[0]
+        assert entry["albumArtUrl"] == url
+        assert entry["trackDuration"] == 300
+
+    def test_override_duration_sets_manual_status(self, prism_root):
+        """Duration override sets fetchStatus and matchConfidence to 'manual'."""
+        self._run(
+            ["metadata", "override", "song-1", "--duration", "200"],
+            prism_root,
+        )
+
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert metadata[0]["fetchStatus"] == "manual"
+        assert metadata[0]["matchConfidence"] == "manual"
+
+    def test_override_duration_negative_value_fails(self, prism_root):
+        """Negative or zero duration exits with error."""
+        result = self._run(
+            ["metadata", "override", "song-1", "--duration", "0"],
+            prism_root,
+        )
+        assert result.exit_code != 0
+
+        result = self._run(
+            ["metadata", "override", "song-1", "--duration", "-5"],
+            prism_root,
+        )
+        assert result.exit_code != 0
+
+        # No metadata should have been written
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        assert len(metadata) == 0
+
+    def test_manual_duration_not_overwritten_by_fetch(self, prism_root):
+        """A manual duration entry is NOT overwritten by `metadata fetch --missing`."""
+        self._run(
+            ["metadata", "override", "song-1", "--duration", "999"],
+            prism_root,
+        )
+
+        track = make_itunes_track()
+        with (
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
+            patch("mizukilens.metadata._http_get_json", return_value=[]),
+        ):
+            fetch_result = self._run(
+                ["metadata", "fetch", "--missing"],
+                prism_root,
+            )
+        assert fetch_result.exit_code == 0
+
+        metadata = json.loads(
+            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
+        )
+        song1 = next(e for e in metadata if e["songId"] == "song-1")
+        assert song1["fetchStatus"] == "manual"
+        assert song1["trackDuration"] == 999
+
+    def test_override_duration_output_confirmation(self, prism_root):
+        """Confirmation output shows the duration that was set."""
+        result = self._run(
+            ["metadata", "override", "song-1", "--duration", "243"],
+            prism_root,
+        )
+        assert result.exit_code == 0
+        assert "Duration" in result.output or "duration" in result.output.lower()
+        assert "243" in result.output
+
 
 # ---------------------------------------------------------------------------
 # CLI: metadata clear

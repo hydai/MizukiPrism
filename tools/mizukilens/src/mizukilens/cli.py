@@ -1494,11 +1494,13 @@ def metadata_clear_cmd(song_id: str | None, clear_all: bool, force: bool) -> Non
               help="Manually specify album art URL.")
 @click.option("--lyrics", "lyrics_file", type=click.Path(dir_okay=False), default=None, metavar="FILE",
               help="Path to a lyrics file (LRC or plain text).")
-def metadata_override_cmd(song_id: str, album_art_url: str | None, lyrics_file: str | None) -> None:
-    """Manually override album art URL and/or lyrics for a song.
+@click.option("--duration", "duration", type=int, default=None, metavar="SECONDS",
+              help="Manually set track duration in seconds.")
+def metadata_override_cmd(song_id: str, album_art_url: str | None, lyrics_file: str | None, duration: int | None) -> None:
+    """Manually override album art URL, lyrics, and/or duration for a song.
 
     \b
-    At least one of --album-art-url or --lyrics must be provided.
+    At least one of --album-art-url, --lyrics, or --duration must be provided.
     LRC format auto-detected: if file contains [MM:SS.xx] timestamps,
     stores as syncedLyrics; otherwise stores as plainLyrics.
 
@@ -1510,6 +1512,7 @@ def metadata_override_cmd(song_id: str, album_art_url: str | None, lyrics_file: 
     Examples:
       mizukilens metadata override song-1 --album-art-url "https://example.com/cover.jpg"
       mizukilens metadata override song-1 --lyrics song.lrc
+      mizukilens metadata override song-1 --duration 243
       mizukilens metadata override song-1 --album-art-url URL --lyrics song.lrc
     """
     import sys
@@ -1525,10 +1528,17 @@ def metadata_override_cmd(song_id: str, album_art_url: str | None, lyrics_file: 
     )
 
     # Validate: at least one option must be provided
-    if album_art_url is None and lyrics_file is None:
+    if album_art_url is None and lyrics_file is None and duration is None:
         console.print(
-            "[red]Error:[/red] At least one of [bold]--album-art-url[/bold] or "
-            "[bold]--lyrics[/bold] must be provided."
+            "[red]Error:[/red] At least one of [bold]--album-art-url[/bold], "
+            "[bold]--lyrics[/bold], or [bold]--duration[/bold] must be provided."
+        )
+        sys.exit(1)
+
+    # Validate duration is positive
+    if duration is not None and duration <= 0:
+        console.print(
+            "[red]Error:[/red] Duration must be a positive number of seconds."
         )
         sys.exit(1)
 
@@ -1601,10 +1611,45 @@ def metadata_override_cmd(song_id: str, album_art_url: str | None, lyrics_file: 
             "albumTitle": None,
             "itunesTrackId": None,
             "itunesCollectionId": None,
-            "trackDuration": None,
+            "trackDuration": duration,
             "fetchedAt": now,
             "lastError": None,
         }
+        metadata_records = upsert_song_metadata(metadata_records, song_meta_entry)
+        write_metadata_file(metadata_path, metadata_records)
+
+    # --- Duration-only override (no album art) ---
+    if duration is not None and album_art_url is None:
+        metadata_path = metadata_dir / "song-metadata.json"
+        metadata_records = read_metadata_file(metadata_path)
+
+        # Find existing entry to preserve album art data
+        existing_entry: dict | None = None
+        for rec in metadata_records:
+            if rec.get("songId") == song_id:
+                existing_entry = rec
+                break
+
+        if existing_entry is not None:
+            song_meta_entry = {**existing_entry}
+            song_meta_entry["trackDuration"] = duration
+            song_meta_entry["fetchStatus"] = "manual"
+            song_meta_entry["matchConfidence"] = "manual"
+            song_meta_entry["fetchedAt"] = now
+        else:
+            song_meta_entry = {
+                "songId": song_id,
+                "fetchStatus": "manual",
+                "matchConfidence": "manual",
+                "albumArtUrl": None,
+                "albumArtUrls": None,
+                "albumTitle": None,
+                "itunesTrackId": None,
+                "itunesCollectionId": None,
+                "trackDuration": duration,
+                "fetchedAt": now,
+                "lastError": None,
+            }
         metadata_records = upsert_song_metadata(metadata_records, song_meta_entry)
         write_metadata_file(metadata_path, metadata_records)
 
@@ -1652,6 +1697,8 @@ def metadata_override_cmd(song_id: str, album_art_url: str | None, lyrics_file: 
     overridden: list[str] = []
     if album_art_url is not None:
         overridden.append(f"[green]Album art URL[/green]: {album_art_url}")
+    if duration is not None:
+        overridden.append(f"[green]Duration[/green]: {duration}s")
     if lyrics_path is not None:
         lyrics_kind = "synced (LRC)" if is_lrc_format(lyrics_content) else "plain text"  # type: ignore[possibly-undefined]
         overridden.append(f"[green]Lyrics[/green]: {lyrics_path.name} ({lyrics_kind})")
