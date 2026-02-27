@@ -306,11 +306,11 @@ def create_app(db_path: str | Path | None = None) -> Flask:
     # ------------------------------------------------------------------
 
     def _maybe_reapprove_stream_by_video_id(conn, video_id: str) -> None:
-        """Transition a stream back to 'approved' if it was exported/imported."""
+        """Transition a stream to 'approved' after stamp edits."""
         from mizukilens.cache import get_stream, update_stream_status
 
         stream = get_stream(conn, video_id)
-        if stream and stream["status"] in ("exported", "imported"):
+        if stream and stream["status"] in ("extracted", "pending", "exported", "imported"):
             update_stream_status(conn, video_id, "approved")
 
     def _maybe_reapprove_stream(conn, song_pk: int) -> None:

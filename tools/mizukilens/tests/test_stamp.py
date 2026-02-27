@@ -490,6 +490,30 @@ class TestStampReapprovesStream:
         assert get_stream(conn, "abc123")["status"] == "approved"
         conn.close()
 
+    def test_stamp_on_extracted_stream_approves(self, db_path: Path) -> None:
+        c = self._make_client(db_path, "extracted")
+        songs = c.get("/api/streams/abc123/songs").get_json()
+        c.put(
+            f"/api/songs/{songs[0]['id']}/end-timestamp",
+            data=json.dumps({"endTimestamp": "5:30"}),
+            content_type="application/json",
+        )
+        conn = open_db(db_path)
+        assert get_stream(conn, "abc123")["status"] == "approved"
+        conn.close()
+
+    def test_stamp_on_pending_stream_approves(self, db_path: Path) -> None:
+        c = self._make_client(db_path, "pending")
+        songs = c.get("/api/streams/abc123/songs").get_json()
+        c.put(
+            f"/api/songs/{songs[0]['id']}/end-timestamp",
+            data=json.dumps({"endTimestamp": "5:30"}),
+            content_type="application/json",
+        )
+        conn = open_db(db_path)
+        assert get_stream(conn, "abc123")["status"] == "approved"
+        conn.close()
+
     def test_clear_on_exported_stream_reapproves(self, db_path: Path) -> None:
         c = self._make_client(db_path, "exported")
         songs = c.get("/api/streams/abc123/songs").get_json()
