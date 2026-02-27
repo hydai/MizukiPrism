@@ -474,6 +474,30 @@ def get_parsed_songs(
     return cur.fetchall()
 
 
+def get_songs_missing_end_timestamp(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """Return all parsed_songs rows where end_timestamp IS NULL."""
+    cur = conn.execute(
+        "SELECT * FROM parsed_songs WHERE end_timestamp IS NULL ORDER BY video_id, order_index"
+    )
+    return cur.fetchall()
+
+
+def update_song_end_timestamp(conn: sqlite3.Connection, song_id: int, end_timestamp: str) -> bool:
+    """Set end_timestamp for a specific parsed_songs row (by PK id).
+
+    Only updates if end_timestamp IS NULL (safety guard).
+
+    Returns:
+        True if the row was updated, False otherwise.
+    """
+    cur = conn.execute(
+        "UPDATE parsed_songs SET end_timestamp = ? WHERE id = ? AND end_timestamp IS NULL",
+        (end_timestamp, song_id),
+    )
+    conn.commit()
+    return cur.rowcount > 0
+
+
 # ---------------------------------------------------------------------------
 # Cache-clear operations
 # ---------------------------------------------------------------------------

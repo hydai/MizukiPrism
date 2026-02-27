@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
@@ -21,6 +21,7 @@ from mizukilens.cache import (
     get_candidate_comment,
     get_db_path,
     get_parsed_songs,
+    get_songs_missing_end_timestamp,
     get_status_counts,
     get_stream,
     is_valid_transition,
@@ -29,6 +30,7 @@ from mizukilens.cache import (
     open_db,
     save_candidate_comments,
     update_candidate_status,
+    update_song_end_timestamp,
     update_stream_date,
     update_stream_status,
     upsert_parsed_songs,
@@ -1073,3 +1075,229 @@ class TestUpdateStreamDate:
         """Returns False when the video_id does not exist."""
         result = update_stream_date(db, "nonexistent", "2024-03-15")
         assert result is False
+
+
+# ===========================================================================
+# SECTION: get_songs_missing_end_timestamp / update_song_end_timestamp
+# ===========================================================================
+
+
+class TestGetSongsMissingEndTimestamp:
+    """Tests for get_songs_missing_end_timestamp."""
+
+    def test_empty_db_returns_empty(self, db: sqlite3.Connection) -> None:
+        result = get_songs_missing_end_timestamp(db)
+        assert result == []
+
+    def test_all_have_end_timestamp(self, db: sqlite3.Connection) -> None:
+        """No rows returned when all songs have end_timestamp."""
+        _add_stream(db, "vid1", status="extracted")
+        upsert_parsed_songs(db, "vid1", [
+            {"order_index": 0, "song_name": "Song A", "artist": "Art",
+             "start_timestamp": "0:00", "end_timestamp": "3:30", "note": None},
+        ])
+        result = get_songs_missing_end_timestamp(db)
+        assert result == []
+
+    def test_returns_null_end_timestamp_songs(self, db: sqlite3.Connection) -> None:
+        """Returns rows where end_timestamp is NULL."""
+        _add_stream(db, "vid1", status="extracted")
+        upsert_parsed_songs(db, "vid1", [
+            {"order_index": 0, "song_name": "Song A", "artist": "Art",
+             "start_timestamp": "0:00", "end_timestamp": "3:30", "note": None},
+            {"order_index": 1, "song_name": "Song B", "artist": "Art",
+             "start_timestamp": "3:30", "end_timestamp": None, "note": None},
+        ])
+        result = get_songs_missing_end_timestamp(db)
+        assert len(result) == 1
+        assert result[0]["song_name"] == "Song B"
+
+    def test_multiple_streams(self, db: sqlite3.Connection) -> None:
+        """Returns rows from multiple streams."""
+        _add_stream(db, "vid1", status="extracted")
+        _add_stream(db, "vid2", status="extracted")
+        upsert_parsed_songs(db, "vid1", [
+            {"order_index": 0, "song_name": "Song A", "artist": None,
+             "start_timestamp": "0:00", "end_timestamp": None, "note": None},
+        ])
+        upsert_parsed_songs(db, "vid2", [
+            {"order_index": 0, "song_name": "Song B", "artist": None,
+             "start_timestamp": "5:00", "end_timestamp": None, "note": None},
+        ])
+        result = get_songs_missing_end_timestamp(db)
+        assert len(result) == 2
+
+
+class TestUpdateSongEndTimestamp:
+    """Tests for update_song_end_timestamp."""
+
+    def test_updates_null_end_timestamp(self, db: sqlite3.Connection) -> None:
+        _add_stream(db, "vid1", status="extracted")
+        upsert_parsed_songs(db, "vid1", [
+            {"order_index": 0, "song_name": "Song A", "artist": None,
+             "start_timestamp": "0:00", "end_timestamp": None, "note": None},
+        ])
+        songs = get_songs_missing_end_timestamp(db)
+        assert len(songs) == 1
+
+        result = update_song_end_timestamp(db, songs[0]["id"], "4:00")
+        assert result is True
+
+        # Verify it's updated
+        updated = get_parsed_songs(db, "vid1")
+        assert updated[0]["end_timestamp"] == "4:00"
+
+    def test_does_not_overwrite_existing(self, db: sqlite3.Connection) -> None:
+        """Safety guard: does not overwrite non-NULL end_timestamp."""
+        _add_stream(db, "vid1", status="extracted")
+        upsert_parsed_songs(db, "vid1", [
+            {"order_index": 0, "song_name": "Song A", "artist": None,
+             "start_timestamp": "0:00", "end_timestamp": "3:30", "note": None},
+        ])
+        songs = get_parsed_songs(db, "vid1")
+
+        result = update_song_end_timestamp(db, songs[0]["id"], "5:00")
+        assert result is False
+
+        # Verify unchanged
+        updated = get_parsed_songs(db, "vid1")
+        assert updated[0]["end_timestamp"] == "3:30"
+
+    def test_returns_false_for_nonexistent_id(self, db: sqlite3.Connection) -> None:
+        result = update_song_end_timestamp(db, 99999, "4:00")
+        assert result is False
+
+
+# ===========================================================================
+# SECTION: CLI cache fill-durations
+# ===========================================================================
+
+
+def _make_deezer_result(duration: int = 240, confidence: str = "exact") -> dict:
+    """Build a minimal Deezer metadata result for mocking."""
+    return {
+        "match_confidence": confidence,
+        "trackDuration": duration,
+        "deezerTrackId": 1,
+        "albumTitle": "Album",
+        "albumArtUrls": {},
+        "artistName": "Artist",
+        "artistPictureUrls": {},
+        "deezerArtistId": 10,
+    }
+
+
+class TestCacheFillDurations:
+    """Tests for the 'cache fill-durations' CLI command."""
+
+    @staticmethod
+    def _mock_open_db(db: sqlite3.Connection):
+        """Return a mock open_db that yields db but prevents close()."""
+        mock_db = MagicMock(wraps=db)
+        mock_db.close = MagicMock()  # no-op close to keep fixture alive
+        return patch("mizukilens.cache.open_db", return_value=mock_db)
+
+    def test_dry_run_no_changes(self, db: sqlite3.Connection, tmp_path: Path) -> None:
+        """Dry run previews changes but doesn't write."""
+        _add_stream(db, "vid1", status="extracted")
+        upsert_parsed_songs(db, "vid1", [
+            {"order_index": 0, "song_name": "Song A", "artist": "Art",
+             "start_timestamp": "1:00:00", "end_timestamp": None, "note": None},
+        ])
+
+        runner = CliRunner()
+        with self._mock_open_db(db), \
+             patch("mizukilens.metadata.fetch_deezer_metadata", return_value=_make_deezer_result(240)):
+            result = runner.invoke(main, ["cache", "fill-durations", "--dry-run"])
+
+        assert result.exit_code == 0
+        assert "would set" in result.output
+        # DB unchanged
+        songs = get_songs_missing_end_timestamp(db)
+        assert len(songs) == 1
+
+    def test_successful_fill(self, db: sqlite3.Connection, tmp_path: Path) -> None:
+        """Fills end_timestamp from Deezer duration."""
+        _add_stream(db, "vid1", status="extracted")
+        upsert_parsed_songs(db, "vid1", [
+            {"order_index": 0, "song_name": "Song A", "artist": "Art",
+             "start_timestamp": "5:00", "end_timestamp": None, "note": None},
+        ])
+
+        runner = CliRunner()
+        with self._mock_open_db(db), \
+             patch("mizukilens.metadata.fetch_deezer_metadata", return_value=_make_deezer_result(240)):
+            result = runner.invoke(main, ["cache", "fill-durations"])
+
+        assert result.exit_code == 0
+        assert "1 filled" in result.output
+        # 5:00 = 300s + 240s = 540s = 9:00
+        updated = get_parsed_songs(db, "vid1")
+        assert updated[0]["end_timestamp"] == "9:00"
+
+    def test_no_match_skipped(self, db: sqlite3.Connection, tmp_path: Path) -> None:
+        """Songs with no Deezer match are skipped."""
+        _add_stream(db, "vid1", status="extracted")
+        upsert_parsed_songs(db, "vid1", [
+            {"order_index": 0, "song_name": "Unknown", "artist": None,
+             "start_timestamp": "0:00", "end_timestamp": None, "note": None},
+        ])
+
+        no_match = {"match_confidence": None, "last_error": None}
+        runner = CliRunner()
+        with self._mock_open_db(db), \
+             patch("mizukilens.metadata.fetch_deezer_metadata", return_value=no_match):
+            result = runner.invoke(main, ["cache", "fill-durations"])
+
+        assert result.exit_code == 0
+        assert "no Deezer match" in result.output
+        assert "0 filled" in result.output
+
+    def test_stream_filter(self, db: sqlite3.Connection, tmp_path: Path) -> None:
+        """--stream filters to a specific stream."""
+        _add_stream(db, "vid1", status="extracted")
+        _add_stream(db, "vid2", status="extracted")
+        upsert_parsed_songs(db, "vid1", [
+            {"order_index": 0, "song_name": "A", "artist": None,
+             "start_timestamp": "0:00", "end_timestamp": None, "note": None},
+        ])
+        upsert_parsed_songs(db, "vid2", [
+            {"order_index": 0, "song_name": "B", "artist": None,
+             "start_timestamp": "0:00", "end_timestamp": None, "note": None},
+        ])
+
+        runner = CliRunner()
+        with self._mock_open_db(db), \
+             patch("mizukilens.metadata.fetch_deezer_metadata", return_value=_make_deezer_result(180)):
+            result = runner.invoke(main, ["cache", "fill-durations", "--stream", "vid1"])
+
+        assert result.exit_code == 0
+        assert "1 filled" in result.output
+        # vid1 filled, vid2 untouched
+        assert get_parsed_songs(db, "vid1")[0]["end_timestamp"] == "3:00"
+        assert get_parsed_songs(db, "vid2")[0]["end_timestamp"] is None
+
+    def test_api_error_continues(self, db: sqlite3.Connection, tmp_path: Path) -> None:
+        """Network errors are caught and counted, not fatal."""
+        _add_stream(db, "vid1", status="extracted")
+        upsert_parsed_songs(db, "vid1", [
+            {"order_index": 0, "song_name": "Song A", "artist": None,
+             "start_timestamp": "0:00", "end_timestamp": None, "note": None},
+        ])
+
+        runner = CliRunner()
+        with self._mock_open_db(db), \
+             patch("mizukilens.metadata.fetch_deezer_metadata", side_effect=Exception("network")):
+            result = runner.invoke(main, ["cache", "fill-durations"])
+
+        assert result.exit_code == 0
+        assert "1 errors" in result.output
+
+    def test_no_missing_songs(self, db: sqlite3.Connection, tmp_path: Path) -> None:
+        """No songs with missing end_timestamp → clean exit."""
+        runner = CliRunner()
+        with self._mock_open_db(db):
+            result = runner.invoke(main, ["cache", "fill-durations"])
+
+        assert result.exit_code == 0
+        assert "No songs with missing" in result.output

@@ -1709,3 +1709,87 @@ def cache_clear_cmd(stream_id: str | None) -> None:
             console.print(f"[green]キャッシュを削除しました。{count} 件のストリームを削除しました。[/green]")
     finally:
         conn.close()
+
+
+@cache_group.command("fill-durations")
+@click.option("--dry-run", is_flag=True, help="Preview without making changes.")
+@click.option("--stream", "stream_id", type=str, default=None, metavar="VIDEO_ID",
+              help="Only fill durations for a specific stream.")
+def cache_fill_durations_cmd(dry_run: bool, stream_id: str | None) -> None:
+    """Fill missing end timestamps using Deezer track durations.
+
+    \b
+    Queries Deezer for each song with a NULL end_timestamp, then computes:
+      end_timestamp = start_timestamp + trackDuration
+    """
+    from mizukilens.cache import (
+        open_db,
+        get_songs_missing_end_timestamp,
+        update_song_end_timestamp,
+    )
+    from mizukilens.extraction import seconds_to_timestamp, parse_timestamp
+    from mizukilens.metadata import fetch_deezer_metadata
+
+    conn = open_db()
+    try:
+        songs = get_songs_missing_end_timestamp(conn)
+        if stream_id:
+            songs = [s for s in songs if s["video_id"] == stream_id]
+
+        if not songs:
+            console.print("[dim]No songs with missing end timestamps found.[/dim]")
+            return
+
+        console.print(f"Found [bold]{len(songs)}[/bold] song(s) with missing end_timestamp.\n")
+
+        filled = 0
+        no_match = 0
+        errors = 0
+
+        for song in songs:
+            artist = song["artist"] or ""
+            title = song["song_name"]
+            start_ts = song["start_timestamp"]
+
+            start_sec = parse_timestamp(start_ts)
+            if start_sec is None:
+                console.print(f"  [red]✗[/red] {title} — cannot parse start_timestamp '{start_ts}'")
+                errors += 1
+                continue
+
+            try:
+                deezer_result = fetch_deezer_metadata(artist, title)
+            except Exception as exc:  # noqa: BLE001
+                console.print(f"  [red]✗[/red] {title} — API error: {exc}")
+                errors += 1
+                continue
+
+            if deezer_result is None or deezer_result.get("match_confidence") is None:
+                console.print(f"  [yellow]–[/yellow] {title} — no Deezer match")
+                no_match += 1
+                continue
+
+            duration = deezer_result.get("trackDuration")
+            if not duration:
+                console.print(f"  [yellow]–[/yellow] {title} — matched but no duration")
+                no_match += 1
+                continue
+
+            end_sec = start_sec + duration
+            end_ts = seconds_to_timestamp(end_sec)
+
+            if dry_run:
+                console.print(f"  [cyan]→[/cyan] {title} — would set end_timestamp={end_ts} ({start_ts} + {duration}s)")
+            else:
+                updated = update_song_end_timestamp(conn, song["id"], end_ts)
+                if updated:
+                    console.print(f"  [green]✓[/green] {title} — end_timestamp={end_ts} ({start_ts} + {duration}s)")
+                else:
+                    console.print(f"  [yellow]–[/yellow] {title} — already filled (race)")
+            filled += 1
+
+        console.print(f"\n[bold]Summary:[/bold] {filled} filled, {no_match} no match, {errors} errors")
+        if dry_run:
+            console.print("[dim]Dry run — no changes written.[/dim]")
+    finally:
+        conn.close()
