@@ -156,10 +156,21 @@ def _max_id_number(entities: list[dict], prefix: str) -> int:
     return max_n
 
 
-def _next_stream_id(existing_streams: list[dict]) -> str:
-    """Generate next stream ID continuing from existing max."""
-    n = _max_id_number(existing_streams, "stream") + 1
-    return f"stream-{n}"
+def _next_stream_id(existing_streams: list[dict], date: str) -> str:
+    """Generate a date-based stream ID, appending a suffix on collision.
+
+    Format: ``stream-YYYY-MM-DD``.  If that already exists, try
+    ``stream-YYYY-MM-DD-a``, ``-b``, etc.
+    """
+    existing_ids = {s.get("id", "") for s in existing_streams}
+    base = f"stream-{date}"
+    if base not in existing_ids:
+        return base
+    for suffix in "abcdefghijklmnopqrstuvwxyz":
+        candidate = f"{base}-{suffix}"
+        if candidate not in existing_ids:
+            return candidate
+    raise ValueError(f"Too many streams on {date}")
 
 
 def _next_song_id(existing_songs: list[dict]) -> str:
@@ -342,7 +353,7 @@ def compute_import_plan(
             mlens_stream_to_prism[mlens_video_id] = existing_stream
         else:
             # New stream: generate ID
-            new_stream_id = _next_stream_id(merged_streams)
+            new_stream_id = _next_stream_id(merged_streams, stream_date)
             new_stream: dict[str, Any] = {
                 "id": new_stream_id,
                 "title": stream_title,

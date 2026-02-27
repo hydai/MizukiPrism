@@ -62,7 +62,7 @@ _EXISTING_SONGS: list[dict] = [
         "performances": [
             {
                 "id": "p1-1",
-                "streamId": "stream-1",
+                "streamId": "stream-2023-10-15",
                 "date": "2023-10-15",
                 "streamTitle": "秋日歌回",
                 "videoId": "_Q5-4yMi-xg",
@@ -80,7 +80,7 @@ _EXISTING_SONGS: list[dict] = [
         "performances": [
             {
                 "id": "p2-1",
-                "streamId": "stream-2",
+                "streamId": "stream-2023-05-01",
                 "date": "2023-05-01",
                 "streamTitle": "五月病退散",
                 "videoId": "ZRtdQ81jPUQ",
@@ -94,14 +94,14 @@ _EXISTING_SONGS: list[dict] = [
 
 _EXISTING_STREAMS: list[dict] = [
     {
-        "id": "stream-1",
+        "id": "stream-2023-10-15",
         "title": "秋日歌回",
         "date": "2023-10-15",
         "videoId": "_Q5-4yMi-xg",
         "youtubeUrl": "https://www.youtube.com/watch?v=_Q5-4yMi-xg",
     },
     {
-        "id": "stream-2",
+        "id": "stream-2023-05-01",
         "title": "五月病退散",
         "date": "2023-05-01",
         "videoId": "ZRtdQ81jPUQ",
@@ -284,11 +284,19 @@ class TestIdGeneration:
         assert _max_id_number(entities, "song") == 2
 
     def test_next_stream_id_empty(self) -> None:
-        assert _next_stream_id([]) == "stream-1"
+        assert _next_stream_id([], "2024-01-15") == "stream-2024-01-15"
 
-    def test_next_stream_id_continues_from_max(self) -> None:
-        existing = [{"id": "stream-1"}, {"id": "stream-8"}]
-        assert _next_stream_id(existing) == "stream-9"
+    def test_next_stream_id_no_collision(self) -> None:
+        existing = [{"id": "stream-2024-01-01"}]
+        assert _next_stream_id(existing, "2024-01-15") == "stream-2024-01-15"
+
+    def test_next_stream_id_same_day_collision(self) -> None:
+        existing = [{"id": "stream-2024-01-15"}]
+        assert _next_stream_id(existing, "2024-01-15") == "stream-2024-01-15-a"
+
+    def test_next_stream_id_multi_collision(self) -> None:
+        existing = [{"id": "stream-2024-01-15"}, {"id": "stream-2024-01-15-a"}]
+        assert _next_stream_id(existing, "2024-01-15") == "stream-2024-01-15-b"
 
     def test_next_song_id_empty(self) -> None:
         assert _next_song_id([]) == "song-1"
@@ -542,10 +550,10 @@ class TestSongMatching:
 # ===========================================================================
 
 class TestStreamIdGeneration:
-    """Stream IDs must follow 'stream-{N}' with N = max existing + 1."""
+    """Stream IDs must follow 'stream-{YYYY-MM-DD}' date-based format."""
 
-    def test_new_stream_id_continues_from_max(self) -> None:
-        existing_streams = deepcopy(_EXISTING_STREAMS)  # stream-1 and stream-2
+    def test_new_stream_id_uses_date(self) -> None:
+        existing_streams = deepcopy(_EXISTING_STREAMS)
         payload = _make_export_payload(
             streams=[{"id": "new_vid_001", "title": "New", "date": "2024-01-01"}],
             songs=[],
@@ -554,7 +562,7 @@ class TestStreamIdGeneration:
         plan = compute_import_plan(payload, [], existing_streams)
 
         assert plan.new_stream_count == 1
-        assert plan.new_streams[0]["id"] == "stream-3"
+        assert plan.new_streams[0]["id"] == "stream-2024-01-01"
 
     def test_new_stream_contains_youtube_video_id(self) -> None:
         payload = _make_export_payload(
@@ -574,7 +582,7 @@ class TestStreamIdGeneration:
         plan = compute_import_plan(payload, [], [])
         assert plan.new_streams[0]["youtubeUrl"] == "https://www.youtube.com/watch?v=abc123xyz"
 
-    def test_multiple_new_streams_get_sequential_ids(self) -> None:
+    def test_multiple_new_streams_get_date_based_ids(self) -> None:
         payload = _make_export_payload(
             streams=[
                 {"id": "vid_001", "title": "Stream 1", "date": "2024-01-01"},
@@ -583,12 +591,27 @@ class TestStreamIdGeneration:
             songs=[],
             versions=[],
         )
-        existing_streams = [{"id": "stream-5"}]
+        existing_streams = [{"id": "stream-2023-12-25"}]
         plan = compute_import_plan(payload, [], existing_streams)
 
         new_ids = {s["id"] for s in plan.new_streams}
-        assert "stream-6" in new_ids
-        assert "stream-7" in new_ids
+        assert "stream-2024-01-01" in new_ids
+        assert "stream-2024-01-02" in new_ids
+
+    def test_same_day_streams_get_suffix(self) -> None:
+        payload = _make_export_payload(
+            streams=[
+                {"id": "vid_001", "title": "Morning", "date": "2024-01-01"},
+                {"id": "vid_002", "title": "Evening", "date": "2024-01-01"},
+            ],
+            songs=[],
+            versions=[],
+        )
+        plan = compute_import_plan(payload, [], [])
+
+        new_ids = [s["id"] for s in plan.new_streams]
+        assert new_ids[0] == "stream-2024-01-01"
+        assert new_ids[1] == "stream-2024-01-01-a"
 
 
 # ===========================================================================
@@ -608,7 +631,7 @@ class TestStreamConflictDetection:
 
         assert len(plan.conflicts) == 1
         assert plan.conflicts[0].video_id == "_Q5-4yMi-xg"
-        assert plan.conflicts[0].existing_stream_id == "stream-1"
+        assert plan.conflicts[0].existing_stream_id == "stream-2023-10-15"
 
     def test_conflict_is_not_added_to_new_streams(self) -> None:
         existing_streams = deepcopy(_EXISTING_STREAMS)
