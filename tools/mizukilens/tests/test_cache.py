@@ -112,7 +112,7 @@ class TestDatabaseCreation:
         columns = {row["name"] for row in cur.fetchall()}
         expected = {
             "id", "video_id", "order_index", "song_name", "artist",
-            "start_timestamp", "end_timestamp", "note",
+            "start_timestamp", "end_timestamp", "note", "manual_end_ts",
         }
         assert expected == columns
 

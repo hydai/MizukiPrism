@@ -110,7 +110,8 @@ CREATE TABLE IF NOT EXISTS parsed_songs (
     artist           TEXT,
     start_timestamp  TEXT NOT NULL,
     end_timestamp    TEXT,
-    note             TEXT
+    note             TEXT,
+    manual_end_ts    INTEGER DEFAULT 0
 );
 """
 
@@ -190,6 +191,14 @@ def _init_schema(conn: sqlite3.Connection) -> None:
     # Migration: add date_source column to track date precision.
     try:
         conn.execute("ALTER TABLE streams ADD COLUMN date_source TEXT")
+    except sqlite3.OperationalError:
+        pass  # column already exists
+
+    # Migration: add manual_end_ts column to parsed_songs for stamp tool.
+    try:
+        conn.execute(
+            "ALTER TABLE parsed_songs ADD COLUMN manual_end_ts INTEGER DEFAULT 0"
+        )
     except sqlite3.OperationalError:
         pass  # column already exists
 
@@ -429,6 +438,8 @@ def upsert_parsed_songs(
       - ``note`` (str | None)
 
     Existing rows for the stream are deleted before inserting the new list.
+    Rows with ``manual_end_ts = 1`` have their end_timestamp preserved after
+    re-insertion by matching on (song_name, artist, start_timestamp).
 
     Raises:
         KeyError: If *video_id* does not exist in the streams table.
@@ -436,15 +447,26 @@ def upsert_parsed_songs(
     if get_stream(conn, video_id) is None:
         raise KeyError(f"Stream {video_id!r} not found; cannot insert parsed songs.")
 
+    # Preserve manually-stamped end_timestamps before delete.
+    cur = conn.execute(
+        "SELECT song_name, artist, start_timestamp, end_timestamp "
+        "FROM parsed_songs WHERE video_id = ? AND manual_end_ts = 1",
+        (video_id,),
+    )
+    manual_stamps: dict[tuple[str, str | None, str], str] = {
+        (row["song_name"], row["artist"], row["start_timestamp"]): row["end_timestamp"]
+        for row in cur.fetchall()
+    }
+
     conn.execute("DELETE FROM parsed_songs WHERE video_id = ?", (video_id,))
     conn.executemany(
         """
         INSERT INTO parsed_songs
             (video_id, order_index, song_name, artist,
-             start_timestamp, end_timestamp, note)
+             start_timestamp, end_timestamp, note, manual_end_ts)
         VALUES
             (:video_id, :order_index, :song_name, :artist,
-             :start_timestamp, :end_timestamp, :note)
+             :start_timestamp, :end_timestamp, :note, :manual_end_ts)
         """,
         [
             {
@@ -455,10 +477,20 @@ def upsert_parsed_songs(
                 "start_timestamp": s["start_timestamp"],
                 "end_timestamp":   s.get("end_timestamp"),
                 "note":            s.get("note"),
+                "manual_end_ts":   s.get("manual_end_ts", 0),
             }
             for s in songs
         ],
     )
+
+    # Restore manually-stamped end_timestamps after re-insertion.
+    for (song_name, artist, start_ts), end_ts in manual_stamps.items():
+        conn.execute(
+            "UPDATE parsed_songs SET end_timestamp = ?, manual_end_ts = 1 "
+            "WHERE video_id = ? AND song_name = ? AND artist IS ? AND start_timestamp = ?",
+            (end_ts, video_id, song_name, artist, start_ts),
+        )
+
     conn.commit()
 
 
@@ -482,17 +514,48 @@ def get_songs_missing_end_timestamp(conn: sqlite3.Connection) -> list[sqlite3.Ro
     return cur.fetchall()
 
 
-def update_song_end_timestamp(conn: sqlite3.Connection, song_id: int, end_timestamp: str) -> bool:
+def update_song_end_timestamp(
+    conn: sqlite3.Connection,
+    song_id: int,
+    end_timestamp: str,
+    *,
+    manual: bool = False,
+) -> bool:
     """Set end_timestamp for a specific parsed_songs row (by PK id).
 
-    Only updates if end_timestamp IS NULL (safety guard).
+    When *manual* is False (default), only updates if end_timestamp IS NULL
+    (safety guard for automated fills).  When *manual* is True, always updates
+    and sets ``manual_end_ts = 1`` (used by the stamp tool).
 
     Returns:
         True if the row was updated, False otherwise.
     """
+    if manual:
+        cur = conn.execute(
+            "UPDATE parsed_songs SET end_timestamp = ?, manual_end_ts = 1 "
+            "WHERE id = ?",
+            (end_timestamp, song_id),
+        )
+    else:
+        cur = conn.execute(
+            "UPDATE parsed_songs SET end_timestamp = ? WHERE id = ? AND end_timestamp IS NULL",
+            (end_timestamp, song_id),
+        )
+    conn.commit()
+    return cur.rowcount > 0
+
+
+def clear_song_end_timestamp(conn: sqlite3.Connection, song_id: int) -> bool:
+    """Clear end_timestamp and manual_end_ts for a specific parsed_songs row.
+
+    Used by the stamp tool's undo/clear action.
+
+    Returns:
+        True if the row was updated, False otherwise (e.g. id not found).
+    """
     cur = conn.execute(
-        "UPDATE parsed_songs SET end_timestamp = ? WHERE id = ? AND end_timestamp IS NULL",
-        (end_timestamp, song_id),
+        "UPDATE parsed_songs SET end_timestamp = NULL, manual_end_ts = 0 WHERE id = ?",
+        (song_id,),
     )
     conn.commit()
     return cur.rowcount > 0
