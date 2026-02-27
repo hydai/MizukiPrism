@@ -1,8 +1,8 @@
-"""Tests for mizukilens.metadata — Deezer + LRCLIB integration.
+"""Tests for mizukilens.metadata — iTunes + LRCLIB integration.
 
 Coverage:
   - normalize_artist()
-  - fetch_deezer_metadata() — all 4 strategies, no-match, timeout, HTTP error
+  - fetch_itunes_metadata() — all strategies, no-match, timeout, HTTP error
   - fetch_lrclib_lyrics()   — synced, plain, no-match, timeout, HTTP error
   - read_metadata_file()    — normal, missing, corrupt
   - write_metadata_file()   — basic write
@@ -37,7 +37,7 @@ from mizukilens.metadata import (
     SongStatusRecord,
     _clean_title,
     _strip_featuring,
-    fetch_deezer_metadata,
+    fetch_itunes_metadata,
     fetch_lrclib_lyrics,
     fetch_song_metadata,
     get_metadata_status,
@@ -56,35 +56,24 @@ from mizukilens.metadata import (
 # Helpers / fixtures
 # ---------------------------------------------------------------------------
 
-def make_deezer_track(
+def make_itunes_track(
     track_id: int = 1,
     title: str = "Test Song",
     artist_id: int = 10,
     artist_name: str = "Test Artist",
     album_title: str = "Test Album",
-    duration: int = 240,
+    duration_ms: int = 240000,
 ) -> dict:
-    """Build a minimal Deezer track result dict."""
+    """Build a minimal iTunes track result dict."""
     return {
-        "id": track_id,
-        "title": title,
-        "duration": duration,
-        "artist": {
-            "id": artist_id,
-            "name": artist_name,
-            "picture_small": "https://example.com/artist_small.jpg",
-            "picture_medium": "https://example.com/artist_medium.jpg",
-            "picture_big": "https://example.com/artist_big.jpg",
-            "picture_xl": "https://example.com/artist_xl.jpg",
-        },
-        "album": {
-            "id": 100,
-            "title": album_title,
-            "cover_small": "https://example.com/cover_small.jpg",
-            "cover_medium": "https://example.com/cover_medium.jpg",
-            "cover_big": "https://example.com/cover_big.jpg",
-            "cover_xl": "https://example.com/cover_xl.jpg",
-        },
+        "trackId": track_id,
+        "trackName": title,
+        "artistId": artist_id,
+        "artistName": artist_name,
+        "collectionId": 100,
+        "collectionName": album_title,
+        "trackTimeMillis": duration_ms,
+        "artworkUrl100": "https://example.com/art100x100bb.jpg",
     }
 
 
@@ -134,115 +123,99 @@ class TestNormalizeArtist:
 
 
 # ---------------------------------------------------------------------------
-# fetch_deezer_metadata — mocked _deezer_search
+# fetch_itunes_metadata — mocked _itunes_search
 # ---------------------------------------------------------------------------
 
-class TestFetchDeezerMetadata:
-    """Tests for the Deezer search with 4 fallback strategies."""
+class TestFetchItunesMetadata:
+    """Tests for the iTunes search with fallback strategies."""
 
     def test_strategy_1_exact_match(self):
-        """Strategy 1 (exact) succeeds → returns match_confidence='exact'."""
-        track = make_deezer_track()
-        with patch("mizukilens.metadata._deezer_search", return_value=[track]) as mock_search:
-            result = fetch_deezer_metadata("Test Artist", "Test Song")
+        """Strategy 1 (artist + title) succeeds → returns match_confidence='exact'."""
+        track = make_itunes_track()
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]) as mock_search:
+            result = fetch_itunes_metadata("Test Artist", "Test Song")
         assert result is not None
         assert result["match_confidence"] == "exact"
-        assert result["deezerTrackId"] == 1
-        assert result["albumArtUrls"]["xl"] == "https://example.com/cover_xl.jpg"
-        # Should have been called with the structured query first
+        assert result["itunesTrackId"] == 1
+        assert result["albumArtUrls"]["xl"] == "https://example.com/art600x600bb.jpg"
+        # Should have been called with artist + title query
         mock_search.assert_called_once()
         first_call_query = mock_search.call_args[0][0]
-        assert 'artist:"Test Artist"' in first_call_query
-        assert 'track:"Test Song"' in first_call_query
+        assert "Test Artist" in first_call_query
+        assert "Test Song" in first_call_query
 
-    def test_strategy_2_romanized_slot_skipped(self):
-        """Strategy 2 (romanized) is a reserved slot; simple search (strategy 3) is used next."""
-        track = make_deezer_track()
-        # First call (structured) returns empty; second call (simple) returns result
-        call_count = [0]
-        def side_effect(query):
-            call_count[0] += 1
-            if call_count[0] == 1:
-                return []  # structured failed
-            return [track]  # simple succeeded
-
-        with patch("mizukilens.metadata._deezer_search", side_effect=side_effect):
-            result = fetch_deezer_metadata("日本語アーティスト", "Test Song")
-
-        assert result["match_confidence"] == "fuzzy"
-        assert call_count[0] == 2
-
-    def test_strategy_3_simple_match(self):
-        """Strategy 3 (simple) is used when strategy 1 returns no results."""
-        track = make_deezer_track()
+    def test_strategy_2_title_only(self):
+        """Strategy 2 (title-only) is used when strategy 1 returns no results."""
+        track = make_itunes_track()
 
         call_count = [0]
         def side_effect(query):
             call_count[0] += 1
             if call_count[0] == 1:
-                return []  # strategy 1 failed
-            return [track]  # strategy 3 succeeded
+                return []  # artist+title failed
+            return [track]  # title-only succeeded
 
-        with patch("mizukilens.metadata._deezer_search", side_effect=side_effect):
-            result = fetch_deezer_metadata("Test Artist", "Test Song")
+        with patch("mizukilens.metadata._itunes_search", side_effect=side_effect):
+            result = fetch_itunes_metadata("Test Artist", "Test Song")
 
         assert result["match_confidence"] == "fuzzy"
         assert call_count[0] == 2
-
-    def test_strategy_4_title_only(self):
-        """Strategy 4 (title-only) is used when strategies 1 & 3 fail."""
-        track = make_deezer_track()
-
-        call_count = [0]
-        def side_effect(query):
-            call_count[0] += 1
-            if call_count[0] < 3:
-                return []
-            return [track]
-
-        with patch("mizukilens.metadata._deezer_search", side_effect=side_effect):
-            result = fetch_deezer_metadata("Test Artist", "Test Song")
-
-        assert result["match_confidence"] == "fuzzy"
-        assert call_count[0] == 3
 
     def test_all_strategies_no_match(self):
         """All strategies return empty → match_confidence is None, last_error None."""
-        with patch("mizukilens.metadata._deezer_search", return_value=[]):
-            result = fetch_deezer_metadata("Unknown Artist", "Unknown Song")
+        with patch("mizukilens.metadata._itunes_search", return_value=[]):
+            result = fetch_itunes_metadata("Unknown Artist", "Unknown Song")
 
         assert result["match_confidence"] is None
         assert result.get("last_error") is None
 
     def test_timeout_marks_error(self):
         """Timeout on all strategies → last_error='timeout'."""
-        with patch("mizukilens.metadata._deezer_search", side_effect=TimeoutError("timeout")):
-            result = fetch_deezer_metadata("Test Artist", "Test Song")
+        with patch("mizukilens.metadata._itunes_search", side_effect=TimeoutError("timeout")):
+            result = fetch_itunes_metadata("Test Artist", "Test Song")
 
         assert result["match_confidence"] is None
         assert result["last_error"] == "timeout"
 
     def test_http_error_marks_error(self):
         """HTTP error on all strategies → last_error set."""
-        with patch("mizukilens.metadata._deezer_search",
+        with patch("mizukilens.metadata._itunes_search",
                    side_effect=urllib.error.URLError("connection refused")):
-            result = fetch_deezer_metadata("Test Artist", "Test Song")
+            result = fetch_itunes_metadata("Test Artist", "Test Song")
 
         assert result["match_confidence"] is None
         assert result["last_error"] is not None
 
-    def test_artist_info_extracted(self):
-        """Artist picture URLs are extracted from the track result."""
-        track = make_deezer_track()
-        with patch("mizukilens.metadata._deezer_search", return_value=[track]):
-            result = fetch_deezer_metadata("Test Artist", "Test Song")
+    def test_artwork_url_resizing(self):
+        """iTunes artwork URLs are resized from 100x100bb template."""
+        track = make_itunes_track()
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
+            result = fetch_itunes_metadata("Test Artist", "Test Song")
 
-        assert result["artistPictureUrls"]["xl"] == "https://example.com/artist_xl.jpg"
-        assert result["deezerArtistId"] == 10
+        assert result["albumArtUrls"]["small"] == "https://example.com/art60x60bb.jpg"
+        assert result["albumArtUrls"]["medium"] == "https://example.com/art200x200bb.jpg"
+        assert result["albumArtUrls"]["big"] == "https://example.com/art400x400bb.jpg"
+        assert result["albumArtUrls"]["xl"] == "https://example.com/art600x600bb.jpg"
+
+    def test_duration_ms_to_seconds(self):
+        """trackTimeMillis is converted to seconds."""
+        track = make_itunes_track(duration_ms=240000)
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
+            result = fetch_itunes_metadata("Test Artist", "Test Song")
+
+        assert result["trackDuration"] == 240
+
+    def test_collection_id_extracted(self):
+        """collectionId is extracted as itunesCollectionId."""
+        track = make_itunes_track()
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
+            result = fetch_itunes_metadata("Test Artist", "Test Song")
+
+        assert result["itunesCollectionId"] == 100
 
     def test_timeout_on_first_strategy_continues(self):
         """Timeout on first strategy → tries next strategies."""
-        track = make_deezer_track()
+        track = make_itunes_track()
         call_count = [0]
         def side_effect(query):
             call_count[0] += 1
@@ -250,10 +223,10 @@ class TestFetchDeezerMetadata:
                 raise TimeoutError("timeout")
             return [track]
 
-        with patch("mizukilens.metadata._deezer_search", side_effect=side_effect):
-            result = fetch_deezer_metadata("Test Artist", "Test Song")
+        with patch("mizukilens.metadata._itunes_search", side_effect=side_effect):
+            result = fetch_itunes_metadata("Test Artist", "Test Song")
 
-        # Strategy 2 (simple) should have succeeded
+        # Strategy 2 (title-only) should have succeeded
         assert result["match_confidence"] == "fuzzy"
 
 
@@ -308,93 +281,73 @@ class TestCleanTitle:
 
 
 # ---------------------------------------------------------------------------
-# fetch_deezer_metadata — conditional strategy tests
+# fetch_itunes_metadata — conditional strategy tests
 # ---------------------------------------------------------------------------
 
-class TestDeezerConditionalStrategies:
-    """Tests for the new conditional strategies (feat. stripping, bare title, etc.)."""
+class TestItunesConditionalStrategies:
+    """Tests for conditional strategies (feat. stripping, cleaned title)."""
 
-    def test_feat_artist_adds_extra_strategies(self):
-        """Artist with 'feat.' triggers strategies 2 and 7 (cleaned artist)."""
-        track = make_deezer_track()
+    def test_feat_artist_adds_cleaned_strategy(self):
+        """Artist with 'feat.' triggers strategy 2 (cleaned artist)."""
         queries: list[str] = []
         def side_effect(query):
             queries.append(query)
             return []  # no match for any
 
-        with patch("mizukilens.metadata._deezer_search", side_effect=side_effect):
-            result = fetch_deezer_metadata("きくお feat. 初音ミク", "テスト曲")
+        with patch("mizukilens.metadata._itunes_search", side_effect=side_effect):
+            result = fetch_itunes_metadata("きくお feat. 初音ミク", "テスト曲")
 
         assert result["match_confidence"] is None
-        # Should have: exact, cleaned-exact, fuzzy, track:"title", bare-title, cleaned-artist-fuzzy = 6
-        assert len(queries) == 6
-        # Strategy 2: cleaned artist exact
-        assert 'artist:"きくお"' in queries[1]
-        # Strategy 7: cleaned artist fuzzy (last one)
-        assert queries[-1] == "きくお テスト曲"
+        # Should have: artist+title, cleaned-artist+title, title-only = 3
+        assert len(queries) == 3
+        # Strategy 2: cleaned artist + title
+        assert queries[1] == "きくお テスト曲"
 
     def test_special_punct_title_adds_cleaned_strategy(self):
-        """Title with CJK punctuation triggers strategy 6 (cleaned title)."""
-        track = make_deezer_track()
+        """Title with CJK punctuation triggers cleaned title strategy."""
         queries: list[str] = []
         def side_effect(query):
             queries.append(query)
             return []
 
-        with patch("mizukilens.metadata._deezer_search", side_effect=side_effect):
-            result = fetch_deezer_metadata("Artist", "うっせぇわ！")
+        with patch("mizukilens.metadata._itunes_search", side_effect=side_effect):
+            result = fetch_itunes_metadata("Artist", "うっせぇわ！")
 
         assert result["match_confidence"] is None
-        # exact, fuzzy, track:"title", bare-title, cleaned-title = 5
-        assert len(queries) == 5
-        # Strategy 6: cleaned title
-        assert "うっせぇわ" in queries[4]
-        assert "！" not in queries[4]
-
-    def test_bare_title_strategy_matches(self):
-        """Bare title strategy (no Deezer operators) can find matches."""
-        track = make_deezer_track()
-        call_count = [0]
-        def side_effect(query):
-            call_count[0] += 1
-            if call_count[0] <= 3:  # exact, fuzzy, track:"title" fail
-                return []
-            return [track]  # bare title succeeds
-
-        with patch("mizukilens.metadata._deezer_search", side_effect=side_effect):
-            result = fetch_deezer_metadata("Artist", "Test Song")
-
-        assert result["match_confidence"] == "fuzzy_title"
-        assert call_count[0] == 4
+        # artist+title, title-only, cleaned-title = 3
+        assert len(queries) == 3
+        # Last strategy: cleaned title
+        assert "うっせぇわ" in queries[2]
+        assert "！" not in queries[2]
 
     def test_cleaned_title_strategy_matches(self):
         """Cleaned title strategy can find matches when title has punctuation."""
-        track = make_deezer_track()
+        track = make_itunes_track()
         call_count = [0]
         def side_effect(query):
             call_count[0] += 1
-            if call_count[0] <= 4:  # exact, fuzzy, track:"title", bare-title fail
+            if call_count[0] <= 2:  # artist+title, title-only fail
                 return []
             return [track]  # cleaned title succeeds
 
-        with patch("mizukilens.metadata._deezer_search", side_effect=side_effect):
-            result = fetch_deezer_metadata("Artist", "うっせぇわ！")
+        with patch("mizukilens.metadata._itunes_search", side_effect=side_effect):
+            result = fetch_itunes_metadata("Artist", "うっせぇわ！")
 
         assert result["match_confidence"] == "fuzzy_cleaned"
 
     def test_no_extra_strategies_for_plain_input(self):
-        """Plain artist + title (no feat, no special punct) → 4 strategies."""
+        """Plain artist + title (no feat, no special punct) → 2 strategies."""
         queries: list[str] = []
         def side_effect(query):
             queries.append(query)
             return []
 
-        with patch("mizukilens.metadata._deezer_search", side_effect=side_effect):
-            fetch_deezer_metadata("Test Artist", "Test Song")
+        with patch("mizukilens.metadata._itunes_search", side_effect=side_effect):
+            fetch_itunes_metadata("Test Artist", "Test Song")
 
-        # exact, fuzzy, track:"title", bare-title = 4
+        # artist+title, title-only = 2
         # (cleaned title == title, so no extra; no feat in artist, so no extra)
-        assert len(queries) == 4
+        assert len(queries) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -612,10 +565,10 @@ class TestUpsertArtistInfo:
 
     def test_update_existing_record(self):
         old = {"normalizedArtist": "yoasobi", "originalName": "Yoasobi"}
-        new = {"normalizedArtist": "yoasobi", "originalName": "YOASOBI", "deezerArtistId": 42}
+        new = {"normalizedArtist": "yoasobi", "originalName": "YOASOBI", "itunesCollectionId": 42}
         result = upsert_artist_info([old], new)
         assert len(result) == 1
-        assert result[0]["deezerArtistId"] == 42
+        assert result[0]["itunesCollectionId"] == 42
 
     def test_different_artists_not_overwritten(self):
         a1 = {"normalizedArtist": "yoasobi", "originalName": "YOASOBI"}
@@ -673,17 +626,17 @@ class TestFetchSongMetadata:
     def song(self):
         return {"id": "song-1", "title": "Test Song", "originalArtist": "Test Artist"}
 
-    def test_matched_deezer_and_lyrics(self, metadata_dir, song):
-        track = make_deezer_track()
+    def test_matched_itunes_and_lyrics(self, metadata_dir, song):
+        track = make_itunes_track()
         lrc = make_lrclib_result(synced="[00:01.00] Hello")
 
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
         ):
             result = fetch_song_metadata(song, metadata_dir)
 
-        assert result.deezer_status == "matched"
+        assert result.art_status == "matched"
         assert result.lyrics_status == "matched"
         assert result.overall_status == "matched"
 
@@ -702,51 +655,51 @@ class TestFetchSongMetadata:
         assert len(artists) == 1
         assert artists[0]["normalizedArtist"] == "test artist"
 
-    def test_deezer_no_match(self, metadata_dir, song):
+    def test_itunes_no_match(self, metadata_dir, song):
         lrc = make_lrclib_result()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[]),
+            patch("mizukilens.metadata._itunes_search", return_value=[]),
             patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
         ):
             result = fetch_song_metadata(song, metadata_dir)
 
-        assert result.deezer_status == "no_match"
+        assert result.art_status == "no_match"
         assert result.lyrics_status == "matched"
         # SongMetadata still written with no_match status
         metadata = json.loads((metadata_dir / "song-metadata.json").read_text())
         assert metadata[0]["fetchStatus"] == "no_match"
 
     def test_lyrics_no_match(self, metadata_dir, song):
-        track = make_deezer_track()
+        track = make_itunes_track()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             result = fetch_song_metadata(song, metadata_dir)
 
-        assert result.deezer_status == "matched"
+        assert result.art_status == "matched"
         assert result.lyrics_status == "no_match"
         lyrics = json.loads((metadata_dir / "song-lyrics.json").read_text())
         assert lyrics[0]["fetchStatus"] == "no_match"
 
-    def test_deezer_error(self, metadata_dir, song):
+    def test_itunes_error(self, metadata_dir, song):
         lrc = make_lrclib_result()
         with (
-            patch("mizukilens.metadata._deezer_search", side_effect=TimeoutError("timeout")),
+            patch("mizukilens.metadata._itunes_search", side_effect=TimeoutError("timeout")),
             patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
         ):
             result = fetch_song_metadata(song, metadata_dir)
 
-        assert result.deezer_status == "error"
-        assert result.deezer_error == "timeout"
+        assert result.art_status == "error"
+        assert result.art_error == "timeout"
         metadata = json.loads((metadata_dir / "song-metadata.json").read_text())
         assert metadata[0]["fetchStatus"] == "error"
         assert metadata[0]["lastError"] == "timeout"
 
     def test_lyrics_error(self, metadata_dir, song):
-        track = make_deezer_track()
+        track = make_itunes_track()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", side_effect=TimeoutError("timeout")),
         ):
             result = fetch_song_metadata(song, metadata_dir)
@@ -757,22 +710,22 @@ class TestFetchSongMetadata:
         assert lyrics[0]["fetchStatus"] == "error"
 
     def test_art_only_skips_lyrics(self, metadata_dir, song):
-        track = make_deezer_track()
-        with patch("mizukilens.metadata._deezer_search", return_value=[track]):
+        track = make_itunes_track()
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
             result = fetch_song_metadata(song, metadata_dir, fetch_lyrics=False)
 
-        assert result.deezer_status == "matched"
+        assert result.art_status == "matched"
         assert result.lyrics_status == "skipped"
         # lyrics file should remain empty
         lyrics = json.loads((metadata_dir / "song-lyrics.json").read_text())
         assert lyrics == []
 
-    def test_lyrics_only_skips_deezer(self, metadata_dir, song):
+    def test_lyrics_only_skips_itunes(self, metadata_dir, song):
         lrc = make_lrclib_result()
         with patch("mizukilens.metadata._http_get_json", return_value=[lrc]):
-            result = fetch_song_metadata(song, metadata_dir, fetch_deezer=False)
+            result = fetch_song_metadata(song, metadata_dir, fetch_art=False)
 
-        assert result.deezer_status == "skipped"
+        assert result.art_status == "skipped"
         assert result.lyrics_status == "matched"
         # metadata file should remain empty
         metadata = json.loads((metadata_dir / "song-metadata.json").read_text())
@@ -780,10 +733,10 @@ class TestFetchSongMetadata:
 
     def test_upsert_updates_existing_entry(self, metadata_dir, song):
         """Calling fetch twice updates the existing record (upsert behavior)."""
-        track = make_deezer_track()
+        track = make_itunes_track()
         lrc = make_lrclib_result()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
         ):
             fetch_song_metadata(song, metadata_dir)
@@ -795,12 +748,12 @@ class TestFetchSongMetadata:
 
     def test_artist_info_upsert(self, metadata_dir):
         """Two songs with the same artist share one ArtistInfo entry."""
-        track = make_deezer_track()
+        track = make_itunes_track()
         song1 = {"id": "song-1", "title": "Song A", "originalArtist": "YOASOBI"}
         song2 = {"id": "song-2", "title": "Song B", "originalArtist": "YOASOBI"}
 
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             fetch_song_metadata(song1, metadata_dir, fetch_lyrics=False)
@@ -814,58 +767,57 @@ class TestFetchSongMetadata:
         """metadata_dir is created if it doesn't exist."""
         metadata_dir = tmp_path / "brand_new_dir"
         # Don't create it
-        track = make_deezer_track()
+        track = make_itunes_track()
         lrc = make_lrclib_result()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
         ):
             result = fetch_song_metadata(song, metadata_dir)
 
-        assert result.deezer_status == "matched"
+        assert result.art_status == "matched"
         assert metadata_dir.exists()
 
     def test_album_art_url_set_to_xl(self, metadata_dir, song):
         """albumArtUrl is set to the XL URL."""
-        track = make_deezer_track()
+        track = make_itunes_track()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             fetch_song_metadata(song, metadata_dir, fetch_lyrics=False)
 
         metadata = json.loads((metadata_dir / "song-metadata.json").read_text())
-        assert metadata[0]["albumArtUrl"] == "https://example.com/cover_xl.jpg"
+        assert metadata[0]["albumArtUrl"] == "https://example.com/art600x600bb.jpg"
 
 
 # ---------------------------------------------------------------------------
-# Rate limiting — _wait_deezer / _wait_lrclib
+# Rate limiting — _wait_itunes / _wait_lrclib
 # ---------------------------------------------------------------------------
 
 class TestRateLimiting:
-    """Verify that consecutive API calls respect the 200ms minimum interval."""
+    """Verify that consecutive API calls respect the minimum interval."""
 
-    def test_deezer_rate_limit_respected(self):
-        """Two consecutive Deezer calls should have at least 200ms between them."""
+    def test_itunes_rate_limit_respected(self):
+        """Two consecutive iTunes calls should have _wait_itunes invoked."""
         import mizukilens.metadata as m_module
 
         # Reset last call time to simulate a fresh start
-        m_module._last_deezer_call = 0.0
+        m_module._last_itunes_call = 0.0
 
         call_times = []
-        original_search = m_module._deezer_search.__wrapped__ if hasattr(m_module._deezer_search, '__wrapped__') else None
 
-        # Track timing through _wait_deezer calls
-        original_wait = m_module._wait_deezer
+        # Track timing through _wait_itunes calls
+        original_wait = m_module._wait_itunes
 
         def recording_wait():
             call_times.append(time.monotonic())
             original_wait()
 
-        with patch.object(m_module, "_wait_deezer", side_effect=recording_wait):
-            with patch.object(m_module, "_http_get_json", return_value={"data": []}):
-                m_module._deezer_search("query1")
-                m_module._deezer_search("query2")
+        with patch.object(m_module, "_wait_itunes", side_effect=recording_wait):
+            with patch.object(m_module, "_http_get_json", return_value={"results": []}):
+                m_module._itunes_search("query1")
+                m_module._itunes_search("query2")
 
         # Should have been called twice
         assert len(call_times) == 2
@@ -873,25 +825,24 @@ class TestRateLimiting:
         assert call_times[1] >= call_times[0]
 
     def test_min_interval_enforced(self):
-        """The _wait_deezer function sleeps if called too quickly."""
+        """The _wait_itunes function sleeps if called too quickly."""
         import mizukilens.metadata as m_module
 
         sleep_calls = []
-        original_sleep = time.sleep
 
         def mock_sleep(seconds):
             sleep_calls.append(seconds)
 
         # Set last call to "just happened"
-        m_module._last_deezer_call = time.monotonic()
+        m_module._last_itunes_call = time.monotonic()
 
         with patch("mizukilens.metadata.time.sleep", side_effect=mock_sleep):
-            m_module._wait_deezer()
+            m_module._wait_itunes()
 
-        # Should have slept for approximately MIN_INTERVAL_SEC
+        # Should have slept for approximately ITUNES_MIN_INTERVAL_SEC
         assert len(sleep_calls) == 1
         assert sleep_calls[0] > 0
-        assert sleep_calls[0] <= m_module._MIN_INTERVAL_SEC + 0.01
+        assert sleep_calls[0] <= m_module._ITUNES_MIN_INTERVAL_SEC + 0.01
 
 
 # ---------------------------------------------------------------------------
@@ -934,10 +885,10 @@ class TestCLIMetadataFetch:
             os.chdir(old_cwd)
 
     def test_fetch_missing_fetches_all_when_none_exist(self, prism_root):
-        track = make_deezer_track()
+        track = make_itunes_track()
         lrc = make_lrclib_result()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
         ):
             result = self._run(["metadata", "fetch", "--missing"], prism_root)
@@ -959,23 +910,23 @@ class TestCLIMetadataFetch:
             json.dumps(existing) + "\n", encoding="utf-8"
         )
 
-        track = make_deezer_track()
+        track = make_itunes_track()
         lrc = make_lrclib_result()
         fetch_calls = []
 
-        def track_deezer(query):
+        def track_itunes(query):
             fetch_calls.append(query)
             return [track]
 
         with (
-            patch("mizukilens.metadata._deezer_search", side_effect=track_deezer),
+            patch("mizukilens.metadata._itunes_search", side_effect=track_itunes),
             patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
         ):
             result = self._run(["metadata", "fetch", "--missing"], prism_root)
 
         assert result.exit_code == 0
         # Only song-2 should be fetched (song-1 already has metadata)
-        # The Deezer query should mention Idol or YOASOBI but not 宇多田光
+        # The iTunes query should mention Idol or YOASOBI but not 宇多田光
         all_queries = " ".join(fetch_calls)
         assert "Idol" in all_queries or "YOASOBI" in all_queries
 
@@ -989,15 +940,15 @@ class TestCLIMetadataFetch:
             json.dumps(existing) + "\n", encoding="utf-8"
         )
 
-        track = make_deezer_track()
+        track = make_itunes_track()
         fetch_calls = []
 
-        def track_deezer(query):
+        def track_itunes(query):
             fetch_calls.append(query)
             return [track]
 
         with (
-            patch("mizukilens.metadata._deezer_search", side_effect=track_deezer),
+            patch("mizukilens.metadata._itunes_search", side_effect=track_itunes),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             result = self._run(["metadata", "fetch", "--stale"], prism_root)
@@ -1017,15 +968,15 @@ class TestCLIMetadataFetch:
             json.dumps(existing) + "\n", encoding="utf-8"
         )
 
-        track = make_deezer_track()
+        track = make_itunes_track()
         fetch_calls = []
 
-        def track_deezer(query):
+        def track_itunes(query):
             fetch_calls.append(query)
             return [track]
 
         with (
-            patch("mizukilens.metadata._deezer_search", side_effect=track_deezer),
+            patch("mizukilens.metadata._itunes_search", side_effect=track_itunes),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             result = self._run(["metadata", "fetch", "--all"], prism_root)
@@ -1046,15 +997,15 @@ class TestCLIMetadataFetch:
             json.dumps(existing) + "\n", encoding="utf-8"
         )
 
-        track = make_deezer_track()
+        track = make_itunes_track()
         fetch_calls = []
 
-        def track_deezer(query):
+        def track_itunes(query):
             fetch_calls.append(query)
             return [track]
 
         with (
-            patch("mizukilens.metadata._deezer_search", side_effect=track_deezer),
+            patch("mizukilens.metadata._itunes_search", side_effect=track_itunes),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             result = self._run(["metadata", "fetch", "--all", "--force"], prism_root)
@@ -1065,15 +1016,15 @@ class TestCLIMetadataFetch:
 
     def test_fetch_specific_song(self, prism_root):
         """--song ID fetches only that song."""
-        track = make_deezer_track()
+        track = make_itunes_track()
         fetch_calls = []
 
-        def track_deezer(query):
+        def track_itunes(query):
             fetch_calls.append(query)
             return [track]
 
         with (
-            patch("mizukilens.metadata._deezer_search", side_effect=track_deezer),
+            patch("mizukilens.metadata._itunes_search", side_effect=track_itunes),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             result = self._run(["metadata", "fetch", "--song", "song-1"], prism_root)
@@ -1090,19 +1041,19 @@ class TestCLIMetadataFetch:
         result = self._run(["metadata", "fetch", "--song", "song-999"], prism_root)
         assert result.exit_code != 0
 
-    def test_lyrics_only_skips_deezer(self, prism_root):
-        """--lyrics-only skips Deezer API calls."""
+    def test_lyrics_only_skips_itunes(self, prism_root):
+        """--lyrics-only skips iTunes API calls."""
         lrc = make_lrclib_result()
-        deezer_calls = []
+        itunes_calls = []
 
         with (
-            patch("mizukilens.metadata._deezer_search", side_effect=lambda q: deezer_calls.append(q) or []),
+            patch("mizukilens.metadata._itunes_search", side_effect=lambda q: itunes_calls.append(q) or []),
             patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
         ):
             result = self._run(["metadata", "fetch", "--lyrics-only"], prism_root)
 
         assert result.exit_code == 0
-        assert deezer_calls == []
+        assert itunes_calls == []
         # Lyrics file should have entries
         lyrics = json.loads(
             (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
@@ -1111,7 +1062,7 @@ class TestCLIMetadataFetch:
 
     def test_art_only_skips_lrclib(self, prism_root):
         """--art-only skips LRCLIB API calls."""
-        track = make_deezer_track()
+        track = make_itunes_track()
         lrclib_calls = []
 
         def mock_http_get(url, **kwargs):
@@ -1119,7 +1070,7 @@ class TestCLIMetadataFetch:
             return []
 
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", side_effect=mock_http_get),
         ):
             result = self._run(["metadata", "fetch", "--art-only"], prism_root)
@@ -1145,10 +1096,10 @@ class TestCLIMetadataFetch:
             call_count[0] += 1
             if call_count[0] == 1:
                 raise TimeoutError("timeout")
-            return [make_deezer_track()]
+            return [make_itunes_track()]
 
         with (
-            patch("mizukilens.metadata._deezer_search", side_effect=side_effect),
+            patch("mizukilens.metadata._itunes_search", side_effect=side_effect),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             result = self._run(["metadata", "fetch", "--missing"], prism_root)
@@ -1159,9 +1110,9 @@ class TestCLIMetadataFetch:
 
     def test_summary_table_shown(self, prism_root):
         """Summary table is displayed after fetching."""
-        track = make_deezer_track()
+        track = make_itunes_track()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             result = self._run(["metadata", "fetch", "--missing"], prism_root)
@@ -1187,9 +1138,9 @@ class TestCLIMetadataFetch:
 
     def test_fetched_at_is_set(self, prism_root):
         """Each fetched entry has a fetchedAt timestamp."""
-        track = make_deezer_track()
+        track = make_itunes_track()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             self._run(["metadata", "fetch", "--missing"], prism_root)
@@ -1204,9 +1155,9 @@ class TestCLIMetadataFetch:
 
     def test_metadata_schema_has_required_fields(self, prism_root):
         """song-metadata.json entries have all required schema fields."""
-        track = make_deezer_track()
+        track = make_itunes_track()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             self._run(["metadata", "fetch", "--missing"], prism_root)
@@ -1221,10 +1172,10 @@ class TestCLIMetadataFetch:
 
     def test_lyrics_schema_has_required_fields(self, prism_root):
         """song-lyrics.json entries have all required schema fields."""
-        track = make_deezer_track()
+        track = make_itunes_track()
         lrc = make_lrclib_result()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
         ):
             self._run(["metadata", "fetch", "--missing"], prism_root)
@@ -1239,9 +1190,9 @@ class TestCLIMetadataFetch:
 
     def test_artist_info_schema_has_required_fields(self, prism_root):
         """artist-info.json entries have all required schema fields."""
-        track = make_deezer_track()
+        track = make_itunes_track()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             self._run(["metadata", "fetch", "--missing"], prism_root)
@@ -1249,17 +1200,17 @@ class TestCLIMetadataFetch:
         artists = json.loads(
             (prism_root / "data" / "metadata" / "artist-info.json").read_text()
         )
-        required_fields = {"normalizedArtist", "originalName", "deezerArtistId", "pictureUrls", "fetchedAt"}
+        required_fields = {"normalizedArtist", "originalName", "itunesArtistId", "fetchedAt"}
         for entry in artists:
             missing = required_fields - set(entry.keys())
             assert missing == set(), f"Missing fields: {missing}"
 
     def test_default_mode_is_missing(self, prism_root):
         """Running `metadata fetch` without a mode flag defaults to --missing."""
-        track = make_deezer_track()
+        track = make_itunes_track()
         lrc = make_lrclib_result()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
         ):
             result = self._run(["metadata", "fetch"], prism_root)
@@ -1279,15 +1230,15 @@ class TestCLIMetadataFetch:
             json.dumps(existing) + "\n", encoding="utf-8"
         )
 
-        track = make_deezer_track()
+        track = make_itunes_track()
         fetch_calls = []
 
-        def track_deezer(query):
+        def track_itunes(query):
             fetch_calls.append(query)
             return [track]
 
         with (
-            patch("mizukilens.metadata._deezer_search", side_effect=track_deezer),
+            patch("mizukilens.metadata._itunes_search", side_effect=track_itunes),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             result = self._run(["metadata", "fetch"], prism_root)
@@ -1304,27 +1255,27 @@ class TestCLIMetadataFetch:
 
 class TestFetchResultOverallStatus:
     def test_both_matched(self):
-        r = FetchResult("s1", "T", "A", deezer_status="matched", lyrics_status="matched")
+        r = FetchResult("s1", "T", "A", art_status="matched", lyrics_status="matched")
         assert r.overall_status == "matched"
 
     def test_one_matched_one_no_match(self):
-        r = FetchResult("s1", "T", "A", deezer_status="matched", lyrics_status="no_match")
+        r = FetchResult("s1", "T", "A", art_status="matched", lyrics_status="no_match")
         assert r.overall_status == "matched"
 
     def test_both_no_match(self):
-        r = FetchResult("s1", "T", "A", deezer_status="no_match", lyrics_status="no_match")
+        r = FetchResult("s1", "T", "A", art_status="no_match", lyrics_status="no_match")
         assert r.overall_status == "no_match"
 
     def test_one_error(self):
-        r = FetchResult("s1", "T", "A", deezer_status="error", lyrics_status="no_match")
+        r = FetchResult("s1", "T", "A", art_status="error", lyrics_status="no_match")
         assert r.overall_status == "error"
 
     def test_both_skipped(self):
-        r = FetchResult("s1", "T", "A", deezer_status="skipped", lyrics_status="skipped")
+        r = FetchResult("s1", "T", "A", art_status="skipped", lyrics_status="skipped")
         assert r.overall_status == "skipped"
 
     def test_matched_and_skipped(self):
-        r = FetchResult("s1", "T", "A", deezer_status="matched", lyrics_status="skipped")
+        r = FetchResult("s1", "T", "A", art_status="matched", lyrics_status="skipped")
         assert r.overall_status == "matched"
 
 
@@ -1371,7 +1322,7 @@ class TestGetMetadataStatus:
             "matchConfidence": "exact",
             "albumArtUrl": "https://example.com/art.jpg",
             "albumArtUrls": {},
-            "deezerTrackId": 123,
+            "itunesTrackId": 123,
             "fetchedAt": "2026-02-20T10:00:00+00:00",
             "lastError": None,
         }]
@@ -1391,7 +1342,7 @@ class TestGetMetadataStatus:
         assert r.match_confidence == "exact"
         assert r.fetched_at == "2026-02-20"
         assert r.album_art_url == "https://example.com/art.jpg"
-        assert r.deezer_track_id == 123
+        assert r.itunes_track_id == 123
 
     def test_no_match_status(self, tmp_path):
         songs = [{"id": "s1", "title": "Rare Song", "originalArtist": "Unknown"}]
@@ -1537,7 +1488,7 @@ class TestCLIMetadataStatus:
                 "matchConfidence": "exact",
                 "albumArtUrl": "https://example.com/s1.jpg",
                 "albumArtUrls": {"xl": "https://example.com/s1_xl.jpg"},
-                "deezerTrackId": 111,
+                "itunesTrackId": 111,
                 "fetchedAt": "2026-02-20T10:00:00+00:00",
                 "lastError": None,
             },
@@ -1547,7 +1498,7 @@ class TestCLIMetadataStatus:
                 "matchConfidence": None,
                 "albumArtUrl": None,
                 "albumArtUrls": None,
-                "deezerTrackId": None,
+                "itunesTrackId": None,
                 "fetchedAt": "2026-02-20T10:00:00+00:00",
                 "lastError": None,
             },
@@ -1557,7 +1508,7 @@ class TestCLIMetadataStatus:
                 "matchConfidence": None,
                 "albumArtUrl": None,
                 "albumArtUrls": None,
-                "deezerTrackId": None,
+                "itunesTrackId": None,
                 "fetchedAt": "2026-02-20T10:00:00+00:00",
                 "lastError": "timeout",
             },
@@ -1662,7 +1613,7 @@ class TestCLIMetadataStatus:
         assert result.exit_code == 0
         # Detail columns should appear
         assert "Album Art URL" in result.output
-        assert "Deezer Track ID" in result.output
+        assert "iTunes Track ID" in result.output
         assert "Last Error" in result.output
 
     def test_detail_shows_album_art_url(self, prism_root):
@@ -1670,7 +1621,7 @@ class TestCLIMetadataStatus:
         assert result.exit_code == 0
         assert "https://example.com/s1.jpg" in result.output
 
-    def test_detail_shows_deezer_track_id(self, prism_root):
+    def test_detail_shows_itunes_track_id(self, prism_root):
         result = self._run(["metadata", "status", "--detail"], prism_root)
         assert result.exit_code == 0
         assert "111" in result.output
@@ -2135,9 +2086,9 @@ class TestCLIMetadataOverride:
 
         # Now run `metadata fetch --missing`
         # song-1 already has an entry, so --missing should skip it
-        track = make_deezer_track()
+        track = make_itunes_track()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             fetch_result = self._run(
@@ -2164,9 +2115,9 @@ class TestCLIMetadataOverride:
         )
 
         # Now run `metadata fetch --all --force`
-        track = make_deezer_track()
+        track = make_itunes_track()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             fetch_result = self._run(
@@ -2180,7 +2131,7 @@ class TestCLIMetadataOverride:
             (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
         )
         song1_after = next(e for e in metadata_after if e["songId"] == "song-1")
-        # After --force, should be 'matched' (from Deezer mock), not 'manual'
+        # After --force, should be 'matched' (from iTunes mock), not 'manual'
         assert song1_after["fetchStatus"] == "matched"
 
     # --- fetchStatus and matchConfidence verification ---
@@ -2270,9 +2221,9 @@ class TestCLIMetadataOverride:
         )
 
         # Now run `metadata fetch --all` WITHOUT --force
-        track = make_deezer_track()
+        track = make_itunes_track()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[]),
         ):
             fetch_result = self._run(
@@ -2323,8 +2274,8 @@ class TestCLIMetadataClear:
                 "albumArtUrl": "https://example.com/art1.jpg",
                 "albumArtUrls": {"small": "", "medium": "", "big": "", "xl": "https://example.com/art1.jpg"},
                 "albumTitle": "Album A",
-                "deezerTrackId": 1,
-                "deezerArtistId": 10,
+                "itunesTrackId": 1,
+                "itunesCollectionId": 10,
                 "trackDuration": 240,
                 "fetchedAt": _fresh_iso(),
                 "lastError": None,
@@ -2336,8 +2287,8 @@ class TestCLIMetadataClear:
                 "albumArtUrl": "https://example.com/art2.jpg",
                 "albumArtUrls": {"small": "", "medium": "", "big": "", "xl": "https://example.com/art2.jpg"},
                 "albumTitle": "Album B",
-                "deezerTrackId": 2,
-                "deezerArtistId": 20,
+                "itunesTrackId": 2,
+                "itunesCollectionId": 20,
                 "trackDuration": 200,
                 "fetchedAt": _fresh_iso(),
                 "lastError": None,
@@ -2365,14 +2316,14 @@ class TestCLIMetadataClear:
             {
                 "normalizedArtist": "宇多田光",
                 "originalName": "宇多田光",
-                "deezerArtistId": 10,
+                "itunesCollectionId": 10,
                 "pictureUrls": {"medium": "", "big": "", "xl": ""},
                 "fetchedAt": _fresh_iso(),
             },
             {
                 "normalizedArtist": "yoasobi",
                 "originalName": "YOASOBI",
-                "deezerArtistId": 20,
+                "itunesCollectionId": 20,
                 "pictureUrls": {"medium": "", "big": "", "xl": ""},
                 "fetchedAt": _fresh_iso(),
             },
@@ -2642,10 +2593,10 @@ class TestCLIMetadataClear:
         assert not any(e["songId"] == "song-1" for e in metadata)
 
         # Re-fetch
-        track = make_deezer_track()
+        track = make_itunes_track()
         lrc = make_lrclib_result()
         with (
-            patch("mizukilens.metadata._deezer_search", return_value=[track]),
+            patch("mizukilens.metadata._itunes_search", return_value=[track]),
             patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
         ):
             fetch_result = self._run(

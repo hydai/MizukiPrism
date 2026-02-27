@@ -1015,7 +1015,7 @@ def metadata_group() -> None:
 
     \b
     Subcommands:
-      fetch    — fetch metadata from Deezer (album art) and LRCLIB (lyrics)
+      fetch    — fetch metadata from iTunes (album art) and LRCLIB (lyrics)
       status   — view metadata status for all songs
       override — manually override album art URL and/or lyrics
       clear    — remove metadata entries so they can be re-fetched
@@ -1034,9 +1034,9 @@ def metadata_group() -> None:
 @click.option("--force", is_flag=True, default=False,
               help="Allow overwriting manual entries.")
 @click.option("--lyrics-only", "lyrics_only", is_flag=True, default=False,
-              help="Only fetch lyrics from LRCLIB (skip Deezer).")
+              help="Only fetch lyrics from LRCLIB (skip iTunes).")
 @click.option("--art-only", "art_only", is_flag=True, default=False,
-              help="Only fetch album art from Deezer (skip LRCLIB).")
+              help="Only fetch album art from iTunes (skip LRCLIB).")
 def metadata_fetch_cmd(
     mode: str,
     song_id: str | None,
@@ -1044,7 +1044,7 @@ def metadata_fetch_cmd(
     lyrics_only: bool,
     art_only: bool,
 ) -> None:
-    """Fetch album art and lyrics metadata from Deezer and LRCLIB.
+    """Fetch album art and lyrics metadata from iTunes and LRCLIB.
 
     \b
     Examples:
@@ -1052,7 +1052,7 @@ def metadata_fetch_cmd(
       mizukilens metadata fetch --stale         # re-fetch entries >90 days old
       mizukilens metadata fetch --all           # re-fetch everything
       mizukilens metadata fetch --song song-1   # fetch one specific song
-      mizukilens metadata fetch --art-only      # Deezer only
+      mizukilens metadata fetch --art-only      # iTunes only
       mizukilens metadata fetch --lyrics-only   # LRCLIB only
     """
     import sys
@@ -1074,7 +1074,7 @@ def metadata_fetch_cmd(
         sys.exit(1)
 
     # Determine fetch flags
-    do_deezer = not lyrics_only
+    do_art = not lyrics_only
     do_lyrics = not art_only
 
     # Locate MizukiPrism root
@@ -1137,8 +1137,8 @@ def metadata_fetch_cmd(
         return
 
     console.print(f"[cyan]Fetching metadata for[/cyan] [bold]{len(target_songs)}[/bold] songs...")
-    if not do_deezer:
-        console.print("[dim](Lyrics only — Deezer skipped)[/dim]")
+    if not do_art:
+        console.print("[dim](Lyrics only — iTunes skipped)[/dim]")
     if not do_lyrics:
         console.print("[dim](Art only — LRCLIB skipped)[/dim]")
 
@@ -1171,7 +1171,7 @@ def metadata_fetch_cmd(
                 result = fetch_song_metadata(
                     song=song,
                     metadata_dir=metadata_dir,
-                    fetch_deezer=do_deezer,
+                    fetch_art=do_art,
                     fetch_lyrics=do_lyrics,
                 )
             except Exception as exc:  # noqa: BLE001
@@ -1216,7 +1216,7 @@ def metadata_fetch_cmd(
 
 @metadata_group.command("status")
 @click.option("--detail", is_flag=True, default=False,
-              help="Show additional columns (URLs, Deezer IDs, error messages, fetched time).")
+              help="Show additional columns (URLs, iTunes IDs, error messages, fetched time).")
 @click.option(
     "--filter", "filter_status",
     type=click.Choice(["matched", "no_match", "error", "manual", "pending"], case_sensitive=False),
@@ -1302,7 +1302,7 @@ def metadata_status_cmd(detail: bool, filter_status: str | None) -> None:
     tbl.add_column("Fetched", no_wrap=True)
     if detail:
         tbl.add_column("Album Art URL", overflow="fold")
-        tbl.add_column("Deezer Track ID", no_wrap=True)
+        tbl.add_column("iTunes Track ID", no_wrap=True)
         tbl.add_column("Last Error", overflow="fold")
 
     for r in records:
@@ -1316,7 +1316,7 @@ def metadata_status_cmd(detail: bool, filter_status: str | None) -> None:
         ]
         if detail:
             row.append(r.album_art_url or "[dim]\u2014[/dim]")
-            row.append(str(r.deezer_track_id) if r.deezer_track_id is not None else "[dim]\u2014[/dim]")
+            row.append(str(r.itunes_track_id) if r.itunes_track_id is not None else "[dim]\u2014[/dim]")
             # Show first non-None error
             last_err = r.cover_last_error or r.lyrics_last_error or ""
             row.append(last_err or "[dim]\u2014[/dim]")
@@ -1599,8 +1599,8 @@ def metadata_override_cmd(song_id: str, album_art_url: str | None, lyrics_file: 
             "albumArtUrl": album_art_url,
             "albumArtUrls": art_urls,
             "albumTitle": None,
-            "deezerTrackId": None,
-            "deezerArtistId": None,
+            "itunesTrackId": None,
+            "itunesCollectionId": None,
             "trackDuration": None,
             "fetchedAt": now,
             "lastError": None,
@@ -1716,10 +1716,10 @@ def cache_clear_cmd(stream_id: str | None) -> None:
 @click.option("--stream", "stream_id", type=str, default=None, metavar="VIDEO_ID",
               help="Only fill durations for a specific stream.")
 def cache_fill_durations_cmd(dry_run: bool, stream_id: str | None) -> None:
-    """Fill missing end timestamps using Deezer track durations.
+    """Fill missing end timestamps using iTunes track durations.
 
     \b
-    Queries Deezer for each song with a NULL end_timestamp, then computes:
+    Queries iTunes for each song with a NULL end_timestamp, then computes:
       end_timestamp = start_timestamp + trackDuration
     """
     from mizukilens.cache import (
@@ -1728,7 +1728,7 @@ def cache_fill_durations_cmd(dry_run: bool, stream_id: str | None) -> None:
         update_song_end_timestamp,
     )
     from mizukilens.extraction import seconds_to_timestamp, parse_timestamp
-    from mizukilens.metadata import fetch_deezer_metadata
+    from mizukilens.metadata import fetch_itunes_metadata
 
     conn = open_db()
     try:
@@ -1758,18 +1758,18 @@ def cache_fill_durations_cmd(dry_run: bool, stream_id: str | None) -> None:
                 continue
 
             try:
-                deezer_result = fetch_deezer_metadata(artist, title)
+                itunes_result = fetch_itunes_metadata(artist, title)
             except Exception as exc:  # noqa: BLE001
                 console.print(f"  [red]✗[/red] {title} — API error: {exc}")
                 errors += 1
                 continue
 
-            if deezer_result is None or deezer_result.get("match_confidence") is None:
-                console.print(f"  [yellow]–[/yellow] {title} — no Deezer match")
+            if itunes_result is None or itunes_result.get("match_confidence") is None:
+                console.print(f"  [yellow]–[/yellow] {title} — no iTunes match")
                 no_match += 1
                 continue
 
-            duration = deezer_result.get("trackDuration")
+            duration = itunes_result.get("trackDuration")
             if not duration:
                 console.print(f"  [yellow]–[/yellow] {title} — matched but no duration")
                 no_match += 1

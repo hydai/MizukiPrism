@@ -37,8 +37,10 @@ export interface SongMetadata {
     xl: string;
   };
   albumTitle?: string;
-  deezerTrackId?: number;
-  deezerArtistId?: number;
+  deezerTrackId?: number;    // Legacy (Deezer matches)
+  deezerArtistId?: number;   // Legacy (Deezer matches)
+  itunesTrackId?: number;
+  itunesCollectionId?: number;
   trackDuration?: number;
   fetchedAt: string;
   lastError?: string;
@@ -56,7 +58,8 @@ export interface SongLyrics {
 export interface ArtistInfo {
   normalizedArtist: string;
   originalName: string;
-  deezerArtistId: number;
+  deezerArtistId?: number;   // Legacy (Deezer matches)
+  itunesArtistId?: number;
   pictureUrls?: {
     medium: string;
     big: string;

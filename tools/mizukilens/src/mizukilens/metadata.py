@@ -1,4 +1,4 @@
-"""Metadata module for MizukiLens — Deezer album art and LRCLIB lyrics fetching.
+"""Metadata module for MizukiLens — iTunes album art and LRCLIB lyrics fetching.
 
 Fetches music metadata from external APIs and stores results in static JSON
 files under data/metadata/ in the MizukiPrism project root.
@@ -17,8 +17,8 @@ _clean_title(title: str) -> str
 is_lrc_format(content: str) -> bool
     Return True if the content contains at least one LRC timestamp line.
 
-fetch_deezer_metadata(artist: str, title: str) -> dict | None
-    Search Deezer for a track, returning structured metadata.
+fetch_itunes_metadata(artist: str, title: str) -> dict | None
+    Search iTunes for a track, returning structured metadata.
 
 fetch_lrclib_lyrics(artist: str, title: str) -> dict | None
     Search LRCLIB for synced/plain lyrics.
@@ -38,7 +38,7 @@ upsert_song_lyrics(records: list[dict], entry: dict) -> list[dict]
 upsert_artist_info(records: list[dict], entry: dict) -> list[dict]
     Upsert an ArtistInfo record by normalizedArtist.
 
-fetch_song_metadata(song: dict, metadata_dir: Path, fetch_deezer: bool, fetch_lyrics: bool) -> FetchResult
+fetch_song_metadata(song: dict, metadata_dir: Path, fetch_art: bool, fetch_lyrics: bool) -> FetchResult
     Fetch and persist metadata for a single song.
 
 get_metadata_status(songs_path: Path, metadata_dir: Path) -> list[SongStatusRecord]
@@ -63,11 +63,12 @@ from typing import Any
 # Constants
 # ---------------------------------------------------------------------------
 
-DEEZER_SEARCH_URL = "https://api.deezer.com/search"
+ITUNES_SEARCH_URL = "https://itunes.apple.com/search"
 LRCLIB_SEARCH_URL = "https://lrclib.net/api/search"
 
-# Rate limiting: 200ms min between calls, max 8 req/sec
-_MIN_INTERVAL_SEC = 0.2
+# Rate limiting: iTunes ~20 req/min → 3s between calls; LRCLIB uses same
+_ITUNES_MIN_INTERVAL_SEC = 3.0
+_LRCLIB_MIN_INTERVAL_SEC = 0.2
 _TIMEOUT_SEC = 5.0
 
 # Staleness threshold: 90 days
@@ -78,25 +79,25 @@ STALE_DAYS = 90
 # Rate limiter state (module-level, shared across all calls in a session)
 # ---------------------------------------------------------------------------
 
-_last_deezer_call: float = 0.0
+_last_itunes_call: float = 0.0
 _last_lrclib_call: float = 0.0
 
 
-def _wait_deezer() -> None:
-    """Enforce minimum interval between Deezer API calls."""
-    global _last_deezer_call
-    elapsed = time.monotonic() - _last_deezer_call
-    if elapsed < _MIN_INTERVAL_SEC:
-        time.sleep(_MIN_INTERVAL_SEC - elapsed)
-    _last_deezer_call = time.monotonic()
+def _wait_itunes() -> None:
+    """Enforce minimum interval between iTunes API calls."""
+    global _last_itunes_call
+    elapsed = time.monotonic() - _last_itunes_call
+    if elapsed < _ITUNES_MIN_INTERVAL_SEC:
+        time.sleep(_ITUNES_MIN_INTERVAL_SEC - elapsed)
+    _last_itunes_call = time.monotonic()
 
 
 def _wait_lrclib() -> None:
     """Enforce minimum interval between LRCLIB API calls."""
     global _last_lrclib_call
     elapsed = time.monotonic() - _last_lrclib_call
-    if elapsed < _MIN_INTERVAL_SEC:
-        time.sleep(_MIN_INTERVAL_SEC - elapsed)
+    if elapsed < _LRCLIB_MIN_INTERVAL_SEC:
+        time.sleep(_LRCLIB_MIN_INTERVAL_SEC - elapsed)
     _last_lrclib_call = time.monotonic()
 
 
@@ -107,7 +108,7 @@ def _wait_lrclib() -> None:
 # Pattern for "feat." / "ft." and everything after (with optional parentheses)
 _FEAT_RE = re.compile(r"\s*[\(（]?\s*(?:feat\.?|ft\.?)\s+.+[\)）]?\s*$", re.IGNORECASE)
 
-# CJK and special punctuation that pollutes Deezer search queries
+# CJK and special punctuation that pollutes search queries
 _CJK_PUNCT_RE = re.compile(r"[？！♪☆★〜~・「」『』【】（）《》〈〉♡♥→←↑↓…‥、。]+")
 
 
@@ -205,61 +206,56 @@ def _http_get_json(url: str, timeout: float = _TIMEOUT_SEC) -> Any:
 
 
 # ---------------------------------------------------------------------------
-# Deezer API client
+# iTunes API client
 # ---------------------------------------------------------------------------
 
-def _deezer_search(query: str) -> list[dict]:
-    """Execute a single Deezer search and return the data list."""
-    _wait_deezer()
-    encoded = urllib.parse.urlencode({"q": query})
-    url = f"{DEEZER_SEARCH_URL}?{encoded}"
+def _itunes_search(query: str, country: str = "JP") -> list[dict]:
+    """Execute a single iTunes search and return the results list."""
+    _wait_itunes()
+    params = urllib.parse.urlencode({
+        "term": query, "media": "music", "entity": "song",
+        "country": country, "limit": "10",
+    })
+    url = f"{ITUNES_SEARCH_URL}?{params}"
     try:
         data = _http_get_json(url)
     except TimeoutError:
         raise
     except (urllib.error.URLError, json.JSONDecodeError) as exc:
         raise urllib.error.URLError(str(exc)) from exc
-    return data.get("data", []) if isinstance(data, dict) else []
+    return data.get("results", []) if isinstance(data, dict) else []
 
 
-def _extract_deezer_metadata(track: dict) -> dict:
-    """Extract structured metadata from a Deezer track result."""
-    album = track.get("album", {})
-    artist = track.get("artist", {})
+def _extract_itunes_metadata(track: dict) -> dict:
+    """Extract structured metadata from an iTunes track result."""
+    duration_ms = track.get("trackTimeMillis", 0)
+    artwork = track.get("artworkUrl100", "")
     return {
-        "deezerTrackId": track.get("id"),
-        "deezerArtistId": artist.get("id"),
-        "albumTitle": album.get("title"),
-        "trackDuration": track.get("duration"),
+        "itunesTrackId": track.get("trackId"),
+        "itunesCollectionId": track.get("collectionId"),
+        "albumTitle": track.get("collectionName", ""),
+        "trackDuration": duration_ms // 1000,
         "albumArtUrls": {
-            "small": album.get("cover_small", ""),
-            "medium": album.get("cover_medium", ""),
-            "big": album.get("cover_big", ""),
-            "xl": album.get("cover_xl", ""),
+            "small": artwork.replace("100x100bb", "60x60bb"),
+            "medium": artwork.replace("100x100bb", "200x200bb"),
+            "big": artwork.replace("100x100bb", "400x400bb"),
+            "xl": artwork.replace("100x100bb", "600x600bb"),
         },
-        "artistName": artist.get("name", ""),
-        "artistPictureUrls": {
-            "medium": artist.get("picture_medium", ""),
-            "big": artist.get("picture_big", ""),
-            "xl": artist.get("picture_xl", ""),
-        },
+        "artistName": track.get("artistName", ""),
     }
 
 
-def fetch_deezer_metadata(original_artist: str, title: str) -> dict | None:
-    """Search Deezer for a track using up to 7 fallback strategies.
+def fetch_itunes_metadata(original_artist: str, title: str) -> dict | None:
+    """Search iTunes for a track using up to 4 fallback strategies.
 
     Strategy order (conditional strategies only added when relevant):
-      1. Structured: ``artist:"<artist>" track:"<title>"`` → exact
-      2. Cleaned artist (if feat.): ``artist:"<cleaned>" track:"<title>"`` → exact
-      3. Simple: ``<artist> <title>`` → fuzzy
-      4. Title-only structured: ``track:"<title>"`` → fuzzy
-      5. Bare title: ``<title>`` → fuzzy_title
-      6. Cleaned title (if special punct): ``<cleaned_title>`` → fuzzy_cleaned
-      7. Cleaned artist simple (if feat.): ``<cleaned_artist> <title>`` → fuzzy
+      1. ``<artist> <title>`` with country=JP → exact
+      2. ``<cleaned_artist> <title>`` (if feat.) with country=JP → exact
+      3. ``<title>`` with country=JP → fuzzy
+      4. ``<cleaned_title>`` (if special punct) with country=JP → fuzzy_cleaned
 
     Returns a dict with keys: track_result, match_confidence, and the
-    extracted Deezer metadata. Returns None only when no API call succeeded
+    extracted iTunes metadata. Returns None only when no API call succeeded
     (network error propagated).
 
     On no-match (all strategies return 0 results), returns a dict with
@@ -271,23 +267,19 @@ def fetch_deezer_metadata(original_artist: str, title: str) -> dict | None:
     has_special_punct = cleaned_title != title
 
     strategies: list[tuple[str, str]] = [
-        (f'artist:"{original_artist}" track:"{title}"', "exact"),
+        (f"{original_artist} {title}", "exact"),
     ]
     if has_feat:
-        strategies.append((f'artist:"{cleaned_artist}" track:"{title}"', "exact"))
-    strategies.append((f"{original_artist} {title}", "fuzzy"))
-    strategies.append((f'track:"{title}"', "fuzzy"))
-    strategies.append((title, "fuzzy_title"))
+        strategies.append((f"{cleaned_artist} {title}", "exact"))
+    strategies.append((title, "fuzzy"))
     if has_special_punct:
         strategies.append((cleaned_title, "fuzzy_cleaned"))
-    if has_feat:
-        strategies.append((f"{cleaned_artist} {title}", "fuzzy"))
 
     last_error: str | None = None
 
     for query, confidence in strategies:
         try:
-            results = _deezer_search(query)
+            results = _itunes_search(query)
         except TimeoutError:
             last_error = "timeout"
             continue
@@ -297,7 +289,7 @@ def fetch_deezer_metadata(original_artist: str, title: str) -> dict | None:
 
         if results:
             track = results[0]
-            meta = _extract_deezer_metadata(track)
+            meta = _extract_itunes_metadata(track)
             meta["match_confidence"] = confidence
             return meta
 
@@ -460,16 +452,16 @@ class FetchResult:
     song_id: str
     title: str
     original_artist: str
-    deezer_status: str  # 'matched', 'no_match', 'error', 'skipped'
+    art_status: str  # 'matched', 'no_match', 'error', 'skipped'
     lyrics_status: str  # 'matched', 'no_match', 'error', 'skipped'
-    deezer_confidence: str | None = None
-    deezer_error: str | None = None
+    art_confidence: str | None = None
+    art_error: str | None = None
     lyrics_error: str | None = None
 
     @property
     def overall_status(self) -> str:
         """Return 'matched', 'no_match', 'error', or 'skipped'."""
-        statuses = {self.deezer_status, self.lyrics_status}
+        statuses = {self.art_status, self.lyrics_status}
         if statuses == {"skipped"}:
             return "skipped"
         if "matched" in statuses:
@@ -491,7 +483,7 @@ def _now_iso() -> str:
 def fetch_song_metadata(
     song: dict,
     metadata_dir: Path,
-    fetch_deezer: bool = True,
+    fetch_art: bool = True,
     fetch_lyrics: bool = True,
 ) -> FetchResult:
     """Fetch and persist metadata for a single song.
@@ -502,7 +494,7 @@ def fetch_song_metadata(
     Args:
         song: A song dict with at least ``id``, ``title``, ``originalArtist``.
         metadata_dir: Path to the ``data/metadata/`` directory.
-        fetch_deezer: Whether to call the Deezer API.
+        fetch_art: Whether to call the iTunes API.
         fetch_lyrics: Whether to call the LRCLIB API.
 
     Returns:
@@ -524,71 +516,69 @@ def fetch_song_metadata(
 
     now = _now_iso()
 
-    # --- Deezer ---
-    deezer_status = "skipped"
-    deezer_confidence: str | None = None
-    deezer_error: str | None = None
+    # --- iTunes ---
+    art_status = "skipped"
+    art_confidence: str | None = None
+    art_error: str | None = None
 
-    if fetch_deezer:
-        deezer_result = fetch_deezer_metadata(original_artist, title)
+    if fetch_art:
+        itunes_result = fetch_itunes_metadata(original_artist, title)
 
-        if deezer_result is None:
-            # Should not happen with current implementation, but be safe
-            deezer_status = "error"
-            deezer_error = "unexpected None from fetch_deezer_metadata"
-        elif deezer_result.get("match_confidence") is not None:
+        if itunes_result is None:
+            art_status = "error"
+            art_error = "unexpected None from fetch_itunes_metadata"
+        elif itunes_result.get("match_confidence") is not None:
             # Matched
-            deezer_status = "matched"
-            deezer_confidence = deezer_result["match_confidence"]
-            art_urls = deezer_result.get("albumArtUrls", {})
+            art_status = "matched"
+            art_confidence = itunes_result["match_confidence"]
+            art_urls = itunes_result.get("albumArtUrls", {})
             album_art_url = art_urls.get("xl") or art_urls.get("big") or art_urls.get("medium") or art_urls.get("small") or ""
 
             song_meta_entry: dict[str, Any] = {
                 "songId": song_id,
                 "fetchStatus": "matched",
-                "matchConfidence": deezer_confidence,
+                "matchConfidence": art_confidence,
                 "albumArtUrl": album_art_url,
                 "albumArtUrls": art_urls,
-                "albumTitle": deezer_result.get("albumTitle"),
-                "deezerTrackId": deezer_result.get("deezerTrackId"),
-                "deezerArtistId": deezer_result.get("deezerArtistId"),
-                "trackDuration": deezer_result.get("trackDuration"),
+                "albumTitle": itunes_result.get("albumTitle"),
+                "itunesTrackId": itunes_result.get("itunesTrackId"),
+                "itunesCollectionId": itunes_result.get("itunesCollectionId"),
+                "trackDuration": itunes_result.get("trackDuration"),
                 "fetchedAt": now,
                 "lastError": None,
             }
             metadata_records = upsert_song_metadata(metadata_records, song_meta_entry)
 
             # Upsert ArtistInfo
-            deezer_artist_name = deezer_result.get("artistName", original_artist)
+            itunes_artist_name = itunes_result.get("artistName", original_artist)
             artist_entry: dict[str, Any] = {
                 "normalizedArtist": normalize_artist(original_artist),
-                "originalName": deezer_artist_name,
-                "deezerArtistId": deezer_result.get("deezerArtistId"),
-                "pictureUrls": deezer_result.get("artistPictureUrls", {}),
+                "originalName": itunes_artist_name,
+                "itunesArtistId": itunes_result.get("itunesTrackId"),
                 "fetchedAt": now,
             }
             artist_records = upsert_artist_info(artist_records, artist_entry)
         else:
             # No match or error
-            last_err = deezer_result.get("last_error")
+            last_err = itunes_result.get("last_error")
             if last_err is not None:
-                deezer_status = "error"
-                deezer_error = last_err
+                art_status = "error"
+                art_error = last_err
             else:
-                deezer_status = "no_match"
+                art_status = "no_match"
 
             song_meta_entry = {
                 "songId": song_id,
-                "fetchStatus": deezer_status,
+                "fetchStatus": art_status,
                 "matchConfidence": None,
                 "albumArtUrl": None,
                 "albumArtUrls": None,
                 "albumTitle": None,
-                "deezerTrackId": None,
-                "deezerArtistId": None,
+                "itunesTrackId": None,
+                "itunesCollectionId": None,
                 "trackDuration": None,
                 "fetchedAt": now,
-                "lastError": deezer_error,
+                "lastError": art_error,
             }
             metadata_records = upsert_song_metadata(metadata_records, song_meta_entry)
 
@@ -629,7 +619,7 @@ def fetch_song_metadata(
             lyrics_records = upsert_song_lyrics(lyrics_records, lyrics_entry)
 
     # --- Persist ---
-    if fetch_deezer:
+    if fetch_art:
         write_metadata_file(metadata_path, metadata_records)
         write_metadata_file(artist_path, artist_records)
     if fetch_lyrics:
@@ -639,10 +629,10 @@ def fetch_song_metadata(
         song_id=song_id,
         title=title,
         original_artist=original_artist,
-        deezer_status=deezer_status,
+        art_status=art_status,
         lyrics_status=lyrics_status,
-        deezer_confidence=deezer_confidence,
-        deezer_error=deezer_error,
+        art_confidence=art_confidence,
+        art_error=art_error,
         lyrics_error=lyrics_error,
     )
 
@@ -682,7 +672,7 @@ class SongStatusRecord:
     match_confidence: str | None = None   # 'exact', 'fuzzy', 'manual', or None
     fetched_at: str | None = None         # ISO 8601 date string (date portion only)
     album_art_url: str | None = None
-    deezer_track_id: int | None = None
+    itunes_track_id: int | None = None
     cover_last_error: str | None = None
     lyrics_last_error: str | None = None
 
@@ -738,7 +728,7 @@ def get_metadata_status(
             match_confidence = None
             fetched_at = None
             album_art_url = None
-            deezer_track_id = None
+            itunes_track_id = None
             cover_last_error = None
         else:
             cover_status = meta.get("fetchStatus", "pending")
@@ -750,7 +740,7 @@ def get_metadata_status(
             else:
                 fetched_at = None
             album_art_url = meta.get("albumArtUrl")
-            deezer_track_id = meta.get("deezerTrackId")
+            itunes_track_id = meta.get("itunesTrackId")
             cover_last_error = meta.get("lastError")
 
         # Lyrics status
@@ -770,7 +760,7 @@ def get_metadata_status(
             match_confidence=match_confidence,
             fetched_at=fetched_at,
             album_art_url=album_art_url,
-            deezer_track_id=deezer_track_id,
+            itunes_track_id=itunes_track_id,
             cover_last_error=cover_last_error,
             lyrics_last_error=lyrics_last_error,
         ))

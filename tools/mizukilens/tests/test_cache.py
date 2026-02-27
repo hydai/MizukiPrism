@@ -1173,17 +1173,16 @@ class TestUpdateSongEndTimestamp:
 # ===========================================================================
 
 
-def _make_deezer_result(duration: int = 240, confidence: str = "exact") -> dict:
-    """Build a minimal Deezer metadata result for mocking."""
+def _make_itunes_result(duration: int = 240, confidence: str = "exact") -> dict:
+    """Build a minimal iTunes metadata result for mocking."""
     return {
         "match_confidence": confidence,
         "trackDuration": duration,
-        "deezerTrackId": 1,
+        "itunesTrackId": 1,
         "albumTitle": "Album",
         "albumArtUrls": {},
         "artistName": "Artist",
-        "artistPictureUrls": {},
-        "deezerArtistId": 10,
+        "itunesCollectionId": 100,
     }
 
 
@@ -1207,7 +1206,7 @@ class TestCacheFillDurations:
 
         runner = CliRunner()
         with self._mock_open_db(db), \
-             patch("mizukilens.metadata.fetch_deezer_metadata", return_value=_make_deezer_result(240)):
+             patch("mizukilens.metadata.fetch_itunes_metadata", return_value=_make_itunes_result(240)):
             result = runner.invoke(main, ["cache", "fill-durations", "--dry-run"])
 
         assert result.exit_code == 0
@@ -1217,7 +1216,7 @@ class TestCacheFillDurations:
         assert len(songs) == 1
 
     def test_successful_fill(self, db: sqlite3.Connection, tmp_path: Path) -> None:
-        """Fills end_timestamp from Deezer duration."""
+        """Fills end_timestamp from iTunes duration."""
         _add_stream(db, "vid1", status="extracted")
         upsert_parsed_songs(db, "vid1", [
             {"order_index": 0, "song_name": "Song A", "artist": "Art",
@@ -1226,7 +1225,7 @@ class TestCacheFillDurations:
 
         runner = CliRunner()
         with self._mock_open_db(db), \
-             patch("mizukilens.metadata.fetch_deezer_metadata", return_value=_make_deezer_result(240)):
+             patch("mizukilens.metadata.fetch_itunes_metadata", return_value=_make_itunes_result(240)):
             result = runner.invoke(main, ["cache", "fill-durations"])
 
         assert result.exit_code == 0
@@ -1236,7 +1235,7 @@ class TestCacheFillDurations:
         assert updated[0]["end_timestamp"] == "9:00"
 
     def test_no_match_skipped(self, db: sqlite3.Connection, tmp_path: Path) -> None:
-        """Songs with no Deezer match are skipped."""
+        """Songs with no iTunes match are skipped."""
         _add_stream(db, "vid1", status="extracted")
         upsert_parsed_songs(db, "vid1", [
             {"order_index": 0, "song_name": "Unknown", "artist": None,
@@ -1246,11 +1245,11 @@ class TestCacheFillDurations:
         no_match = {"match_confidence": None, "last_error": None}
         runner = CliRunner()
         with self._mock_open_db(db), \
-             patch("mizukilens.metadata.fetch_deezer_metadata", return_value=no_match):
+             patch("mizukilens.metadata.fetch_itunes_metadata", return_value=no_match):
             result = runner.invoke(main, ["cache", "fill-durations"])
 
         assert result.exit_code == 0
-        assert "no Deezer match" in result.output
+        assert "no iTunes match" in result.output
         assert "0 filled" in result.output
 
     def test_stream_filter(self, db: sqlite3.Connection, tmp_path: Path) -> None:
@@ -1268,7 +1267,7 @@ class TestCacheFillDurations:
 
         runner = CliRunner()
         with self._mock_open_db(db), \
-             patch("mizukilens.metadata.fetch_deezer_metadata", return_value=_make_deezer_result(180)):
+             patch("mizukilens.metadata.fetch_itunes_metadata", return_value=_make_itunes_result(180)):
             result = runner.invoke(main, ["cache", "fill-durations", "--stream", "vid1"])
 
         assert result.exit_code == 0
@@ -1287,7 +1286,7 @@ class TestCacheFillDurations:
 
         runner = CliRunner()
         with self._mock_open_db(db), \
-             patch("mizukilens.metadata.fetch_deezer_metadata", side_effect=Exception("network")):
+             patch("mizukilens.metadata.fetch_itunes_metadata", side_effect=Exception("network")):
             result = runner.invoke(main, ["cache", "fill-durations"])
 
         assert result.exit_code == 0
