@@ -21,6 +21,7 @@ def create_app(db_path: str | Path | None = None) -> Flask:
         __name__,
         template_folder=str(Path(__file__).parent / "stamp_templates"),
         static_folder=str(Path(__file__).parent / "stamp_static"),
+        static_url_path="/static",
     )
 
     # Store db_path in app config so routes can access it.
