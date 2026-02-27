@@ -167,6 +167,7 @@
       const li = document.createElement("li");
       li.className = i === selectedIndex ? "selected" : "";
       li.addEventListener("click", function () {
+        if (selectedIndex === i) return;
         selectedIndex = i;
         renderSongs();
         updateControls();
