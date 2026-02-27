@@ -131,6 +131,7 @@ def create_app(db_path: str | Path | None = None) -> Flask:
             )
             if not updated:
                 return jsonify({"error": f"Song {song_pk} not found"}), 404
+            _maybe_reapprove_stream(conn, song_pk)
             return jsonify({"ok": True, "songId": song_pk, "endTimestamp": end_ts.strip()})
         finally:
             conn.close()
@@ -149,6 +150,7 @@ def create_app(db_path: str | Path | None = None) -> Flask:
             updated = clear_song_end_timestamp(conn, song_pk)
             if not updated:
                 return jsonify({"error": f"Song {song_pk} not found"}), 404
+            _maybe_reapprove_stream(conn, song_pk)
             return jsonify({"ok": True, "songId": song_pk})
         finally:
             conn.close()
@@ -179,5 +181,22 @@ def create_app(db_path: str | Path | None = None) -> Flask:
             })
         finally:
             conn.close()
+
+    # ------------------------------------------------------------------
+    # Helper: re-approve stream after stamp edit
+    # ------------------------------------------------------------------
+
+    def _maybe_reapprove_stream(conn, song_pk: int) -> None:
+        """Transition the song's parent stream back to 'approved' if needed."""
+        from mizukilens.cache import get_stream, update_stream_status
+
+        row = conn.execute(
+            "SELECT video_id FROM parsed_songs WHERE id = ?", (song_pk,)
+        ).fetchone()
+        if not row:
+            return
+        stream = get_stream(conn, row["video_id"])
+        if stream and stream["status"] in ("exported", "imported"):
+            update_stream_status(conn, row["video_id"], "approved")
 
     return app

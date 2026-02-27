@@ -12,8 +12,10 @@ import pytest
 from mizukilens.cache import (
     clear_song_end_timestamp,
     get_parsed_songs,
+    get_stream,
     open_db,
     update_song_end_timestamp,
+    update_stream_status,
     upsert_parsed_songs,
     upsert_stream,
 )
@@ -439,7 +441,83 @@ class TestApiStats:
 
 
 # ===========================================================================
-# SECTION 10: Flask API — index page
+# SECTION 10: Flask API — stamp re-approves stream
+# ===========================================================================
+
+class TestStampReapprovesStream:
+    """Stamping/clearing should transition exported/imported streams back to approved."""
+
+    def _make_client(self, db_path: Path, stream_status: str):
+        conn = open_db(db_path)
+        _add_stream(conn, status="approved")
+        _add_songs(conn)
+        # Transition to target status via valid path
+        if stream_status in ("exported", "imported"):
+            update_stream_status(conn, "abc123", "exported")
+        if stream_status == "imported":
+            update_stream_status(conn, "abc123", "imported")
+        conn.close()
+        app = create_app(db_path=db_path)
+        app.config["TESTING"] = True
+        return app.test_client()
+
+    def test_stamp_on_exported_stream_reapproves(self, db_path: Path) -> None:
+        c = self._make_client(db_path, "exported")
+        songs = c.get("/api/streams/abc123/songs").get_json()
+        c.put(
+            f"/api/songs/{songs[0]['id']}/end-timestamp",
+            data=json.dumps({"endTimestamp": "5:30"}),
+            content_type="application/json",
+        )
+        conn = open_db(db_path)
+        assert get_stream(conn, "abc123")["status"] == "approved"
+        conn.close()
+
+    def test_stamp_on_imported_stream_reapproves(self, db_path: Path) -> None:
+        c = self._make_client(db_path, "imported")
+        songs = c.get("/api/streams/abc123/songs").get_json()
+        c.put(
+            f"/api/songs/{songs[0]['id']}/end-timestamp",
+            data=json.dumps({"endTimestamp": "5:30"}),
+            content_type="application/json",
+        )
+        conn = open_db(db_path)
+        assert get_stream(conn, "abc123")["status"] == "approved"
+        conn.close()
+
+    def test_clear_on_exported_stream_reapproves(self, db_path: Path) -> None:
+        c = self._make_client(db_path, "exported")
+        songs = c.get("/api/streams/abc123/songs").get_json()
+        song_c_id = songs[2]["id"]  # Song C has end_timestamp
+        c.delete(f"/api/songs/{song_c_id}/end-timestamp")
+        conn = open_db(db_path)
+        assert get_stream(conn, "abc123")["status"] == "approved"
+        conn.close()
+
+    def test_clear_on_imported_stream_reapproves(self, db_path: Path) -> None:
+        c = self._make_client(db_path, "imported")
+        songs = c.get("/api/streams/abc123/songs").get_json()
+        song_c_id = songs[2]["id"]
+        c.delete(f"/api/songs/{song_c_id}/end-timestamp")
+        conn = open_db(db_path)
+        assert get_stream(conn, "abc123")["status"] == "approved"
+        conn.close()
+
+    def test_stamp_on_approved_stream_stays_approved(self, db_path: Path) -> None:
+        c = self._make_client(db_path, "approved")
+        songs = c.get("/api/streams/abc123/songs").get_json()
+        c.put(
+            f"/api/songs/{songs[0]['id']}/end-timestamp",
+            data=json.dumps({"endTimestamp": "5:30"}),
+            content_type="application/json",
+        )
+        conn = open_db(db_path)
+        assert get_stream(conn, "abc123")["status"] == "approved"
+        conn.close()
+
+
+# ===========================================================================
+# SECTION 11: Flask API — index page
 # ===========================================================================
 
 class TestIndexPage:
