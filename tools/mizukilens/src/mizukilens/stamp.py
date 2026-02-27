@@ -51,15 +51,27 @@ def create_app(db_path: str | Path | None = None) -> Flask:
     @app.route("/api/streams")
     def api_streams():
         """List streams in approved/exported/imported status with pending stamp counts."""
+        allowed = {"approved", "exported", "imported"}
+        status_param = request.args.get("status")
+        if status_param:
+            requested = {s.strip() for s in status_param.split(",") if s.strip()}
+            statuses = allowed & requested
+        else:
+            statuses = allowed
+        if not statuses:
+            return jsonify([])
+
         conn = _open()
         try:
+            placeholders = ",".join("?" for _ in statuses)
             cur = conn.execute(
                 "SELECT s.video_id, s.title, s.date, s.status, "
                 "  (SELECT COUNT(*) FROM parsed_songs p "
                 "   WHERE p.video_id = s.video_id AND p.end_timestamp IS NULL) AS pending "
                 "FROM streams s "
-                "WHERE s.status IN ('approved', 'exported', 'imported') "
-                "ORDER BY s.date DESC, s.video_id"
+                f"WHERE s.status IN ({placeholders}) "
+                "ORDER BY s.date DESC, s.video_id",
+                tuple(statuses),
             )
             rows = cur.fetchall()
             return jsonify([

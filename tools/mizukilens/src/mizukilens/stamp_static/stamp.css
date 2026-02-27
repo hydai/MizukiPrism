@@ -70,6 +70,36 @@ main {
   padding: 12px 16px 8px;
 }
 
+/* Status filter */
+.status-filter {
+  display: flex;
+  gap: 6px;
+  padding: 0 16px 10px;
+}
+
+.status-btn {
+  flex: 1;
+  padding: 4px 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.status-btn:hover {
+  background: var(--bg-hover);
+}
+
+.status-btn.active {
+  background: var(--accent-dim);
+  border-color: var(--accent-dim);
+  color: #fff;
+}
+
 .stream-list ul {
   list-style: none;
 }

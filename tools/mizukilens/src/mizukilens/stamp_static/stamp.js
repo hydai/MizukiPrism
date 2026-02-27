@@ -9,6 +9,7 @@
   let currentVideoId = null;
   let songs = [];
   let selectedIndex = -1;
+  let activeFilters = new Set(["approved", "exported", "imported"]);
 
   // --- DOM refs ---
   const $streams = document.getElementById("streams");
@@ -88,7 +89,11 @@
   // --- Stream list ---
 
   async function loadStreams() {
-    const data = await fetchJSON("/api/streams");
+    var url = "/api/streams";
+    if (activeFilters.size > 0 && activeFilters.size < 3) {
+      url += "?status=" + Array.from(activeFilters).join(",");
+    }
+    const data = await fetchJSON(url);
     clearChildren($streams);
     data.forEach(function (s) {
       const li = document.createElement("li");
@@ -488,6 +493,23 @@
   $btnSeekEnd.addEventListener("click", seekToEnd);
   $btnFetch.addEventListener("click", fetchDuration);
   $btnClearAll.addEventListener("click", clearAllEndTimestamps);
+
+  // --- Status filter ---
+  document.querySelectorAll(".status-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var status = btn.dataset.status;
+      if (activeFilters.has(status)) {
+        // Prevent deactivating the last filter
+        if (activeFilters.size <= 1) return;
+        activeFilters.delete(status);
+        btn.classList.remove("active");
+      } else {
+        activeFilters.add(status);
+        btn.classList.add("active");
+      }
+      loadStreams();
+    });
+  });
 
   // --- Init ---
   loadStats();

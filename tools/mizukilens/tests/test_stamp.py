@@ -283,6 +283,63 @@ class TestApiStreams:
             assert "disc1" not in video_ids
             assert "exp1" in video_ids
 
+    def test_filter_by_single_status(self, db_path: Path) -> None:
+        conn = open_db(db_path)
+        _add_stream(conn, video_id="a1", status="approved")
+        _add_stream(conn, video_id="e1", status="exported")
+        _add_stream(conn, video_id="i1", status="imported")
+        conn.close()
+
+        app = create_app(db_path=db_path)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            resp = c.get("/api/streams?status=approved")
+            data = resp.get_json()
+            statuses = {s["status"] for s in data}
+            assert statuses == {"approved"}
+
+    def test_filter_by_multiple_statuses(self, db_path: Path) -> None:
+        conn = open_db(db_path)
+        _add_stream(conn, video_id="a1", status="approved")
+        _add_stream(conn, video_id="e1", status="exported")
+        _add_stream(conn, video_id="i1", status="imported")
+        conn.close()
+
+        app = create_app(db_path=db_path)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            resp = c.get("/api/streams?status=approved,imported")
+            data = resp.get_json()
+            statuses = {s["status"] for s in data}
+            assert statuses == {"approved", "imported"}
+
+    def test_filter_ignores_invalid_status(self, db_path: Path) -> None:
+        conn = open_db(db_path)
+        _add_stream(conn, video_id="a1", status="approved")
+        conn.close()
+
+        app = create_app(db_path=db_path)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            resp = c.get("/api/streams?status=discovered")
+            data = resp.get_json()
+            assert data == []
+
+    def test_no_filter_returns_all(self, db_path: Path) -> None:
+        conn = open_db(db_path)
+        _add_stream(conn, video_id="a1", status="approved")
+        _add_stream(conn, video_id="e1", status="exported")
+        _add_stream(conn, video_id="i1", status="imported")
+        conn.close()
+
+        app = create_app(db_path=db_path)
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            resp = c.get("/api/streams")
+            data = resp.get_json()
+            statuses = {s["status"] for s in data}
+            assert statuses == {"approved", "exported", "imported"}
+
 
 # ===========================================================================
 # SECTION 6: Flask API — /api/streams/<id>/songs
