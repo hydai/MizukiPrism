@@ -51,23 +51,27 @@ def categorize_stream(title: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Emoji / emote artifact patterns
+# Noise patterns (emoji/emote artifacts + setlist number prefixes)
 # ---------------------------------------------------------------------------
 
 # Matches patterns like ✰:_MIZUKIMilk:, ✩:_SomeThing:, ✰□, etc.
 # Two-phase approach: strip emote codes first, then clean orphaned decorations.
-_EMOJI_PATTERNS = [
+_NOISE_PATTERNS = [
+    re.compile(r"^\d+\.\s+"),              # setlist number prefix: "01. ", "12. ", etc.
     re.compile(r"[✰✩☆★]:_[^:]+:"),       # star + emote codes like ✰:_MIZUKIMilk:
     re.compile(r"[✰✩☆★][□■]"),            # star + box artifacts
     re.compile(r":_[A-Za-z0-9_]+:"),       # bare emote codes :_SomeThing:
     re.compile(r"[✰✩☆★✿🍪🍮ʚɞ♡⃛]+"),    # leftover decorative chars (ʚ♡⃛ɞ, 🍪, ✿, etc.)
 ]
 
+# Backward-compatible aliases
+_EMOJI_PATTERNS = _NOISE_PATTERNS
+
 
 def _clean_text_field(text: str) -> str:
-    """Remove emoji/emote artifacts from a text string."""
+    """Remove noise artifacts (emoji/emote codes, number prefixes) from text."""
     cleaned = text
-    for pat in _EMOJI_PATTERNS:
+    for pat in _NOISE_PATTERNS:
         cleaned = pat.sub("", cleaned)
     # Collapse multiple spaces and strip
     cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
@@ -78,9 +82,13 @@ def _clean_text_field(text: str) -> str:
 _clean_artist_field = _clean_text_field
 
 
-def _has_emoji_artifacts(text: str) -> bool:
-    """Return True if the text contains emoji/emote artifacts."""
-    return any(pat.search(text) for pat in _EMOJI_PATTERNS)
+def _has_noise_artifacts(text: str) -> bool:
+    """Return True if the text contains noise artifacts."""
+    return any(pat.search(text) for pat in _NOISE_PATTERNS)
+
+
+# Backward-compatible alias
+_has_emoji_artifacts = _has_noise_artifacts
 
 
 # ---------------------------------------------------------------------------
@@ -151,7 +159,7 @@ def generate_report(conn: sqlite3.Connection, *, detail: bool = False) -> None:
             artist = song["artist"] or ""
             if artist.strip():
                 songs_with_artist += 1
-            if _has_emoji_artifacts(artist):
+            if _has_noise_artifacts(artist):
                 songs_with_emoji += 1
 
     console.print()
@@ -403,7 +411,7 @@ def clean_parsed_songs(
         for song in songs:
             artist = song["artist"] or ""
             song_name = song["song_name"] or ""
-            if _has_emoji_artifacts(artist) or _has_emoji_artifacts(song_name):
+            if _has_noise_artifacts(artist) or _has_noise_artifacts(song_name):
                 dirty.append(song)
 
         if not dirty:
@@ -413,12 +421,12 @@ def clean_parsed_songs(
             for song in dirty:
                 artist = song["artist"] or ""
                 song_name = song["song_name"] or ""
-                if _has_emoji_artifacts(artist):
+                if _has_noise_artifacts(artist):
                     console.print(
                         f"  [cyan]{stream['video_id']}[/cyan] #{song['order_index']} artist: "
                         f"[red]{artist!r}[/red] → [green]{_clean_text_field(artist)!r}[/green]"
                     )
-                if _has_emoji_artifacts(song_name):
+                if _has_noise_artifacts(song_name):
                     console.print(
                         f"  [cyan]{stream['video_id']}[/cyan] #{song['order_index']} song_name: "
                         f"[red]{song_name!r}[/red] → [green]{_clean_text_field(song_name)!r}[/green]"
@@ -432,10 +440,10 @@ def clean_parsed_songs(
             artist = song["artist"] or ""
             song_name = song["song_name"] or ""
             song_dirty = False
-            if _has_emoji_artifacts(artist):
+            if _has_noise_artifacts(artist):
                 artist = _clean_text_field(artist)
                 song_dirty = True
-            if _has_emoji_artifacts(song_name):
+            if _has_noise_artifacts(song_name):
                 song_name = _clean_text_field(song_name)
                 song_dirty = True
             if song_dirty:

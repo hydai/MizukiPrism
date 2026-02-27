@@ -123,9 +123,15 @@ class TestEmojiArtifacts:
         ("🍪:_MIZUKIMilk: song", True),
         ("🍮:_MIZUKIMilk: song", True),
         ("✿:_MIZUKIMilk: artist", True),
+        # Numbered setlist prefixes
+        ("01. Song Name", True),
+        ("12. 絕頂讚歌", True),
+        ("1. Song", True),
+        # Safe non-matches
         ("Normal Artist Name", False),
         ("", False),
         ("DAOKO×米津玄師", False),
+        ("0.5倍速帶音樂練習跳一下", False),  # decimal, not a prefix
     ])
     def test_has_emoji_artifacts(self, artist: str, expected: bool) -> None:
         assert _has_emoji_artifacts(artist) == expected
@@ -143,6 +149,11 @@ class TestEmojiArtifacts:
         ("🍮:_MIZUKIMilk: title", "title"),
         ("✿:_MIZUKIMilk: artist", "artist"),
         ("artist ✩:_MIZUKIMilk:", "artist"),
+        # Numbered setlist prefix cleaning
+        ("01. DROP", "DROP"),
+        ("12. 絕頂讚歌", "絕頂讚歌"),
+        ("1. Song", "Song"),
+        ("0.5倍速帶音樂練習跳一下", "0.5倍速帶音樂練習跳一下"),  # no change
     ])
     def test_clean_artist_field(self, artist: str, expected: str) -> None:
         assert _clean_artist_field(artist) == expected
@@ -445,6 +456,24 @@ class TestCleanParsedSongs:
         songs = get_parsed_songs(db, "vid1")
         assert songs[0]["song_name"] == "Song"
         assert songs[0]["artist"] == "doriko"
+
+    def test_clean_numbered_prefix(self, db: sqlite3.Connection) -> None:
+        _add_stream(db, "vid1", "歌枠")
+        _add_songs(db, "vid1", [
+            _make_song(1, "01. DROP", artist="Clean"),
+            _make_song(2, "12. 絕頂讚歌", artist="Clean"),
+            _make_song(3, "0.5倍速帶音樂練習跳一下", artist="Clean"),
+        ])
+
+        count = clean_parsed_songs(db)
+        assert count == 2
+
+        songs = get_parsed_songs(db, "vid1")
+        assert songs[0]["song_name"] == "DROP"
+        assert songs[0]["order_index"] == 1  # preserved
+        assert songs[1]["song_name"] == "絕頂讚歌"
+        assert songs[1]["order_index"] == 2  # preserved
+        assert songs[2]["song_name"] == "0.5倍速帶音樂練習跳一下"  # unchanged
 
     def test_clean_song_name_dry_run(self, db: sqlite3.Connection) -> None:
         _add_stream(db, "vid1", "歌枠")
