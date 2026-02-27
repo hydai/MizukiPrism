@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MizukiLens EndStamp Editor</title>
+  <link rel="stylesheet" href="/static/stamp.css">
+</head>
+<body>
+  <header>
+    <h1>MizukiLens EndStamp Editor</h1>
+    <div id="stats" class="stats"></div>
+  </header>
+
+  <main>
+    <aside id="stream-list" class="stream-list">
+      <h2>Streams</h2>
+      <ul id="streams"></ul>
+    </aside>
+
+    <section class="content">
+      <div id="player-container" class="player-container">
+        <div id="player"></div>
+        <p class="placeholder-text" id="player-placeholder">Select a stream to load the YouTube player</p>
+      </div>
+
+      <div id="song-panel" class="song-panel">
+        <h2>Songs <span id="song-count" class="badge"></span></h2>
+        <ul id="songs"></ul>
+
+        <div class="controls">
+          <button id="btn-mark" class="btn btn-mark" disabled title="Mark end timestamp (m)">Mark End</button>
+          <button id="btn-seek" class="btn btn-seek" disabled title="Seek to start (s)">Seek to Start</button>
+          <div class="nav-hint">
+            <kbd>m</kbd> mark &nbsp; <kbd>s</kbd> seek &nbsp; <kbd>n</kbd>/<kbd>p</kbd> next/prev
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="/static/stamp.js"></script>
+</body>
+</html>

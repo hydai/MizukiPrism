@@ -13,6 +13,7 @@ dependencies = [
     "youtube-comment-downloader>=0.1.68",
     "yt-dlp>=2024.1.0",
     "click>=8.1.7",
+    "flask>=3.0",
     "rich>=13.7.0",
     "textual>=0.52.1",
     "tomli>=2.0.1; python_version < '3.11'",
@@ -27,6 +28,9 @@ where = ["src"]
 
 [tool.setuptools.package-dir]
 "" = "src"
+
+[tool.setuptools.package-data]
+mizukilens = ["stamp_templates/*.html", "stamp_static/*.css", "stamp_static/*.js"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

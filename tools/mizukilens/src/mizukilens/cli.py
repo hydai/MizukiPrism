@@ -26,10 +26,11 @@ def main() -> None:
       1. mizukilens config   — configure your YouTube channel
       2. mizukilens fetch    — discover & scrape livestream archives
       3. mizukilens review   — curate the extracted song timestamps (TUI)
-      4. mizukilens export   — export approved data to MizukiPrism JSON
-      5. mizukilens import   — import the JSON into MizukiPrism
-      6. mizukilens status   — view cache statistics
-      7. mizukilens cache    — manage the local cache
+      4. mizukilens stamp    — mark end timestamps via web UI
+      5. mizukilens export   — export approved data to MizukiPrism JSON
+      6. mizukilens import   — import the JSON into MizukiPrism
+      7. mizukilens status   — view cache statistics
+      8. mizukilens cache    — manage the local cache
     """
 
 
@@ -989,6 +990,34 @@ def candidates_reject_cmd(candidate_id: int) -> None:
         sys.exit(1)
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# stamp  (end-timestamp editor)
+# ---------------------------------------------------------------------------
+
+@main.command("stamp")
+@click.option("--port", default=5555, type=int, show_default=True,
+              help="Port for the local web server.")
+@click.option("--host", default="127.0.0.1", show_default=True,
+              help="Host to bind the web server to.")
+def stamp_cmd(port: int, host: str) -> None:
+    """Launch the EndStamp web editor for marking song end timestamps.
+
+    \b
+    Opens a local web UI to watch YouTube VODs and interactively mark
+    when each song ends.  Timestamps are saved to the SQLite cache DB
+    and flow through the normal export → import pipeline.
+    """
+    import webbrowser
+    from mizukilens.stamp import create_app
+
+    app = create_app()
+    url = f"http://{host}:{port}"
+    console.print(f"[cyan]EndStamp Editor:[/cyan] {url}")
+    console.print("[dim]Press Ctrl+C to stop.[/dim]")
+    webbrowser.open(url)
+    app.run(host=host, port=port, debug=False)
 
 
 # ---------------------------------------------------------------------------
