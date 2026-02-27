@@ -302,6 +302,17 @@ main {
   background: var(--bg-active);
 }
 
+.btn-seek-end {
+  background: var(--bg-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-seek-end:hover:not(:disabled) {
+  background: var(--bg-active);
+  border-color: var(--green);
+}
+
 .btn-fetch {
   background: var(--bg-hover);
   color: var(--text);

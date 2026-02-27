@@ -17,6 +17,7 @@
   const $stats = document.getElementById("stats");
   const $btnMark = document.getElementById("btn-mark");
   const $btnSeek = document.getElementById("btn-seek");
+  const $btnSeekEnd = document.getElementById("btn-seek-end");
   const $btnFetch = document.getElementById("btn-fetch");
   const $btnClearAll = document.getElementById("btn-clear-all");
   const $placeholder = document.getElementById("player-placeholder");
@@ -316,6 +317,7 @@
     const hasSong = selectedIndex >= 0 && selectedIndex < songs.length;
     $btnMark.disabled = !hasSong;
     $btnSeek.disabled = !hasSong;
+    $btnSeekEnd.disabled = !(hasSong && songs[selectedIndex].endTimestamp);
     $btnFetch.disabled = !hasSong;
     $btnClearAll.disabled = !currentVideoId;
   }
@@ -392,6 +394,17 @@
     player.seekTo(sec, true);
   }
 
+  function seekToEnd() {
+    if (selectedIndex < 0 || !player || !playerReady) return;
+    const song = songs[selectedIndex];
+    if (!song.endTimestamp) {
+      showToast("No end timestamp set", true);
+      return;
+    }
+    const sec = Math.max(0, timestampToSeconds(song.endTimestamp) - 10);
+    player.seekTo(sec, true);
+  }
+
   async function fetchDuration() {
     if (selectedIndex < 0) return;
     const song = songs[selectedIndex];
@@ -442,6 +455,9 @@
       case "s":
         seekToStart();
         break;
+      case "e":
+        seekToEnd();
+        break;
       case "f":
         fetchDuration();
         break;
@@ -469,6 +485,7 @@
   // --- Button handlers ---
   $btnMark.addEventListener("click", markEndTimestamp);
   $btnSeek.addEventListener("click", seekToStart);
+  $btnSeekEnd.addEventListener("click", seekToEnd);
   $btnFetch.addEventListener("click", fetchDuration);
   $btnClearAll.addEventListener("click", clearAllEndTimestamps);
 
