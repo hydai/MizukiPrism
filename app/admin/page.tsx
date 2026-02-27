@@ -628,6 +628,7 @@ export default function AdminPage() {
   const [songs, setSongs] = useState<Song[]>([]);
   const [streams, setStreams] = useState<Stream[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
   const [showStreamForm, setShowStreamForm] = useState(false);
   const [expandedStream, setExpandedStream] = useState<string | null>(null);
   const [addVersionStreamId, setAddVersionStreamId] = useState<string | null>(null);
@@ -656,8 +657,19 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetch('/api/auth/check', { method: 'POST' })
+      .then(res => {
+        if (!res.ok) {
+          router.replace('/admin/login');
+        } else {
+          setAuthenticated(true);
+          fetchData();
+        }
+      })
+      .catch(() => {
+        router.replace('/admin/login');
+      });
+  }, [fetchData, router]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -726,7 +738,7 @@ export default function AdminPage() {
       })()
     : null;
 
-  if (loading) {
+  if (!authenticated || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#fff0f5] via-[#f0f8ff] to-[#e6e6fa] flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-pink-400 animate-spin" />

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 const CURATOR_USERNAME = 'curator';
 const CURATOR_PASSWORD = 'mizuki-admin';
@@ -14,19 +13,17 @@ export async function POST(request: Request) {
     }
 
     if (username === CURATOR_USERNAME && password === CURATOR_PASSWORD) {
-      const cookieStore = await cookies();
-      cookieStore.set('admin-auth', 'curator', {
+      const response = NextResponse.json({ success: true, role: 'curator' });
+      response.cookies.set('admin-auth', 'curator', {
         httpOnly: true,
         path: '/',
         maxAge: 60 * 60 * 24, // 24 hours
         sameSite: 'lax',
       });
-
-      return NextResponse.json({ success: true, role: 'curator' });
+      return response;
     }
 
-    // Check if this is a non-curator account login attempt
-    // For demo: any other username/password combo is treated as non-curator
+    // Any other username/password combo is treated as non-curator
     if (username && password) {
       return NextResponse.json({ error: '您沒有管理權限', role: 'non-curator' }, { status: 403 });
     }

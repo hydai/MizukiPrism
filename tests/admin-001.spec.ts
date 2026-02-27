@@ -62,7 +62,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('login-button').click();
 
     // Should redirect to admin dashboard
-    await page.waitForURL('http://localhost:3000/admin', { timeout: 5000 });
+    await expect(page).toHaveURL('http://localhost:3000/admin', { timeout: 5000 });
 
     // Management interface should be visible
     await expect(page.getByText('管理介面')).toBeVisible();
@@ -77,7 +77,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('username-input').fill('curator');
     await page.getByTestId('password-input').fill('mizuki-admin');
     await page.getByTestId('login-button').click();
-    await page.waitForURL('http://localhost:3000/admin');
+    await expect(page).toHaveURL('http://localhost:3000/admin', { timeout: 5000 });
 
     // Click add stream button
     await page.getByTestId('add-stream-button').click();
@@ -112,7 +112,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('username-input').fill('curator');
     await page.getByTestId('password-input').fill('mizuki-admin');
     await page.getByTestId('login-button').click();
-    await page.waitForURL('http://localhost:3000/admin');
+    await expect(page).toHaveURL('http://localhost:3000/admin', { timeout: 5000 });
 
     // First create a stream
     await page.getByTestId('add-stream-button').click();
@@ -153,7 +153,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('username-input').fill('curator');
     await page.getByTestId('password-input').fill('mizuki-admin');
     await page.getByTestId('login-button').click();
-    await page.waitForURL('http://localhost:3000/admin');
+    await expect(page).toHaveURL('http://localhost:3000/admin', { timeout: 5000 });
 
     // Create a stream first
     await page.getByTestId('add-stream-button').click();
@@ -185,7 +185,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('username-input').fill('curator');
     await page.getByTestId('password-input').fill('mizuki-admin');
     await page.getByTestId('login-button').click();
-    await page.waitForURL('http://localhost:3000/admin');
+    await expect(page).toHaveURL('http://localhost:3000/admin', { timeout: 5000 });
 
     // Get initial songs count
     const initialRes = await page.evaluate(() =>
@@ -228,7 +228,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('username-input').fill('curator');
     await page.getByTestId('password-input').fill('mizuki-admin');
     await page.getByTestId('login-button').click();
-    await page.waitForURL('http://localhost:3000/admin');
+    await expect(page).toHaveURL('http://localhost:3000/admin', { timeout: 5000 });
 
     // Get initial songs count
     const initialSongs = await page.evaluate(() =>
@@ -272,7 +272,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('username-input').fill('curator');
     await page.getByTestId('password-input').fill('mizuki-admin');
     await page.getByTestId('login-button').click();
-    await page.waitForURL('http://localhost:3000/admin');
+    await expect(page).toHaveURL('http://localhost:3000/admin', { timeout: 5000 });
 
     // Expand the first stream (午後歌枠)
     await page.getByTestId('streams-tab').click();
@@ -318,7 +318,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('username-input').fill('curator');
     await page.getByTestId('password-input').fill('mizuki-admin');
     await page.getByTestId('login-button').click();
-    await page.waitForURL('http://localhost:3000/admin');
+    await expect(page).toHaveURL('http://localhost:3000/admin', { timeout: 5000 });
 
     // Expand stream 1
     await page.getByTestId('stream-toggle-stream-2025-03-26').click();
@@ -355,7 +355,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('username-input').fill('curator');
     await page.getByTestId('password-input').fill('mizuki-admin');
     await page.getByTestId('login-button').click();
-    await page.waitForURL('http://localhost:3000/admin');
+    await expect(page).toHaveURL('http://localhost:3000/admin', { timeout: 5000 });
 
     // Expand stream 1 - song 3 (君の知らない物語) has only p3-1
     await page.getByTestId('stream-toggle-stream-2025-03-26').click();
@@ -396,7 +396,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('username-input').fill('curator');
     await page.getByTestId('password-input').fill('mizuki-admin');
     await page.getByTestId('login-button').click();
-    await page.waitForURL('http://localhost:3000/admin');
+    await expect(page).toHaveURL('http://localhost:3000/admin', { timeout: 5000 });
 
     // Go to songs tab
     await page.getByTestId('songs-tab').click();
@@ -451,7 +451,7 @@ test.describe.serial('ADMIN-001: Curator Management Interface', () => {
     await page.getByTestId('username-input').fill('curator');
     await page.getByTestId('password-input').fill('mizuki-admin');
     await page.getByTestId('login-button').click();
-    await page.waitForURL('http://localhost:3000/admin');
+    await expect(page).toHaveURL('http://localhost:3000/admin', { timeout: 5000 });
 
     // Go to songs tab
     await page.getByTestId('songs-tab').click();
