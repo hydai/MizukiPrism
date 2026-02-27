@@ -245,14 +245,16 @@ def batch_approve(
     dry_run: bool = False,
     yes: bool = False,
 ) -> int:
-    """Batch-approve extracted streams matching the given filters.
+    """Batch-approve extracted or pending streams matching the given filters.
 
     Returns the number of streams approved (or that would be approved in dry-run).
     """
     extracted = list_streams(conn, status="extracted")
+    pending = list_streams(conn, status="pending")
+    candidates = extracted + pending
     targets: list[sqlite3.Row] = []
 
-    for stream in extracted:
+    for stream in candidates:
         if video_id and stream["video_id"] != video_id:
             continue
 
