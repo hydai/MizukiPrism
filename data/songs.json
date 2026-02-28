@@ -270,7 +270,7 @@
   {
     "id": "song-7",
     "title": "愛して愛して愛して",
-    "originalArtist": "きくお feat. 初音ミク",
+    "originalArtist": "きくお",
     "tags": [],
     "performances": [
       {
@@ -642,7 +642,7 @@
   {
     "id": "song-16",
     "title": "ラヴィ",
-    "originalArtist": "すりぃ feat.鏡音レン",
+    "originalArtist": "すりぃ",
     "tags": [],
     "performances": [
       {
@@ -1546,7 +1546,7 @@
   {
     "id": "song-44",
     "title": "エンヴィーベイビー",
-    "originalArtist": "Kanaria feat. GUMI",
+    "originalArtist": "Kanaria",
     "tags": [],
     "performances": [
       {
@@ -1632,7 +1632,7 @@
   {
     "id": "song-46",
     "title": "ラブカ?",
-    "originalArtist": "柊キライ feat. v flower",
+    "originalArtist": "柊キライ",
     "tags": [],
     "performances": [
       {
@@ -1650,7 +1650,7 @@
   {
     "id": "song-47",
     "title": "誰",
-    "originalArtist": "李友廷 Yo Lee",
+    "originalArtist": "李友廷",
     "tags": [],
     "performances": [
       {
@@ -1791,7 +1791,7 @@
   },
   {
     "id": "song-51",
-    "title": "KEEP COLD",
+    "title": "Keep Cold",
     "originalArtist": "Numcha",
     "tags": [],
     "performances": [
@@ -1809,8 +1809,8 @@
   },
   {
     "id": "song-52",
-    "title": "SHALLOW",
-    "originalArtist": "Lady Gaga, Bradley Cooper",
+    "title": "Shallow",
+    "originalArtist": "Lady Gaga & Bradley Cooper",
     "tags": [],
     "performances": [
       {
@@ -1828,7 +1828,7 @@
   {
     "id": "song-53",
     "title": "愛言葉Ⅲ",
-    "originalArtist": "DECO*27 feat. 初音ミク",
+    "originalArtist": "DECO*27",
     "tags": [],
     "performances": [
       {
@@ -1922,7 +1922,7 @@
   {
     "id": "song-56",
     "title": "人生は最高の暇つぶし",
-    "originalArtist": "HoneyWorks feat. Hanon",
+    "originalArtist": "HoneyWorks",
     "tags": [],
     "performances": [
       {
@@ -3000,7 +3000,7 @@
   {
     "id": "song-97",
     "title": "ワールドイズマイン",
-    "originalArtist": "ryo (かぐや&月見ヤチヨ ver.) [CPK! Remix]",
+    "originalArtist": "ryo",
     "tags": [],
     "performances": [
       {
@@ -3428,7 +3428,7 @@
   {
     "id": "song-108",
     "title": "Tell your world",
-    "originalArtist": "kz(livetune)",
+    "originalArtist": "kz",
     "tags": [],
     "performances": [
       {
@@ -3746,7 +3746,7 @@
   {
     "id": "song-119",
     "title": "寄り酔い",
-    "originalArtist": "和ぬか-100回嘔吐",
+    "originalArtist": "和ぬか",
     "tags": [],
     "performances": [
       {
@@ -3812,7 +3812,7 @@
   {
     "id": "song-121",
     "title": "glow",
-    "originalArtist": "Keeno feat.初音ミクDark",
+    "originalArtist": "keeno",
     "tags": [],
     "performances": [
       {
@@ -3945,8 +3945,8 @@
   },
   {
     "id": "song-124",
-    "title": "Rain stops, good-bye",
-    "originalArtist": "におP feat.初音ミク",
+    "title": "rain stops, good-bye",
+    "originalArtist": "におP",
     "tags": [],
     "performances": [
       {
@@ -4062,7 +4062,7 @@
   {
     "id": "song-126",
     "title": "想見你想見你想見你",
-    "originalArtist": "八三夭 831",
+    "originalArtist": "八三夭",
     "tags": [],
     "performances": [
       {
@@ -4156,7 +4156,7 @@
   {
     "id": "song-129",
     "title": "Calc.",
-    "originalArtist": "ジミーサムP feat.初音ミク",
+    "originalArtist": "ジミーサムP",
     "tags": [],
     "performances": [
       {
@@ -4280,7 +4280,7 @@
   {
     "id": "song-132",
     "title": "Just Be Friends",
-    "originalArtist": "DixieFlatline feat.巡音ルカ",
+    "originalArtist": "Dixie Flatline",
     "tags": [],
     "performances": [
       {
@@ -4671,7 +4671,7 @@
   },
   {
     "id": "song-141",
-    "title": "LOVE STORY",
+    "title": "Love Story",
     "originalArtist": "Taylor Swift",
     "tags": [],
     "performances": [
@@ -4753,7 +4753,7 @@
   },
   {
     "id": "song-145",
-    "title": "SWEET PARADE",
+    "title": "Sweets Parade",
     "originalArtist": "花澤香菜",
     "tags": [],
     "performances": [
@@ -4771,7 +4771,7 @@
   },
   {
     "id": "song-146",
-    "title": "MY DEAREST",
+    "title": "My Dearest",
     "originalArtist": "Supercell",
     "tags": [],
     "performances": [
@@ -5040,7 +5040,7 @@
   {
     "id": "song-152",
     "title": "マフィア",
-    "originalArtist": "wotaku feat. 初音ミク",
+    "originalArtist": "wotaku",
     "tags": [],
     "performances": [
       {
@@ -5057,7 +5057,7 @@
   },
   {
     "id": "song-153",
-    "title": "Someone You Loved",
+    "title": "Someone You loved",
     "originalArtist": "Lewis Capaldi",
     "tags": [],
     "performances": [
@@ -5095,7 +5095,7 @@
   },
   {
     "id": "song-154",
-    "title": "The Winner Takes it All",
+    "title": "The Winner Takes It All",
     "originalArtist": "ABBA",
     "tags": [],
     "performances": [
@@ -5142,7 +5142,7 @@
   {
     "id": "song-156",
     "title": "誇り高きアイドル",
-    "originalArtist": "HoneyWorks feat. mona",
+    "originalArtist": "HoneyWorks",
     "tags": [],
     "performances": [
       {
@@ -5254,7 +5254,7 @@
   {
     "id": "song-160",
     "title": "錦鯉抄",
-    "originalArtist": "雲の泣 x 銀臨",
+    "originalArtist": "雲の泣 銀臨",
     "tags": [],
     "performances": [
       {
@@ -5358,7 +5358,7 @@
   {
     "id": "song-163",
     "title": "千本桜",
-    "originalArtist": "黒うさP feat. 初音ミク",
+    "originalArtist": "黒うさP",
     "tags": [],
     "performances": [
       {
@@ -5556,7 +5556,7 @@
   {
     "id": "song-169",
     "title": "Hero too",
-    "originalArtist": "耳郎響香 Starring Chrissy Costanza",
+    "originalArtist": "KYOKA JIRO Starring Chrissy Costanza",
     "tags": [],
     "performances": [
       {
@@ -7656,7 +7656,7 @@
   {
     "id": "song-229",
     "title": "喜歡你",
-    "originalArtist": "陳潔儀",
+    "originalArtist": "陳潔儀 Kit Chan",
     "tags": [],
     "performances": [
       {
@@ -7862,7 +7862,7 @@
   {
     "id": "song-236",
     "title": "溯Reverse",
-    "originalArtist": "CORSAK 馬吟吟",
+    "originalArtist": "CORSAK",
     "tags": [],
     "performances": [
       {
@@ -7927,7 +7927,7 @@
   },
   {
     "id": "song-238",
-    "title": "你站在雲林 我輸得徹底",
+    "title": "你站在雲林 我輸得徹底👆😑👇",
     "originalArtist": "Diiton",
     "tags": [],
     "performances": [
@@ -8690,7 +8690,7 @@
   {
     "id": "song-257",
     "title": "Femme Fatale",
-    "originalArtist": "ヒプノシスマイク 中王区",
+    "originalArtist": "ヒプノシスマイク",
     "tags": [],
     "performances": [
       {
@@ -8962,7 +8962,7 @@
   {
     "id": "song-266",
     "title": "U",
-    "originalArtist": "Millennium Parade",
+    "originalArtist": "millennium parade-Belle",
     "tags": [],
     "performances": [
       {
@@ -8998,7 +8998,7 @@
   {
     "id": "song-268",
     "title": "回る空うさぎ",
-    "originalArtist": "Orangestar ft. 初音ミク",
+    "originalArtist": "Orangestar",
     "tags": [],
     "performances": [
       {
@@ -9268,7 +9268,7 @@
   {
     "id": "song-278",
     "title": "求救訊號",
-    "originalArtist": "Vast & Hazy (VH)",
+    "originalArtist": "Vast & Hazy",
     "tags": [],
     "performances": [
       {
@@ -9472,7 +9472,7 @@
   {
     "id": "song-286",
     "title": "響念Missing",
-    "originalArtist": "響Hibki",
+    "originalArtist": "響 Hibiki",
     "tags": [],
     "performances": [
       {
@@ -9662,7 +9662,7 @@
   {
     "id": "song-296",
     "title": "-ERROR",
-    "originalArtist": "Niki",
+    "originalArtist": "niki",
     "tags": [],
     "performances": [
       {
@@ -9810,7 +9810,7 @@
   {
     "id": "song-302",
     "title": "晚餐歌",
-    "originalArtist": "Tuki.",
+    "originalArtist": "tuki.",
     "tags": [],
     "performances": [
       {
@@ -9837,7 +9837,7 @@
   },
   {
     "id": "song-303",
-    "title": "未知未踏アルスハイル (pinao ver.)",
+    "title": "未知未踏アルスハイル Piano ver.",
     "originalArtist": "浠Mizuki",
     "tags": [],
     "performances": [
@@ -10270,7 +10270,7 @@
   {
     "id": "song-312",
     "title": "デーモンロード",
-    "originalArtist": "kanaria",
+    "originalArtist": "Kanaria",
     "tags": [],
     "performances": [
       {
@@ -10692,7 +10692,7 @@
   {
     "id": "song-326",
     "title": "No.1",
-    "originalArtist": "HoneyWorks （CV：夏川椎菜）",
+    "originalArtist": "HoneyWorks",
     "tags": [],
     "performances": [
       {
@@ -10989,7 +10989,7 @@
   },
   {
     "id": "song-337",
-    "title": "Let It Go",
+    "title": "Let it go",
     "originalArtist": "Idina Menzel",
     "tags": [],
     "performances": [
@@ -11101,7 +11101,7 @@
   },
   {
     "id": "song-341",
-    "title": "LOVER",
+    "title": "Lover",
     "originalArtist": "Taylor Swift",
     "tags": [],
     "performances": [
@@ -11119,7 +11119,7 @@
   },
   {
     "id": "song-342",
-    "title": "Snow Halation",
+    "title": "Snow halation",
     "originalArtist": "μ's",
     "tags": [],
     "performances": [
@@ -11155,7 +11155,7 @@
   },
   {
     "id": "song-344",
-    "title": "Luminous - 冬明けのボヤージュ",
+    "title": "Luminous 冬明けのボヤージュ",
     "originalArtist": "浠Mizuki",
     "tags": [],
     "performances": [
@@ -11932,7 +11932,7 @@
   {
     "id": "song-366",
     "title": "ロイヤルフラッシュ",
-    "originalArtist": "奏音69 feat.luz",
+    "originalArtist": "奏音69",
     "tags": [],
     "performances": [
       {
@@ -11950,7 +11950,7 @@
   {
     "id": "song-367",
     "title": "ミリオンダラードリーマー",
-    "originalArtist": "奏音69 feat.巡音ルカ",
+    "originalArtist": "奏音69",
     "tags": [],
     "performances": [
       {
@@ -11968,7 +11968,7 @@
   {
     "id": "song-368",
     "title": "キャットアイメイク",
-    "originalArtist": "奏音69 feat.巡音ルカ",
+    "originalArtist": "奏音69",
     "tags": [],
     "performances": [
       {
@@ -11986,7 +11986,7 @@
   {
     "id": "song-369",
     "title": "チェリーハント",
-    "originalArtist": "奏音69 feat.luz",
+    "originalArtist": "奏音69",
     "tags": [],
     "performances": [
       {
@@ -12014,7 +12014,7 @@
   {
     "id": "song-370",
     "title": "REVOLVER",
-    "originalArtist": "奏音69 feat.luz",
+    "originalArtist": "奏音69",
     "tags": [],
     "performances": [
       {
@@ -12032,7 +12032,7 @@
   {
     "id": "song-371",
     "title": "ビーストインザビューティ",
-    "originalArtist": "奏音69 feat.luz",
+    "originalArtist": "奏音69",
     "tags": [],
     "performances": [
       {
@@ -12050,7 +12050,7 @@
   {
     "id": "song-372",
     "title": "ネクロの花嫁",
-    "originalArtist": "奏音69 feat.びす",
+    "originalArtist": "奏音69",
     "tags": [],
     "performances": [
       {
@@ -12086,7 +12086,7 @@
   {
     "id": "song-374",
     "title": "ビタースウィート",
-    "originalArtist": "奏音69 feat.luz",
+    "originalArtist": "奏音69",
     "tags": [],
     "performances": [
       {
@@ -12104,7 +12104,7 @@
   {
     "id": "song-375",
     "title": "ファントムペイン",
-    "originalArtist": "奏音69 feat.luz",
+    "originalArtist": "奏音69",
     "tags": [],
     "performances": [
       {
@@ -12122,7 +12122,7 @@
   {
     "id": "song-376",
     "title": "チェルシー",
-    "originalArtist": "奏音69 feat.luz",
+    "originalArtist": "奏音69",
     "tags": [],
     "performances": [
       {
@@ -12176,7 +12176,7 @@
   {
     "id": "song-379",
     "title": "マジックリングナイト",
-    "originalArtist": "奏音69 feat.luz",
+    "originalArtist": "奏音69",
     "tags": [],
     "performances": [
       {
@@ -12336,7 +12336,7 @@
   {
     "id": "song-384",
     "title": "母系社會",
-    "originalArtist": "AMIT（清唱）",
+    "originalArtist": "A-MIT",
     "tags": [],
     "performances": [
       {
@@ -12533,8 +12533,8 @@
   },
   {
     "id": "song-390",
-    "title": "下一站，與你",
-    "originalArtist": "KSP, 3R2, 茶米",
+    "title": "下一站,與你",
+    "originalArtist": "KSP-3R2-茶米",
     "tags": [],
     "performances": [
       {
@@ -12798,7 +12798,7 @@
   {
     "id": "song-398",
     "title": "ベノム",
-    "originalArtist": "かいりきベア feat.flower",
+    "originalArtist": "かいりきベア",
     "tags": [],
     "performances": [
       {
@@ -12816,7 +12816,7 @@
   {
     "id": "song-399",
     "title": "flos",
-    "originalArtist": "R Sound Design feat.初音ミク",
+    "originalArtist": "R Sound Design",
     "tags": [],
     "performances": [
       {
@@ -12834,7 +12834,7 @@
   {
     "id": "song-400",
     "title": "POP/STARS",
-    "originalArtist": "K/DA（Seraphine版本）",
+    "originalArtist": "K/DA",
     "tags": [],
     "performances": [
       {
@@ -12938,7 +12938,7 @@
   {
     "id": "song-403",
     "title": "NON STOP SOUL!!!",
-    "originalArtist": "Rumi 懶貓子",
+    "originalArtist": "Rumi 懶猫子",
     "tags": [],
     "performances": [
       {
@@ -13012,7 +13012,7 @@
   {
     "id": "song-406",
     "title": "霽れを待つ",
-    "originalArtist": "Orangestar feat.初音ミク",
+    "originalArtist": "Orangestar",
     "tags": [],
     "performances": [
       {
@@ -13030,7 +13030,7 @@
   {
     "id": "song-407",
     "title": "Hearts",
-    "originalArtist": "niki feat.Lily",
+    "originalArtist": "niki",
     "tags": [],
     "performances": [
       {
@@ -13048,7 +13048,7 @@
   {
     "id": "song-408",
     "title": "ファンサ",
-    "originalArtist": "HoneyWorks feat.mona（CV：夏川椎菜）",
+    "originalArtist": "HoneyWorks",
     "tags": [],
     "performances": [
       {
@@ -13129,7 +13129,7 @@
   },
   {
     "id": "song-412",
-    "title": "命に嫌われている",
+    "title": "命に嫌われている。",
     "originalArtist": "カンザキイオリ",
     "tags": [],
     "performances": [
@@ -13658,7 +13658,7 @@
   {
     "id": "song-428",
     "title": "與浪之間",
-    "originalArtist": "Vast&Hazy",
+    "originalArtist": "Vast & Hazy",
     "tags": [],
     "performances": [
       {
@@ -14031,7 +14031,7 @@
   },
   {
     "id": "song-441",
-    "title": "Love me like you do",
+    "title": "Love Me Like You Do",
     "originalArtist": "Ellie Goulding",
     "tags": [],
     "performances": [
@@ -14050,7 +14050,7 @@
   {
     "id": "song-442",
     "title": "Rather Be",
-    "originalArtist": "Clean Bandit(ft.Jess Glynne)",
+    "originalArtist": "Clean Bandit",
     "tags": [],
     "performances": [
       {
@@ -14161,7 +14161,7 @@
   },
   {
     "id": "song-446",
-    "title": "A whole new world",
+    "title": "A Whole New World",
     "originalArtist": "Mena Massoud,Naomi Scott",
     "tags": [],
     "performances": [
@@ -14393,7 +14393,7 @@
   },
   {
     "id": "song-455",
-    "title": "殘酷な天使のテーゼ",
+    "title": "残酷な天使のテーゼ",
     "originalArtist": "高橋洋子",
     "tags": [],
     "performances": [
@@ -14586,7 +14586,7 @@
   {
     "id": "song-464",
     "title": "虎視眈々",
-    "originalArtist": "梅とら様",
+    "originalArtist": "梅とら",
     "tags": [],
     "performances": [
       {
@@ -14855,7 +14855,7 @@
   },
   {
     "id": "song-474",
-    "title": "BAD DAY",
+    "title": "Bad Day",
     "originalArtist": "Daniel Robert Powter",
     "tags": [],
     "performances": [
@@ -15553,7 +15553,7 @@
   },
   {
     "id": "song-495",
-    "title": "ハロ／ハワユ",
+    "title": "ハロ/ハワユ",
     "originalArtist": "ナノウ",
     "tags": [],
     "performances": [
@@ -15656,7 +15656,7 @@
   {
     "id": "song-499",
     "title": "A Million Dreams",
-    "originalArtist": "The Greatest Showman Cast",
+    "originalArtist": "The Greatest Showman",
     "tags": [],
     "performances": [
       {
@@ -15702,7 +15702,7 @@
   {
     "id": "song-501",
     "title": "My Heart Will Go On",
-    "originalArtist": "Céline Dion",
+    "originalArtist": "Celine Dion",
     "tags": [],
     "performances": [
       {
@@ -15720,7 +15720,7 @@
   {
     "id": "song-502",
     "title": "NON STOP SOUL!!!",
-    "originalArtist": "Rumi",
+    "originalArtist": "Rumi 懶猫子",
     "tags": [],
     "performances": [
       {
@@ -16360,7 +16360,7 @@
   {
     "id": "song-522",
     "title": "你的行李",
-    "originalArtist": "謝震廷 Eli Hsieh",
+    "originalArtist": "謝震廷",
     "tags": [],
     "performances": [
       {
@@ -16548,7 +16548,7 @@
   {
     "id": "song-528",
     "title": "ロンリーユニバース-Lonely Universe",
-    "originalArtist": "Aqu3ra feat.初音ミク,flower",
+    "originalArtist": "Aqu3ra",
     "tags": [],
     "performances": [
       {
@@ -17039,7 +17039,7 @@
   },
   {
     "id": "song-542",
-    "title": "きみだけは",
+    "title": "きみだけは。",
     "originalArtist": "夏代孝明",
     "tags": [],
     "performances": [
@@ -17141,7 +17141,7 @@
   },
   {
     "id": "song-546",
-    "title": "我還年輕 我還年輕",
+    "title": "我還年輕我還年輕",
     "originalArtist": "老王樂隊",
     "tags": [],
     "performances": [
@@ -17999,7 +17999,7 @@
   },
   {
     "id": "song-572",
-    "title": "チュルリラ・チュルリラ・ダッダッダ!",
+    "title": "チュルリラ·チュルリラ·ダッダッダ！",
     "originalArtist": "くらげP",
     "tags": [],
     "performances": [
@@ -18364,7 +18364,7 @@
   {
     "id": "song-585",
     "title": "-ERROR",
-    "originalArtist": "niki-Lily",
+    "originalArtist": "niki",
     "tags": [],
     "performances": [
       {
@@ -18664,7 +18664,7 @@
   {
     "id": "song-600",
     "title": "誇り高きアイドル",
-    "originalArtist": "HoneyWorks(feat.KoToha)",
+    "originalArtist": "HoneyWorks",
     "tags": [],
     "performances": [
       {
@@ -18727,7 +18727,7 @@
   },
   {
     "id": "song-603",
-    "title": "GLOW",
+    "title": "glow",
     "originalArtist": "keeno",
     "tags": [],
     "performances": [
@@ -18784,7 +18784,7 @@
   {
     "id": "song-605",
     "title": "U",
-    "originalArtist": "millennium parade",
+    "originalArtist": "millennium parade-Belle",
     "tags": [],
     "performances": [
       {
@@ -18839,7 +18839,7 @@
   },
   {
     "id": "song-607",
-    "title": "NEVER ENOUGH",
+    "title": "Never Enough",
     "originalArtist": "Loren Allred",
     "tags": [],
     "performances": [
@@ -18875,7 +18875,7 @@
   },
   {
     "id": "song-609",
-    "title": "Flos",
+    "title": "flos",
     "originalArtist": "R Sound Design",
     "tags": [],
     "performances": [
@@ -19168,7 +19168,7 @@
   {
     "id": "song-618",
     "title": "ねこみみスイッチ",
-    "originalArtist": "daniwellP",
+    "originalArtist": "daniwell",
     "tags": [],
     "performances": [
       {
@@ -19428,7 +19428,7 @@
   {
     "id": "song-628",
     "title": "アヤノの幸福理論",
-    "originalArtist": "じん(自然の敵P)",
+    "originalArtist": "じん",
     "tags": [],
     "performances": [
       {
@@ -19693,7 +19693,7 @@
   },
   {
     "id": "song-635",
-    "title": "Tell Your World",
+    "title": "Tell your world",
     "originalArtist": "kz",
     "tags": [],
     "performances": [
@@ -19767,7 +19767,7 @@
   },
   {
     "id": "song-638",
-    "title": "Bad Guy",
+    "title": "bad guy",
     "originalArtist": "Billie Eilish",
     "tags": [],
     "performances": [
@@ -19963,7 +19963,7 @@
   },
   {
     "id": "song-645",
-    "title": "WonderWall",
+    "title": "Wonderwall",
     "originalArtist": "Oasis",
     "tags": [],
     "performances": [
@@ -20440,7 +20440,7 @@
   {
     "id": "song-662",
     "title": "直到我遇見了你",
-    "originalArtist": "李友廷 Yo Lee",
+    "originalArtist": "李友廷",
     "tags": [],
     "performances": [
       {
@@ -20925,7 +20925,7 @@
   },
   {
     "id": "song-674",
-    "title": "Main Actor",
+    "title": "main actor",
     "originalArtist": "美波",
     "tags": [],
     "performances": [
@@ -21048,7 +21048,7 @@
   {
     "id": "song-678",
     "title": "クイーンオブハート",
-    "originalArtist": "奏音69",
+    "originalArtist": "奏音69 feat.luz",
     "tags": [],
     "performances": [
       {
@@ -21279,7 +21279,7 @@
   },
   {
     "id": "song-687",
-    "title": "Just the Way You Are",
+    "title": "Just The Way You Are",
     "originalArtist": "Bruno Mars",
     "tags": [],
     "performances": [
@@ -21492,7 +21492,7 @@
   {
     "id": "song-696",
     "title": "名前のない怪物",
-    "originalArtist": "EGOIST-ryo（supercell）",
+    "originalArtist": "EGOIST",
     "tags": [],
     "performances": [
       {
@@ -21732,7 +21732,7 @@
   {
     "id": "song-706",
     "title": "極光的風",
-    "originalArtist": "香蓮-大内哲也",
+    "originalArtist": "香蓮",
     "tags": [],
     "performances": [
       {
@@ -22184,7 +22184,7 @@
   {
     "id": "song-725",
     "title": "A Million Dreams",
-    "originalArtist": "Ziv Zaifman-Hugh Jackman-Michelle Williams",
+    "originalArtist": "Ziv Zaifman",
     "tags": [],
     "performances": [
       {
@@ -22472,7 +22472,7 @@
   {
     "id": "song-736",
     "title": "大嫌いなはずだった。",
-    "originalArtist": "/HoneyWorks",
+    "originalArtist": "HoneyWorks",
     "tags": [],
     "performances": [
       {
@@ -22759,7 +22759,7 @@
   },
   {
     "id": "song-747",
-    "title": "Under The Sea",
+    "title": "Under the sea",
     "originalArtist": "The Little Mermaid",
     "tags": [],
     "performances": [
@@ -22914,7 +22914,7 @@
   {
     "id": "song-755",
     "title": "Love Is an Open Door",
-    "originalArtist": "Kristen Bell,Santino Fontana-Clark on Stage",
+    "originalArtist": "Kristen Bell & Santino Fontana",
     "tags": [],
     "performances": [
       {
@@ -22932,7 +22932,7 @@
   {
     "id": "song-756",
     "title": "I See the Light",
-    "originalArtist": "Mandy Moore, Zachary Levi-Clark on Stage",
+    "originalArtist": "Mandy Moore & Zachary Levi",
     "tags": [],
     "performances": [
       {
@@ -23368,7 +23368,7 @@
   {
     "id": "song-773",
     "title": "神っぽいな",
-    "originalArtist": "ピノキオピ",
+    "originalArtist": "ピノキオピー",
     "tags": [],
     "performances": [
       {
@@ -23442,7 +23442,7 @@
   {
     "id": "song-776",
     "title": "Nectar",
-    "originalArtist": "まふまふ-nqrse",
+    "originalArtist": "まふまふ",
     "tags": [],
     "performances": [
       {
@@ -23708,7 +23708,7 @@
   {
     "id": "song-783",
     "title": "碼頭姑娘",
-    "originalArtist": "劉芷融-江東昱-楊適維-張衛帆",
+    "originalArtist": "劉芷融",
     "tags": [],
     "performances": [
       {
@@ -23834,7 +23834,7 @@
   {
     "id": "song-790",
     "title": "我的歌聲裡",
-    "originalArtist": "曲婉婷 Wanting",
+    "originalArtist": "曲婉婷",
     "tags": [],
     "performances": [
       {
@@ -23852,7 +23852,7 @@
   {
     "id": "song-791",
     "title": "Bad Day",
-    "originalArtist": "Daniel Powter",
+    "originalArtist": "Daniel Robert Powter",
     "tags": [],
     "performances": [
       {
@@ -24171,7 +24171,7 @@
   },
   {
     "id": "song-801",
-    "title": "ゴスートルール",
+    "title": "ゴーストルール",
     "originalArtist": "DECO*27",
     "tags": [],
     "performances": [
@@ -24661,7 +24661,7 @@
   },
   {
     "id": "song-821",
-    "title": "smile for you",
+    "title": "Smile For You",
     "originalArtist": "ユナ(神田沙也加)",
     "tags": [],
     "performances": [
@@ -24970,7 +24970,7 @@
   {
     "id": "song-827",
     "title": "說到愛",
-    "originalArtist": "蔡健雅 Tanya Chua",
+    "originalArtist": "蔡健雅",
     "tags": [],
     "performances": [
       {
@@ -25042,7 +25042,7 @@
   {
     "id": "song-831",
     "title": "いのちの名前",
-    "originalArtist": "木村弓-久石讓-覚和歌子",
+    "originalArtist": "木村弓",
     "tags": [],
     "performances": [
       {
@@ -25547,7 +25547,7 @@
   },
   {
     "id": "song-853",
-    "title": "ミスター･ダーリン",
+    "title": "ミスター・ダーリン",
     "originalArtist": "CHiCO with HoneyWorks",
     "tags": [],
     "performances": [
@@ -25649,7 +25649,7 @@
   },
   {
     "id": "song-857",
-    "title": "mojito",
+    "title": "Mojito",
     "originalArtist": "周杰倫",
     "tags": [],
     "performances": [
@@ -25912,7 +25912,7 @@
   {
     "id": "song-866",
     "title": "馬戲團公約",
-    "originalArtist": "棉花糖 katncandix2",
+    "originalArtist": "棉花糖",
     "tags": [],
     "performances": [
       {
@@ -26022,7 +26022,7 @@
   {
     "id": "song-871",
     "title": "我是一隻小小鳥",
-    "originalArtist": "趙傳-李宗盛",
+    "originalArtist": "趙傳",
     "tags": [],
     "performances": [
       {
@@ -26114,7 +26114,7 @@
   {
     "id": "song-875",
     "title": "猫",
-    "originalArtist": "DISH//-あいみょん",
+    "originalArtist": "DISH//",
     "tags": [],
     "performances": [
       {
@@ -26188,7 +26188,7 @@
   {
     "id": "song-878",
     "title": "EYE",
-    "originalArtist": "Kanaria (with 祈菈‧貝希毛絲)",
+    "originalArtist": "Kanaria",
     "tags": [],
     "performances": [
       {
@@ -26206,7 +26206,7 @@
   {
     "id": "song-879",
     "title": "Part of Your World",
-    "originalArtist": "Jodi Benson (with 歐妲)",
+    "originalArtist": "Jodi Benson",
     "tags": [],
     "performances": [
       {
@@ -26223,8 +26223,8 @@
   },
   {
     "id": "song-880",
-    "title": "殘酷な天使のテーゼ",
-    "originalArtist": "高橋洋子 (with 海唧 )",
+    "title": "残酷な天使のテーゼ",
+    "originalArtist": "高橋洋子",
     "tags": [],
     "performances": [
       {
@@ -26260,7 +26260,7 @@
   {
     "id": "song-882",
     "title": "曇天",
-    "originalArtist": "DOES-氏原ワタル (with 歐貝爾)",
+    "originalArtist": "DOES",
     "tags": [],
     "performances": [
       {
@@ -26278,7 +26278,7 @@
   {
     "id": "song-883",
     "title": "ヴィラン",
-    "originalArtist": "てにをは (with 須多夜花)",
+    "originalArtist": "てにをは",
     "tags": [],
     "performances": [
       {
@@ -26295,8 +26295,8 @@
   },
   {
     "id": "song-884",
-    "title": "好きだから",
-    "originalArtist": "『ユイカ』 (with 懶貓子)",
+    "title": "好きだから。",
+    "originalArtist": "『ユイカ』",
     "tags": [],
     "performances": [
       {
@@ -26314,7 +26314,7 @@
   {
     "id": "song-885",
     "title": "再会",
-    "originalArtist": "LiSA-Uru-Ayase (with 松永依織)",
+    "originalArtist": "LiSA-Uru-Ayase",
     "tags": [],
     "performances": [
       {
@@ -26332,7 +26332,7 @@
   {
     "id": "song-886",
     "title": "有點甜",
-    "originalArtist": "汪蘇瀧&By2 (with KSP)",
+    "originalArtist": "汪蘇瀧&By2",
     "tags": [],
     "performances": [
       {
@@ -26350,7 +26350,7 @@
   {
     "id": "song-887",
     "title": "フラジール",
-    "originalArtist": "ぬゆり (with 弦戶帝丹)",
+    "originalArtist": "ぬゆり",
     "tags": [],
     "performances": [
       {
@@ -26368,7 +26368,7 @@
   {
     "id": "song-888",
     "title": "Nectar",
-    "originalArtist": "まふまふ-nqrse (with 月城九曜)",
+    "originalArtist": "まふまふ",
     "tags": [],
     "performances": [
       {
@@ -26386,7 +26386,7 @@
   {
     "id": "song-889",
     "title": "GETCHA!",
-    "originalArtist": "Giga&KIRA (with 洛可洛斯特)",
+    "originalArtist": "Giga & KIRA",
     "tags": [],
     "performances": [
       {
@@ -26422,7 +26422,7 @@
   {
     "id": "song-891",
     "title": "ロキ",
-    "originalArtist": "みきとP (with 嗚夫沃夫)",
+    "originalArtist": "みきとP",
     "tags": [],
     "performances": [
       {
@@ -26439,8 +26439,8 @@
   },
   {
     "id": "song-892",
-    "title": "Flos",
-    "originalArtist": "R Sound Design (with 哈瓜)",
+    "title": "flos",
+    "originalArtist": "R Sound Design",
     "tags": [],
     "performances": [
       {
@@ -26458,7 +26458,7 @@
   {
     "id": "song-893",
     "title": "Heartache",
-    "originalArtist": "ONE OK ROCK (with 阿爾姿)",
+    "originalArtist": "ONE OK ROCK",
     "tags": [],
     "performances": [
       {
@@ -26476,7 +26476,7 @@
   {
     "id": "song-894",
     "title": "一番の宝物",
-    "originalArtist": "LiSA (with 帝斗)",
+    "originalArtist": "LiSA",
     "tags": [],
     "performances": [
       {
@@ -26494,7 +26494,7 @@
   {
     "id": "song-895",
     "title": "aLIEz",
-    "originalArtist": "澤野弘之 (with 15號)",
+    "originalArtist": "澤野弘之",
     "tags": [],
     "performances": [
       {
@@ -26530,7 +26530,7 @@
   {
     "id": "song-897",
     "title": "8月31日",
-    "originalArtist": "DECO*27 (with 唄姆拉奇亞)",
+    "originalArtist": "DECO*27",
     "tags": [],
     "performances": [
       {
@@ -26548,7 +26548,7 @@
   {
     "id": "song-898",
     "title": "はなればなれの君へ",
-    "originalArtist": "Belle-中村佳穂",
+    "originalArtist": "Belle",
     "tags": [],
     "performances": [
       {
@@ -26670,7 +26670,7 @@
   {
     "id": "song-902",
     "title": "サマータイムレコード",
-    "originalArtist": "じん（自然の敵P）",
+    "originalArtist": "じん",
     "tags": [],
     "performances": [
       {
@@ -27020,7 +27020,7 @@
   {
     "id": "song-912",
     "title": "不識月",
-    "originalArtist": "Luna_Safari",
+    "originalArtist": "LunaSafari",
     "tags": [],
     "performances": [
       {
@@ -27904,7 +27904,7 @@
   {
     "id": "song-950",
     "title": "言不由衷",
-    "originalArtist": "徐佳瑩 LaLa",
+    "originalArtist": "徐佳瑩",
     "tags": [],
     "performances": [
       {
@@ -27921,7 +27921,7 @@
   },
   {
     "id": "song-951",
-    "title": "calc.",
+    "title": "Calc.",
     "originalArtist": "ジミーサムP",
     "tags": [],
     "performances": [
@@ -28246,7 +28246,7 @@
   {
     "id": "song-964",
     "title": "光",
-    "originalArtist": "奏音69",
+    "originalArtist": "奏音69 feat.巡音ルカ",
     "tags": [],
     "performances": [
       {
@@ -28738,7 +28738,7 @@
   {
     "id": "song-978",
     "title": "PLAY我呸",
-    "originalArtist": "蔡依林 Jolin Tsai",
+    "originalArtist": "蔡依林",
     "tags": [],
     "performances": [
       {
@@ -29334,7 +29334,7 @@
   {
     "id": "song-1000",
     "title": "No pain, No game",
-    "originalArtist": "ナノ-塚本けむ",
+    "originalArtist": "ナノ",
     "tags": [],
     "performances": [
       {
@@ -29525,7 +29525,7 @@
   },
   {
     "id": "song-1009",
-    "title": "Magnet",
+    "title": "magnet",
     "originalArtist": "流星P",
     "tags": [],
     "performances": [
@@ -29600,7 +29600,7 @@
   {
     "id": "song-1012",
     "title": "ねむるまち",
-    "originalArtist": "くじら-yama",
+    "originalArtist": "くじら,yama",
     "tags": [],
     "performances": [
       {
@@ -29750,7 +29750,7 @@
   {
     "id": "song-1017",
     "title": "純白之誓",
-    "originalArtist": "浠Mizuki&夏語遙",
+    "originalArtist": "浠Mizuki & 夏語遙",
     "tags": [],
     "performances": [
       {
@@ -29832,7 +29832,7 @@
   {
     "id": "song-1021",
     "title": "失戀慶功宴",
-    "originalArtist": "魚乾 (SLSMusic伴奏)",
+    "originalArtist": "魚乾",
     "tags": [],
     "performances": [
       {
@@ -29934,7 +29934,7 @@
   {
     "id": "song-1025",
     "title": "我要飛",
-    "originalArtist": "F.I.R./飛兒樂團",
+    "originalArtist": "F.I.R.飛兒樂團",
     "tags": [],
     "performances": [
       {
@@ -29970,7 +29970,7 @@
   {
     "id": "song-1027",
     "title": "ミルクとコーヒー",
-    "originalArtist": "伊東歌詞太郎-れるりり",
+    "originalArtist": "伊東歌詞太郎",
     "tags": [],
     "performances": [
       {
@@ -30453,7 +30453,7 @@
   },
   {
     "id": "song-1045",
-    "title": "Starduster",
+    "title": "starduster",
     "originalArtist": "ジミーサムP",
     "tags": [],
     "performances": [
@@ -30612,7 +30612,7 @@
   {
     "id": "song-1051",
     "title": "Party In The U.S.A.",
-    "originalArtist": "Miley Cyru",
+    "originalArtist": "Miley Cyrus",
     "tags": [],
     "performances": [
       {
@@ -30752,7 +30752,7 @@
   {
     "id": "song-1056",
     "title": "Best Part",
-    "originalArtist": "Daniel Caesar & H.E.R.",
+    "originalArtist": "Daniel Caesar",
     "tags": [],
     "performances": [
       {
@@ -30789,7 +30789,7 @@
   },
   {
     "id": "song-1057",
-    "title": "Can't Help Falling In Love",
+    "title": "Can't Help Falling in Love",
     "originalArtist": "Elvis Presley",
     "tags": [],
     "performances": [
@@ -30865,7 +30865,7 @@
   },
   {
     "id": "song-1059",
-    "title": "Unravel",
+    "title": "unravel",
     "originalArtist": "TK from 凛として時雨",
     "tags": [],
     "performances": [
@@ -31085,7 +31085,7 @@
   },
   {
     "id": "song-1069",
-    "title": "Nine Point Eight",
+    "title": "Nine point eight",
     "originalArtist": "Mili",
     "tags": [],
     "performances": [
@@ -31417,7 +31417,7 @@
   },
   {
     "id": "song-1083",
-    "title": "All I Want For Christmas Is You",
+    "title": "All I Want for Christmas Is You",
     "originalArtist": "Mariah Carey",
     "tags": [],
     "performances": [
@@ -31597,7 +31597,7 @@
   },
   {
     "id": "song-1093",
-    "title": "You only live once",
+    "title": "You Only Live Once",
     "originalArtist": "西寺郷太-羽多野涉-彦田元気",
     "tags": [],
     "performances": [
@@ -31651,7 +31651,7 @@
   },
   {
     "id": "song-1096",
-    "title": "Snow fairy story",
+    "title": "Snow Fairy Story",
     "originalArtist": "40㍍P",
     "tags": [],
     "performances": [
@@ -32026,7 +32026,7 @@
   {
     "id": "song-1109",
     "title": "おちゃめ機能",
-    "originalArtist": "ゴジマジP",
+    "originalArtist": "ゴジマジP ft. 重音テト",
     "tags": [],
     "performances": [
       {
@@ -32154,7 +32154,7 @@
   {
     "id": "song-1115",
     "title": "Gimme×Gimme",
-    "originalArtist": "八王子P-Giga",
+    "originalArtist": "八王子P × Giga",
     "tags": [],
     "performances": [
       {
@@ -32217,7 +32217,7 @@
   },
   {
     "id": "song-1118",
-    "title": "0X.病名は愛だった",
+    "title": "病名は愛だった",
     "originalArtist": "Neru・z'5",
     "tags": [],
     "performances": [
@@ -32810,7 +32810,7 @@
   {
     "id": "song-1142",
     "title": "Say Something",
-    "originalArtist": "A Great Big World,Christina Aguilera",
+    "originalArtist": "A Great Big World, Christina Aguilera",
     "tags": [],
     "performances": [
       {
@@ -33109,7 +33109,7 @@
   },
   {
     "id": "song-1152",
-    "title": "我多喜歡你,你會知道",
+    "title": "我多喜歡你你會知道",
     "originalArtist": "王俊琪",
     "tags": [],
     "performances": [
@@ -33548,7 +33548,7 @@
   {
     "id": "song-1168",
     "title": "地球最後の告白を",
-    "originalArtist": "kemu",
+    "originalArtist": "kemu ft.GUMI",
     "tags": [],
     "performances": [
       {
@@ -33956,7 +33956,7 @@
   {
     "id": "song-1179",
     "title": "約束をしよう",
-    "originalArtist": "Supercell(ryo)",
+    "originalArtist": "supercell",
     "tags": [],
     "performances": [
       {
@@ -34662,7 +34662,7 @@
   {
     "id": "song-1206",
     "title": "他們說我是沒有用的年輕人",
-    "originalArtist": "好樂團 GoodBand",
+    "originalArtist": "好樂團",
     "tags": [],
     "performances": [
       {
@@ -34763,7 +34763,7 @@
   },
   {
     "id": "song-1210",
-    "title": "We Are",
+    "title": "We are",
     "originalArtist": "ONE OK ROCK",
     "tags": [],
     "performances": [
@@ -34800,7 +34800,7 @@
   {
     "id": "song-1212",
     "title": "drop pop candy",
-    "originalArtist": "れをる-ギガP",
+    "originalArtist": "れをる & ギガP",
     "tags": [],
     "performances": [
       {
@@ -35128,7 +35128,7 @@
   {
     "id": "song-1223",
     "title": "玫瑰少年",
-    "originalArtist": "蔡依林 Jolin Tsai",
+    "originalArtist": "蔡依林",
     "tags": [],
     "performances": [
       {
@@ -35146,7 +35146,7 @@
   {
     "id": "song-1224",
     "title": "雨愛",
-    "originalArtist": "楊丞琳 Rainie Yang",
+    "originalArtist": "楊丞琳",
     "tags": [],
     "performances": [
       {
@@ -35181,7 +35181,7 @@
   },
   {
     "id": "song-1226",
-    "title": "Let It Be",
+    "title": "Let it be",
     "originalArtist": "The Beatles",
     "tags": [],
     "performances": [
@@ -35217,7 +35217,7 @@
   },
   {
     "id": "song-1228",
-    "title": "醉いどれ知らず",
+    "title": "酔いどれ知らず",
     "originalArtist": "Kanaria",
     "tags": [],
     "performances": [
@@ -35363,7 +35363,7 @@
   },
   {
     "id": "song-1235",
-    "title": "nine point eight",
+    "title": "Nine point eight",
     "originalArtist": "Mili",
     "tags": [],
     "performances": [
@@ -35650,7 +35650,7 @@
   {
     "id": "song-1242",
     "title": "U",
-    "originalArtist": "millennium parade-Belle-中村佳穂",
+    "originalArtist": "millennium parade-Belle",
     "tags": [],
     "performances": [
       {
@@ -35668,7 +35668,7 @@
   {
     "id": "song-1243",
     "title": "好嗎好嗎",
-    "originalArtist": "魏如萱 waa wei",
+    "originalArtist": "魏如萱",
     "tags": [],
     "performances": [
       {
@@ -35685,7 +35685,7 @@
   },
   {
     "id": "song-1244",
-    "title": "Jump Up, Super Star!",
+    "title": "Jump Up Super Star!",
     "originalArtist": "Super Mario Odyssey",
     "tags": [],
     "performances": [
@@ -36090,7 +36090,7 @@
   {
     "id": "song-1262",
     "title": "Mamma Mia",
-    "originalArtist": "ABBA",
+    "originalArtist": "Abba",
     "tags": [],
     "performances": [
       {
@@ -36237,7 +36237,7 @@
   },
   {
     "id": "song-1268",
-    "title": "溯 Reverse",
+    "title": "溯Reverse",
     "originalArtist": "CORSAK",
     "tags": [],
     "performances": [
@@ -36255,8 +36255,8 @@
   },
   {
     "id": "song-1269",
-    "title": "Rain Stops,Goodbye",
-    "originalArtist": "におp",
+    "title": "rain stops, good-bye",
+    "originalArtist": "におP",
     "tags": [],
     "performances": [
       {
@@ -36546,7 +36546,7 @@
   {
     "id": "song-1279",
     "title": "小情歌",
-    "originalArtist": "蘇打綠 sodagreen",
+    "originalArtist": "蘇打綠",
     "tags": [],
     "performances": [
       {
@@ -36581,8 +36581,8 @@
   },
   {
     "id": "song-1281",
-    "title": "SUMMERTIME",
-    "originalArtist": "cinnamons×evening cinema",
+    "title": "Summertime",
+    "originalArtist": "cinnamons × evening cinema",
     "tags": [],
     "performances": [
       {
@@ -36676,7 +36676,7 @@
   {
     "id": "song-1284",
     "title": "光の向こうへ",
-    "originalArtist": "HACHI-澁江夏奈",
+    "originalArtist": "HACHI",
     "tags": [],
     "performances": [
       {
@@ -36942,7 +36942,7 @@
   {
     "id": "song-1291",
     "title": "神ぽいな",
-    "originalArtist": "ピノキオピ",
+    "originalArtist": "ピノキオピー",
     "tags": [],
     "performances": [
       {
@@ -37007,7 +37007,7 @@
   },
   {
     "id": "song-1293",
-    "title": "フクロウ ～フクロウが知らせる客が来たと～",
+    "title": "フクロウ～フクロウが知らせる客が来たと～",
     "originalArtist": "KOKIA",
     "tags": [],
     "performances": [
@@ -37155,7 +37155,7 @@
   },
   {
     "id": "song-1299",
-    "title": "Someone you loved",
+    "title": "Someone You loved",
     "originalArtist": "Lewis Capaldi",
     "tags": [],
     "performances": [
@@ -37278,7 +37278,7 @@
   {
     "id": "song-1303",
     "title": "獨上C樓",
-    "originalArtist": "YELLOW黃宣",
+    "originalArtist": "YELLOW & 范曉萱",
     "tags": [],
     "performances": [
       {
@@ -37313,7 +37313,7 @@
   },
   {
     "id": "song-1305",
-    "title": "3時12分",
+    "title": "3时12分",
     "originalArtist": "TAKU INOUE-星街すいせい",
     "tags": [],
     "performances": [
@@ -37380,7 +37380,7 @@
   {
     "id": "song-1307",
     "title": "下一站,與你",
-    "originalArtist": "KSP,3R2,茶米",
+    "originalArtist": "KSP-3R2-茶米",
     "tags": [],
     "performances": [
       {
@@ -37416,7 +37416,7 @@
   {
     "id": "song-1309",
     "title": "錦鯉抄",
-    "originalArtist": "雲の泣-銀臨",
+    "originalArtist": "雲の泣 銀臨",
     "tags": [],
     "performances": [
       {
@@ -37452,7 +37452,7 @@
   {
     "id": "song-1311",
     "title": "畫地為牢",
-    "originalArtist": "云の泣-葉里",
+    "originalArtist": "云の泣 & 葉里",
     "tags": [],
     "performances": [
       {
@@ -37470,7 +37470,7 @@
   {
     "id": "song-1312",
     "title": "小丑的品格",
-    "originalArtist": "泠鳶yousa-怪盗V-Leon",
+    "originalArtist": "泠鳶yousa",
     "tags": [],
     "performances": [
       {
@@ -38435,7 +38435,7 @@
   },
   {
     "id": "song-1354",
-    "title": "21  Guns",
+    "title": "21 Guns",
     "originalArtist": "Green Day",
     "tags": [],
     "performances": [
@@ -38453,7 +38453,7 @@
   },
   {
     "id": "song-1355",
-    "title": "Something just like this",
+    "title": "Something Just Like This",
     "originalArtist": "The Chainsmokers & Coldplay",
     "tags": [],
     "performances": [
@@ -38481,7 +38481,7 @@
   },
   {
     "id": "song-1356",
-    "title": "Always remember us this Way",
+    "title": "Always Remember Us This Way",
     "originalArtist": "Lady Gaga",
     "tags": [],
     "performances": [
@@ -38545,7 +38545,7 @@
   },
   {
     "id": "song-1359",
-    "title": "Good goodbye",
+    "title": "Good Goodbye",
     "originalArtist": "ONE OK ROCK",
     "tags": [],
     "performances": [
@@ -38591,7 +38591,7 @@
   },
   {
     "id": "song-1361",
-    "title": "Say something",
+    "title": "Say Something",
     "originalArtist": "A Great Big World, Christina Aguilera",
     "tags": [],
     "performances": [
@@ -38609,7 +38609,7 @@
   },
   {
     "id": "song-1362",
-    "title": "Remember me",
+    "title": "Remember Me",
     "originalArtist": "Miguel",
     "tags": [],
     "performances": [
@@ -38830,7 +38830,7 @@
   {
     "id": "song-1372",
     "title": "你那邊幾點",
-    "originalArtist": "孫盛希Shi Shi",
+    "originalArtist": "孫盛希",
     "tags": [],
     "performances": [
       {
@@ -39745,7 +39745,7 @@
   },
   {
     "id": "song-1414",
-    "title": "Blue",
+    "title": "blue",
     "originalArtist": "Elina",
     "tags": [],
     "performances": [
@@ -39773,7 +39773,7 @@
   },
   {
     "id": "song-1415",
-    "title": "can't help falling in love",
+    "title": "Can't Help Falling in Love",
     "originalArtist": "Elvis Presley",
     "tags": [],
     "performances": [
@@ -39858,7 +39858,7 @@
   {
     "id": "song-1418",
     "title": "深昏睡",
-    "originalArtist": "春野 ( haruno ) feat.初音ミク",
+    "originalArtist": "春野",
     "tags": [],
     "performances": [
       {
@@ -39913,7 +39913,7 @@
   },
   {
     "id": "song-1420",
-    "title": "像是天堂的懸崖",
+    "title": "像天堂的懸崖",
     "originalArtist": "李佳薇",
     "tags": [],
     "performances": [
@@ -40444,7 +40444,7 @@
   {
     "id": "song-1445",
     "title": "Target for Love",
-    "originalArtist": "Lee Jin-ah",
+    "originalArtist": "Lee Jin Ah",
     "tags": [],
     "performances": [
       {
@@ -40462,7 +40462,7 @@
   {
     "id": "song-1446",
     "title": "うらたねこ♀",
-    "originalArtist": "HoneyWorks,Kaoru feat. 可不",
+    "originalArtist": "HoneyWorks",
     "tags": [],
     "performances": [
       {
@@ -40515,7 +40515,7 @@
   },
   {
     "id": "song-1449",
-    "title": "sweets parade",
+    "title": "Sweets Parade",
     "originalArtist": "花澤香菜",
     "tags": [],
     "performances": [
@@ -41371,7 +41371,7 @@
   },
   {
     "id": "song-1486",
-    "title": "Ahoy!!我ら宝鐘海賊団",
+    "title": "Ahoy!! 我ら宝鐘海賊団",
     "originalArtist": "宝鐘マリン",
     "tags": [],
     "performances": [
@@ -41426,7 +41426,7 @@
   {
     "id": "song-1489",
     "title": "Starving",
-    "originalArtist": "Hailee Steinfeld & Grey ft. Zedd",
+    "originalArtist": "Hailee Steinfeld,Grey-ft.Zedd",
     "tags": [],
     "performances": [
       {
@@ -41443,7 +41443,7 @@
   },
   {
     "id": "song-1490",
-    "title": "Suger",
+    "title": "Sugar",
     "originalArtist": "Maroon 5",
     "tags": [],
     "performances": [
@@ -41707,7 +41707,7 @@
   },
   {
     "id": "song-1503",
-    "title": "​ほろよい",
+    "title": "ほろよい",
     "originalArtist": "さんひ",
     "tags": [],
     "performances": [
@@ -42106,7 +42106,7 @@
   {
     "id": "song-1514",
     "title": "Sweet Child O' Mine",
-    "originalArtist": "Gun N' Roses",
+    "originalArtist": "Guns N' Roses",
     "tags": [],
     "performances": [
       {
@@ -42124,7 +42124,7 @@
   {
     "id": "song-1515",
     "title": "ド屑",
-    "originalArtist": "なきそ feat.歌愛ユキ",
+    "originalArtist": "なきそ",
     "tags": [],
     "performances": [
       {
@@ -42142,7 +42142,7 @@
   {
     "id": "song-1516",
     "title": "ロストワンの号哭",
-    "originalArtist": "Neru feat.鏡音リン",
+    "originalArtist": "Neru",
     "tags": [],
     "performances": [
       {
@@ -42160,7 +42160,7 @@
   {
     "id": "song-1517",
     "title": "Henceforth",
-    "originalArtist": "Orangestar feat.IA",
+    "originalArtist": "Orangestar",
     "tags": [],
     "performances": [
       {
@@ -42196,7 +42196,7 @@
   {
     "id": "song-1519",
     "title": "Surges",
-    "originalArtist": "Orangestar feat. 夏背 & ルワン",
+    "originalArtist": "Orangestar",
     "tags": [],
     "performances": [
       {
@@ -42252,7 +42252,7 @@
   {
     "id": "song-1521",
     "title": "春を告げる",
-    "originalArtist": "Yama",
+    "originalArtist": "yama",
     "tags": [],
     "performances": [
       {
@@ -42464,7 +42464,7 @@
   {
     "id": "song-1530",
     "title": "3时12分",
-    "originalArtist": "TAKU INOUE & 星街すいせい",
+    "originalArtist": "TAKU INOUE-星街すいせい",
     "tags": [],
     "performances": [
       {
@@ -42836,7 +42836,7 @@
   {
     "id": "song-1544",
     "title": "Havana",
-    "originalArtist": "Camila Cabello - ft. Young Thug",
+    "originalArtist": "Camila Cabello",
     "tags": [],
     "performances": [
       {
@@ -43417,7 +43417,7 @@
   },
   {
     "id": "song-1568",
-    "title": "Top of the World",
+    "title": "Top of the world",
     "originalArtist": "Carpenters",
     "tags": [],
     "performances": [
@@ -43500,7 +43500,7 @@
   {
     "id": "song-1572",
     "title": "天ノ弱",
-    "originalArtist": "164 feat.GUMI",
+    "originalArtist": "164",
     "tags": [],
     "performances": [
       {
@@ -43756,7 +43756,7 @@
   {
     "id": "song-1584",
     "title": "ねむるまち",
-    "originalArtist": "くじら",
+    "originalArtist": "くじら,yama",
     "tags": [],
     "performances": [
       {
@@ -43875,7 +43875,7 @@
   },
   {
     "id": "song-1589",
-    "title": "I see the light",
+    "title": "I See the Light",
     "originalArtist": "Mandy Moore & Zachary Levi",
     "tags": [],
     "performances": [
@@ -43893,7 +43893,7 @@
   },
   {
     "id": "song-1590",
-    "title": "somewhere over the rainbow",
+    "title": "Somewhere Over The Rainbow",
     "originalArtist": "Harold Arlen",
     "tags": [],
     "performances": [
@@ -44055,7 +44055,7 @@
   },
   {
     "id": "song-1599",
-    "title": "My dearest",
+    "title": "My Dearest",
     "originalArtist": "Supercell",
     "tags": [],
     "performances": [
@@ -44091,7 +44091,7 @@
   },
   {
     "id": "song-1601",
-    "title": "Day by day",
+    "title": "Day by Day",
     "originalArtist": "浠Mizuki",
     "tags": [],
     "performances": [
@@ -45036,7 +45036,7 @@
   {
     "id": "song-1649",
     "title": "フォニイ",
-    "originalArtist": "phony - kafu",
+    "originalArtist": "phony",
     "tags": [],
     "performances": [
       {
@@ -45099,7 +45099,7 @@
   },
   {
     "id": "song-1652",
-    "title": "死了都要爱",
+    "title": "死了都要愛",
     "originalArtist": "信樂團",
     "tags": [],
     "performances": [
@@ -45363,7 +45363,7 @@
   },
   {
     "id": "song-1665",
-    "title": "Just the way you are",
+    "title": "Just The Way You Are",
     "originalArtist": "Bruno Mars",
     "tags": [],
     "performances": [
@@ -45482,7 +45482,7 @@
   {
     "id": "song-1671",
     "title": "Calc.",
-    "originalArtist": "ジミーサムP feat.初音ミク",
+    "originalArtist": "ジミーサムP",
     "tags": [],
     "performances": [
       {
@@ -45782,7 +45782,7 @@
   {
     "id": "song-1686",
     "title": "你的行李",
-    "originalArtist": "謝震廷 Eli Hsieh, feat. 徐靖玟",
+    "originalArtist": "謝震廷",
     "tags": [],
     "performances": [
       {
@@ -45809,7 +45809,7 @@
   },
   {
     "id": "song-1687",
-    "title": "Reverse 溯",
+    "title": "溯Reverse",
     "originalArtist": "CORSAK",
     "tags": [],
     "performances": [
@@ -45827,7 +45827,7 @@
   },
   {
     "id": "song-1688",
-    "title": "斑馬，斑馬",
+    "title": "斑馬斑馬",
     "originalArtist": "宋冬野",
     "tags": [],
     "performances": [
@@ -46109,7 +46109,7 @@
   },
   {
     "id": "song-1702",
-    "title": "未來のひとへ",
+    "title": "未来のひとへ",
     "originalArtist": "TRUE",
     "tags": [],
     "performances": [
@@ -46191,7 +46191,7 @@
   },
   {
     "id": "song-1706",
-    "title": "ラブカ？",
+    "title": "ラブカ?",
     "originalArtist": "柊キライ",
     "tags": [],
     "performances": [
@@ -46276,7 +46276,7 @@
   {
     "id": "song-1709",
     "title": "Beauty And A Beat",
-    "originalArtist": "Justin Bieber ft.Nicki Minaj",
+    "originalArtist": "Justin Bieber",
     "tags": [],
     "performances": [
       {
@@ -46414,7 +46414,7 @@
   {
     "id": "song-1715",
     "title": "真的没喝多",
-    "originalArtist": "B2$,KOALA",
+    "originalArtist": "B2$",
     "tags": [],
     "performances": [
       {
@@ -46432,7 +46432,7 @@
   {
     "id": "song-1716",
     "title": "Cheap Thrills",
-    "originalArtist": "Sia -  ft. Sean Paul",
+    "originalArtist": "Sia",
     "tags": [],
     "performances": [
       {
@@ -46570,7 +46570,7 @@
   {
     "id": "song-1722",
     "title": "濕了分寸",
-    "originalArtist": "謝震廷",
+    "originalArtist": "謝震廷 Eli Hsieh",
     "tags": [],
     "performances": [
       {
@@ -46877,7 +46877,7 @@
   },
   {
     "id": "song-1738",
-    "title": "Can You Feel The Love Tonight",
+    "title": "Can You Feel the Love Tonight",
     "originalArtist": "Elton John",
     "tags": [],
     "performances": [
@@ -47250,7 +47250,7 @@
   {
     "id": "song-1757",
     "title": "stars we chase",
-    "originalArtist": "ミア・テイラー(CV.内田 秀)",
+    "originalArtist": "ミア・テイラー",
     "tags": [],
     "performances": [
       {
@@ -47268,7 +47268,7 @@
   {
     "id": "song-1758",
     "title": "渉り星",
-    "originalArtist": "Islet feat.Sando Aoi×夕凪夜",
+    "originalArtist": "Islet",
     "tags": [],
     "performances": [
       {
@@ -47501,7 +47501,7 @@
   },
   {
     "id": "song-1771",
-    "title": "day by day",
+    "title": "Day by Day",
     "originalArtist": "浠Mizuki",
     "tags": [],
     "performances": [
@@ -47573,7 +47573,7 @@
   },
   {
     "id": "song-1775",
-    "title": "Getcha",
+    "title": "GETCHA",
     "originalArtist": "Giga&KIRA",
     "tags": [],
     "performances": [
@@ -47681,7 +47681,7 @@
   },
   {
     "id": "song-1781",
-    "title": "never enough",
+    "title": "Never Enough",
     "originalArtist": "Loren Allred",
     "tags": [],
     "performances": [
@@ -47699,7 +47699,7 @@
   },
   {
     "id": "song-1782",
-    "title": "maps",
+    "title": "Maps",
     "originalArtist": "Maroon 5",
     "tags": [],
     "performances": [
@@ -47717,7 +47717,7 @@
   },
   {
     "id": "song-1783",
-    "title": "bad romance",
+    "title": "Bad Romance",
     "originalArtist": "Lady Gaga",
     "tags": [],
     "performances": [
@@ -48253,7 +48253,7 @@
   },
   {
     "id": "song-1805",
-    "title": "未知未踏アルスハイル(Piano ver.)",
+    "title": "未知未踏アルスハイル Piano ver.",
     "originalArtist": "浠Mizuki",
     "tags": [],
     "performances": [
@@ -48272,7 +48272,7 @@
   {
     "id": "song-1806",
     "title": "ほしのこもりうた",
-    "originalArtist": "天月",
+    "originalArtist": "天月-あまつき-",
     "tags": [],
     "performances": [
       {
@@ -48289,8 +48289,8 @@
   },
   {
     "id": "song-1807",
-    "title": "Stay",
-    "originalArtist": "The Kid LAROI, Justin Bieber",
+    "title": "STAY",
+    "originalArtist": "The Kid LAROI & Justin Bieber",
     "tags": [],
     "performances": [
       {
@@ -48373,7 +48373,7 @@
   },
   {
     "id": "song-1810",
-    "title": "Let it Be",
+    "title": "Let it be",
     "originalArtist": "The Beatles",
     "tags": [],
     "performances": [
@@ -48391,7 +48391,7 @@
   },
   {
     "id": "song-1811",
-    "title": "If I ain'r got you",
+    "title": "If I Ain't Got You",
     "originalArtist": "Alicia Keys",
     "tags": [],
     "performances": [
@@ -48458,7 +48458,7 @@
   {
     "id": "song-1813",
     "title": "A Whole New World",
-    "originalArtist": "Mena Massoud, Naomi Scott",
+    "originalArtist": "Mena Massoud,Naomi Scott",
     "tags": [],
     "performances": [
       {
@@ -48542,7 +48542,7 @@
   {
     "id": "song-1816",
     "title": "ME!",
-    "originalArtist": "Taylor Swift",
+    "originalArtist": "Taylor Swift-Brendon Boyd Urie",
     "tags": [],
     "performances": [
       {
@@ -48722,7 +48722,7 @@
   {
     "id": "song-1821",
     "title": "GETCHA!",
-    "originalArtist": "Giga&KIRA",
+    "originalArtist": "Giga & KIRA",
     "tags": [],
     "performances": [
       {
@@ -48740,7 +48740,7 @@
   {
     "id": "song-1822",
     "title": "Femme Fatale",
-    "originalArtist": "中王区 言の葉党",
+    "originalArtist": "中王区",
     "tags": [],
     "performances": [
       {
@@ -48875,7 +48875,7 @@
   },
   {
     "id": "song-1829",
-    "title": "Sunday morning",
+    "title": "Sunday Morning",
     "originalArtist": "Maroon 5",
     "tags": [],
     "performances": [
@@ -48903,7 +48903,7 @@
   },
   {
     "id": "song-1830",
-    "title": "if i ain't got you",
+    "title": "If I Ain't Got You",
     "originalArtist": "Alicia Keys",
     "tags": [],
     "performances": [
@@ -48921,7 +48921,7 @@
   },
   {
     "id": "song-1831",
-    "title": "Best part",
+    "title": "Best Part",
     "originalArtist": "Daniel Caesar",
     "tags": [],
     "performances": [
@@ -48939,7 +48939,7 @@
   },
   {
     "id": "song-1832",
-    "title": "愛言葉IV",
+    "title": "愛言葉Ⅳ",
     "originalArtist": "DECO*27",
     "tags": [],
     "performances": [
@@ -48958,7 +48958,7 @@
   {
     "id": "song-1833",
     "title": "打上花火",
-    "originalArtist": "DAOKO×米津玄師",
+    "originalArtist": "DAOKO × 米津玄師",
     "tags": [],
     "performances": [
       {
@@ -49410,7 +49410,7 @@
   {
     "id": "song-1852",
     "title": "すずめ",
-    "originalArtist": "RADWIMPS",
+    "originalArtist": "RADWIMPS ft.十明",
     "tags": [],
     "performances": [
       {
@@ -49474,7 +49474,7 @@
   {
     "id": "song-1855",
     "title": "Fairytale, [reunion]",
-    "originalArtist": "buzzG feat.GUMI",
+    "originalArtist": "buzzG",
     "tags": [],
     "performances": [
       {
@@ -49540,7 +49540,7 @@
   {
     "id": "song-1857",
     "title": "さよならだけが人生だ",
-    "originalArtist": "伊東歌詞太郎 feat. 初音ミク",
+    "originalArtist": "伊東歌詞太郎",
     "tags": [],
     "performances": [
       {
@@ -49696,7 +49696,7 @@
   {
     "id": "song-1864",
     "title": "焼け原",
-    "originalArtist": "NARAKA: BLADEPOINT x NieR Main Theme (Japanese Version)",
+    "originalArtist": "NARAKA: BLADEPOINT x NieR Main Theme",
     "tags": [],
     "performances": [
       {
@@ -49984,7 +49984,7 @@
   {
     "id": "song-1875",
     "title": "不識月",
-    "originalArtist": "Luna Safari feat.赤羽",
+    "originalArtist": "LunaSafari",
     "tags": [],
     "performances": [
       {
@@ -50002,7 +50002,7 @@
   {
     "id": "song-1876",
     "title": "月牙灣",
-    "originalArtist": "F.I.R.飛兒樂團",
+    "originalArtist": "F.I.R. 飛兒樂團",
     "tags": [],
     "performances": [
       {
@@ -50401,7 +50401,7 @@
   },
   {
     "id": "song-1896",
-    "title": "I See The Light",
+    "title": "I See the Light",
     "originalArtist": "Mandy Moore & Zachary Levi",
     "tags": [],
     "performances": [
@@ -50547,7 +50547,7 @@
   },
   {
     "id": "song-1903",
-    "title": "City Of Stars",
+    "title": "City of stars",
     "originalArtist": "Ryan Gosling & Emma Stone",
     "tags": [],
     "performances": [
@@ -51033,7 +51033,7 @@
   },
   {
     "id": "song-1925",
-    "title": "Can you feel the love tonight",
+    "title": "Can You Feel the Love Tonight",
     "originalArtist": "Elton John",
     "tags": [],
     "performances": [
@@ -51051,7 +51051,7 @@
   },
   {
     "id": "song-1926",
-    "title": "Starcrew",
+    "title": "StarCrew",
     "originalArtist": "Sou",
     "tags": [],
     "performances": [
@@ -51069,7 +51069,7 @@
   },
   {
     "id": "song-1927",
-    "title": "心拍数#0822",
+    "title": "心拍数♯0822",
     "originalArtist": "蝶々P",
     "tags": [],
     "performances": [
@@ -51098,7 +51098,7 @@
   {
     "id": "song-1928",
     "title": "晚餐歌",
-    "originalArtist": "tuki",
+    "originalArtist": "tuki.",
     "tags": [],
     "performances": [
       {
@@ -51125,7 +51125,7 @@
   },
   {
     "id": "song-1929",
-    "title": "可愛いくてごめん",
+    "title": "可愛くてごめん",
     "originalArtist": "HoneyWorks",
     "tags": [],
     "performances": [
@@ -51143,8 +51143,8 @@
   },
   {
     "id": "song-1930",
-    "title": "shallow",
-    "originalArtist": "Lady Gaga",
+    "title": "Shallow",
+    "originalArtist": "Lady Gaga & Bradley Cooper",
     "tags": [],
     "performances": [
       {
@@ -51190,7 +51190,7 @@
   {
     "id": "song-1932",
     "title": "Tell your world",
-    "originalArtist": "kz（livetune）",
+    "originalArtist": "kz",
     "tags": [],
     "performances": [
       {
@@ -51225,7 +51225,7 @@
   },
   {
     "id": "song-1934",
-    "title": "你站在雲林我輸的徹底",
+    "title": "你站在雲林 我輸得徹底👆😑👇",
     "originalArtist": "Diiton",
     "tags": [],
     "performances": [
@@ -51244,7 +51244,7 @@
   {
     "id": "song-1935",
     "title": "unravel",
-    "originalArtist": "TK",
+    "originalArtist": "TK from 凛として時雨",
     "tags": [],
     "performances": [
       {
@@ -51317,7 +51317,7 @@
   },
   {
     "id": "song-1938",
-    "title": "いちの名前",
+    "title": "いのちの名前",
     "originalArtist": "木村弓",
     "tags": [],
     "performances": [
@@ -51335,7 +51335,7 @@
   },
   {
     "id": "song-1939",
-    "title": "生きていたんだよね",
+    "title": "生きていたんだよな",
     "originalArtist": "あいみょん",
     "tags": [],
     "performances": [
@@ -51354,7 +51354,7 @@
   {
     "id": "song-1940",
     "title": "ADAMAS",
-    "originalArtist": "LISA",
+    "originalArtist": "LiSA",
     "tags": [],
     "performances": [
       {
@@ -51409,7 +51409,7 @@
   },
   {
     "id": "song-1942",
-    "title": "day by day",
+    "title": "Day by Day",
     "originalArtist": "浠Mizuki",
     "tags": [],
     "performances": [
@@ -51481,7 +51481,7 @@
   },
   {
     "id": "song-1946",
-    "title": "flashlight",
+    "title": "Flashlight",
     "originalArtist": "Jessie J",
     "tags": [],
     "performances": [
@@ -51536,7 +51536,7 @@
   {
     "id": "song-1949",
     "title": "Way Back Into Love",
-    "originalArtist": "Hugh Grant and Haley Bennett",
+    "originalArtist": "Hugh Grant & Haley Bennett",
     "tags": [],
     "performances": [
       {
@@ -51599,7 +51599,7 @@
   },
   {
     "id": "song-1952",
-    "title": "keep cold",
+    "title": "Keep Cold",
     "originalArtist": "Numcha",
     "tags": [],
     "performances": [
@@ -51663,7 +51663,7 @@
   },
   {
     "id": "song-1955",
-    "title": "Wherever You Are",
+    "title": "Wherever you are",
     "originalArtist": "ONE OK ROCK",
     "tags": [],
     "performances": [
@@ -51829,7 +51829,7 @@
   },
   {
     "id": "song-1962",
-    "title": "Snow Mile",
+    "title": "Snow mile",
     "originalArtist": "Aqu3ra",
     "tags": [],
     "performances": [
@@ -51968,7 +51968,7 @@
   {
     "id": "song-1968",
     "title": "愛にできることはまだあるかい",
-    "originalArtist": "RADWIMPS (天気の子)",
+    "originalArtist": "RADWIMPS",
     "tags": [],
     "performances": [
       {
@@ -52004,7 +52004,7 @@
   {
     "id": "song-1970",
     "title": "unlasting",
-    "originalArtist": "LISA (ソードアート・オンライン アリシゼーション)",
+    "originalArtist": "LiSA",
     "tags": [],
     "performances": [
       {
@@ -52022,7 +52022,7 @@
   {
     "id": "song-1971",
     "title": "你那邊幾點",
-    "originalArtist": "孫盛希 Shi Shi",
+    "originalArtist": "孫盛希",
     "tags": [],
     "performances": [
       {
@@ -52087,7 +52087,7 @@
   },
   {
     "id": "song-1973",
-    "title": "Versace On The Floor",
+    "title": "Versace on the Floor",
     "originalArtist": "Bruno Mars",
     "tags": [],
     "performances": [
@@ -52172,7 +52172,7 @@
   {
     "id": "song-1976",
     "title": "Shake It Off",
-    "originalArtist": "Taylor Swift (No Sound)",
+    "originalArtist": "Taylor Swift",
     "tags": [],
     "performances": [
       {
@@ -52226,7 +52226,7 @@
   {
     "id": "song-1979",
     "title": "青花瓷",
-    "originalArtist": "周杰倫 Jay Chou",
+    "originalArtist": "周杰倫",
     "tags": [],
     "performances": [
       {
@@ -52300,7 +52300,7 @@
   {
     "id": "song-1982",
     "title": "踊",
-    "originalArtist": "ADO",
+    "originalArtist": "Ado",
     "tags": [],
     "performances": [
       {
@@ -52318,7 +52318,7 @@
   {
     "id": "song-1983",
     "title": "ギラギラ",
-    "originalArtist": "ADO",
+    "originalArtist": "Ado",
     "tags": [],
     "performances": [
       {
@@ -52336,7 +52336,7 @@
   {
     "id": "song-1984",
     "title": "うっせぇわ",
-    "originalArtist": "ADO",
+    "originalArtist": "Ado",
     "tags": [],
     "performances": [
       {
@@ -52407,7 +52407,7 @@
   },
   {
     "id": "song-1988",
-    "title": "可愛くてごめ ん",
+    "title": "可愛くてごめん",
     "originalArtist": "HoneyWorks",
     "tags": [],
     "performances": [
@@ -52489,7 +52489,7 @@
   },
   {
     "id": "song-1992",
-    "title": "Queen",
+    "title": "QUEEN",
     "originalArtist": "Kanaria",
     "tags": [],
     "performances": [
@@ -52693,7 +52693,7 @@
   },
   {
     "id": "song-2000",
-    "title": "The Fox (What Does the Fox Say?)",
+    "title": "The Fox(What Does The Fox Say?)",
     "originalArtist": "Ylvis",
     "tags": [],
     "performances": [
@@ -52712,7 +52712,7 @@
   {
     "id": "song-2001",
     "title": "ハッピーシンセサイザ",
-    "originalArtist": "Easy Pop",
+    "originalArtist": "EasyPop",
     "tags": [],
     "performances": [
       {
@@ -53150,7 +53150,7 @@
   {
     "id": "song-2017",
     "title": "灰色と青",
-    "originalArtist": "米津玄師 & 菅田將暉",
+    "originalArtist": "米津玄師-菅田将暉",
     "tags": [],
     "performances": [
       {
@@ -53430,7 +53430,7 @@
   {
     "id": "song-2027",
     "title": "Shallow",
-    "originalArtist": "Lady Gaga (& Bradley Cooper)",
+    "originalArtist": "Lady Gaga & Bradley Cooper",
     "tags": [],
     "performances": [
       {
@@ -53448,7 +53448,7 @@
   {
     "id": "song-2028",
     "title": "心のそばに",
-    "originalArtist": "Belle（中村佳穂）",
+    "originalArtist": "Belle",
     "tags": [],
     "performances": [
       {
@@ -53465,7 +53465,7 @@
   },
   {
     "id": "song-2029",
-    "title": "さよならの夏〜コクリコ坂から〜",
+    "title": "さよならの夏～コクリコ坂から～",
     "originalArtist": "手嶌葵",
     "tags": [],
     "performances": [
@@ -53542,7 +53542,7 @@
   {
     "id": "song-2031",
     "title": "Sincerely",
-    "originalArtist": "TRUE（唐沢美帆）",
+    "originalArtist": "TRUE",
     "tags": [],
     "performances": [
       {
@@ -53796,7 +53796,7 @@
   {
     "id": "song-2039",
     "title": "Bang Bang",
-    "originalArtist": "Jessie J",
+    "originalArtist": "Jessie J-Ariana Grande-Nicki Minaj",
     "tags": [],
     "performances": [
       {
@@ -53905,7 +53905,7 @@
   },
   {
     "id": "song-2044",
-    "title": "アメヲマツ",
+    "title": "アメヲマツ、",
     "originalArtist": "美波",
     "tags": [],
     "performances": [
@@ -53979,7 +53979,7 @@
   },
   {
     "id": "song-2047",
-    "title": "The Man Who Can't Be Moved",
+    "title": "The Man Who Can’t Be Moved",
     "originalArtist": "The Script",
     "tags": [],
     "performances": [
@@ -54605,7 +54605,7 @@
   },
   {
     "id": "song-2074",
-    "title": "Bling-Bang-bang-Born",
+    "title": "Bling-Bang-Bang-Born",
     "originalArtist": "Creepy Nuts",
     "tags": [],
     "performances": [
@@ -54975,7 +54975,7 @@
   },
   {
     "id": "song-2094",
-    "title": "Butter Fly",
+    "title": "Butter-Fly",
     "originalArtist": "和田光司",
     "tags": [],
     "performances": [
@@ -55031,7 +55031,7 @@
   },
   {
     "id": "song-2096",
-    "title": "stars are here",
+    "title": "Stars are here",
     "originalArtist": "96猫",
     "tags": [],
     "performances": [
@@ -55096,7 +55096,7 @@
   {
     "id": "song-2099",
     "title": "クリームソーダとシャンデリア",
-    "originalArtist": "Henrii - Mei",
+    "originalArtist": "Henri-mei",
     "tags": [],
     "performances": [
       {
@@ -55131,7 +55131,7 @@
   },
   {
     "id": "song-2101",
-    "title": "Bling Bang Bang Born",
+    "title": "Bling-Bang-Bang-Born",
     "originalArtist": "Creepy Nuts",
     "tags": [],
     "performances": [
@@ -55233,7 +55233,7 @@
   },
   {
     "id": "song-2105",
-    "title": "カワキラアメク",
+    "title": "カワキヲアメク",
     "originalArtist": "美波",
     "tags": [],
     "performances": [
@@ -55605,7 +55605,7 @@
   },
   {
     "id": "song-2124",
-    "title": "One life",
+    "title": "One Life",
     "originalArtist": "James Bay",
     "tags": [],
     "performances": [
@@ -55623,7 +55623,7 @@
   },
   {
     "id": "song-2125",
-    "title": "Rather B",
+    "title": "Rather Be",
     "originalArtist": "Clean Bandit",
     "tags": [],
     "performances": [
@@ -55929,7 +55929,7 @@
   },
   {
     "id": "song-2137",
-    "title": "My heart will go on",
+    "title": "My Heart Will Go On",
     "originalArtist": "Celine Dion",
     "tags": [],
     "performances": [
@@ -55948,7 +55948,7 @@
   {
     "id": "song-2138",
     "title": "醉後喜歡我",
-    "originalArtist": "Icyball冰球樂團",
+    "originalArtist": "icyball 冰球樂團",
     "tags": [],
     "performances": [
       {
@@ -55965,7 +55965,7 @@
   },
   {
     "id": "song-2139",
-    "title": "この夜に 乾杯",
+    "title": "この夜に乾杯",
     "originalArtist": "メガテラ・ゼロ",
     "tags": [],
     "performances": [
@@ -55984,7 +55984,7 @@
   {
     "id": "song-2140",
     "title": "キスだけで",
-    "originalArtist": "菅田将暉feat. あいみょん",
+    "originalArtist": "菅田将暉",
     "tags": [],
     "performances": [
       {
@@ -56286,7 +56286,7 @@
   {
     "id": "song-2154",
     "title": "キスだけで",
-    "originalArtist": "菅田将暉 feat. あいみょん",
+    "originalArtist": "菅田将暉",
     "tags": [],
     "performances": [
       {
@@ -56314,7 +56314,7 @@
   {
     "id": "song-2155",
     "title": "怪物さん",
-    "originalArtist": "平井堅 feat. あいみょん",
+    "originalArtist": "平井堅 ft.あいみょん",
     "tags": [],
     "performances": [
       {
@@ -57057,7 +57057,7 @@
   },
   {
     "id": "song-2193",
-    "title": "１・２・３",
+    "title": "1・2・3",
     "originalArtist": "After the Rain",
     "tags": [],
     "performances": [
@@ -57075,7 +57075,7 @@
   },
   {
     "id": "song-2194",
-    "title": "Be crazy for me",
+    "title": "Be Crazy for me",
     "originalArtist": "EIKO Starring 96猫",
     "tags": [],
     "performances": [
@@ -57379,7 +57379,7 @@
   },
   {
     "id": "song-2207",
-    "title": "漫夜 Sleepless",
+    "title": "漫夜Sleepless",
     "originalArtist": "澪Rei",
     "tags": [],
     "performances": [
@@ -57415,7 +57415,7 @@
   },
   {
     "id": "song-2209",
-    "title": "Dried Flower",
+    "title": "Dried flower",
     "originalArtist": "優里",
     "tags": [],
     "performances": [
@@ -57751,7 +57751,7 @@
   },
   {
     "id": "song-2221",
-    "title": "碎吧 睡吧",
+    "title": "碎吧，睡吧",
     "originalArtist": "許淨淳",
     "tags": [],
     "performances": [
@@ -57787,7 +57787,7 @@
   },
   {
     "id": "song-2223",
-    "title": "Fly me to the moon",
+    "title": "Fly Me To The Moon",
     "originalArtist": "Bart Howard",
     "tags": [],
     "performances": [
@@ -57806,7 +57806,7 @@
   {
     "id": "song-2224",
     "title": "アヤノの幸福理論",
-    "originalArtist": "じん (IA)",
+    "originalArtist": "じん",
     "tags": [],
     "performances": [
       {
@@ -57823,7 +57823,7 @@
   },
   {
     "id": "song-2225",
-    "title": "琉璃色の地球",
+    "title": "瑠璃色の地球",
     "originalArtist": "松本隆-平井夏美-松田聖子",
     "tags": [],
     "performances": [
@@ -58052,7 +58052,7 @@
   {
     "id": "song-2236",
     "title": "象牙舟",
-    "originalArtist": "傻子與白癡",
+    "originalArtist": "傻子與白痴",
     "tags": [],
     "performances": [
       {
@@ -58097,7 +58097,7 @@
   },
   {
     "id": "song-2238",
-    "title": "Fly Me to the Moon",
+    "title": "Fly Me To The Moon",
     "originalArtist": "Bart Howard",
     "tags": [],
     "performances": [
@@ -58115,7 +58115,7 @@
   },
   {
     "id": "song-2239",
-    "title": "Arrietty’s Song",
+    "title": "Arrietty's Song",
     "originalArtist": "セシル・コルベル",
     "tags": [],
     "performances": [
@@ -58409,7 +58409,7 @@
   },
   {
     "id": "song-2252",
-    "title": "Rain Stops, Goodbye",
+    "title": "rain stops, good-bye",
     "originalArtist": "におP",
     "tags": [],
     "performances": [
@@ -58728,7 +58728,7 @@
   {
     "id": "song-2268",
     "title": "灰色と青",
-    "originalArtist": "米津玄師 ft.菅田将暉",
+    "originalArtist": "米津玄師-菅田将暉",
     "tags": [],
     "performances": [
       {
@@ -58845,7 +58845,7 @@
   },
   {
     "id": "song-2274",
-    "title": "Set fire to the rain",
+    "title": "Set Fire To The Rain",
     "originalArtist": "Adele",
     "tags": [],
     "performances": [
@@ -58864,7 +58864,7 @@
   {
     "id": "song-2275",
     "title": "Say Something",
-    "originalArtist": "A Great Big World",
+    "originalArtist": "A Great Big World, Christina Aguilera",
     "tags": [],
     "performances": [
       {
@@ -59206,7 +59206,7 @@
   {
     "id": "song-2289",
     "title": "1925",
-    "originalArtist": "T-POCKET（ショコラビット）",
+    "originalArtist": "T-POCKET",
     "tags": [],
     "performances": [
       {
@@ -59332,7 +59332,7 @@
   {
     "id": "song-2296",
     "title": "Just Be Friends",
-    "originalArtist": "DixieFlatline",
+    "originalArtist": "Dixie Flatline",
     "tags": [],
     "performances": [
       {
@@ -59609,7 +59609,7 @@
   },
   {
     "id": "song-2307",
-    "title": "henceforth",
+    "title": "Henceforth",
     "originalArtist": "Orangestar",
     "tags": [],
     "performances": [
@@ -59627,7 +59627,7 @@
   },
   {
     "id": "song-2308",
-    "title": "Stellar Stella",
+    "title": "Stellar Stellar",
     "originalArtist": "星街すいせい",
     "tags": [],
     "performances": [
@@ -60553,7 +60553,7 @@
   },
   {
     "id": "song-2345",
-    "title": "Wasted nights",
+    "title": "Wasted Nights",
     "originalArtist": "ONE OK ROCK",
     "tags": [],
     "performances": [
@@ -60571,7 +60571,7 @@
   },
   {
     "id": "song-2346",
-    "title": "summertime",
+    "title": "Summertime",
     "originalArtist": "cinnamons × evening cinema",
     "tags": [],
     "performances": [
@@ -60646,7 +60646,7 @@
   {
     "id": "song-2349",
     "title": "Unholy",
-    "originalArtist": "Sam Smith & Kim Petras 開始",
+    "originalArtist": "Sam Smith & Kim Petras",
     "tags": [],
     "performances": [
       {
@@ -60782,7 +60782,7 @@
   {
     "id": "song-2356",
     "title": "シャルル",
-    "originalArtist": "v flower",
+    "originalArtist": "flower",
     "tags": [],
     "performances": [
       {
@@ -60800,7 +60800,7 @@
   {
     "id": "song-2357",
     "title": "プラネタリウム",
-    "originalArtist": "大塚 愛",
+    "originalArtist": "大塚愛",
     "tags": [],
     "performances": [
       {
@@ -60818,7 +60818,7 @@
   {
     "id": "song-2358",
     "title": "忘れじの言の葉",
-    "originalArtist": "未来古代楽団 feat. 安次嶺希和子",
+    "originalArtist": "未来古代楽団 ft. 安次嶺希和子",
     "tags": [],
     "performances": [
       {
@@ -60927,7 +60927,7 @@
   },
   {
     "id": "song-2363",
-    "title": "champagne problem",
+    "title": "champagne problems",
     "originalArtist": "Taylor Swift",
     "tags": [],
     "performances": [
@@ -60982,7 +60982,7 @@
   {
     "id": "song-2366",
     "title": "獨上C樓",
-    "originalArtist": "YELLOW",
+    "originalArtist": "YELLOW & 范曉萱",
     "tags": [],
     "performances": [
       {
@@ -61130,7 +61130,7 @@
   {
     "id": "song-2372",
     "title": "一眼瞬間",
-    "originalArtist": "張惠妹& 蕭敬騰",
+    "originalArtist": "張惠妹 & 蕭敬騰",
     "tags": [],
     "performances": [
       {
@@ -61148,7 +61148,7 @@
   {
     "id": "song-2373",
     "title": "A Million Dreams",
-    "originalArtist": "Ziv Zaifman & Hugh Jackman & Michelle Williams",
+    "originalArtist": "Ziv Zaifman",
     "tags": [],
     "performances": [
       {
@@ -61202,7 +61202,7 @@
   {
     "id": "song-2376",
     "title": "KING",
-    "originalArtist": "kanaria",
+    "originalArtist": "Kanaria",
     "tags": [],
     "performances": [
       {
@@ -61309,7 +61309,7 @@
   },
   {
     "id": "song-2382",
-    "title": "殺死那個石家庄人",
+    "title": "殺死那個石家莊人",
     "originalArtist": "萬能青年旅店",
     "tags": [],
     "performances": [
@@ -61582,7 +61582,7 @@
   {
     "id": "song-2396",
     "title": "渉り星",
-    "originalArtist": "Islet feat.Sando Aoi×Yoru",
+    "originalArtist": "Islet",
     "tags": [],
     "performances": [
       {
@@ -61758,7 +61758,7 @@
   {
     "id": "song-2403",
     "title": "美好的事可不可以發生在我身上",
-    "originalArtist": "康士坦的變化球 (KST)",
+    "originalArtist": "康士坦的變化球",
     "tags": [],
     "performances": [
       {
@@ -61793,7 +61793,7 @@
   },
   {
     "id": "song-2405",
-    "title": "Top Of The World",
+    "title": "Top of the world",
     "originalArtist": "Carpenters",
     "tags": [],
     "performances": [
@@ -61958,7 +61958,7 @@
   {
     "id": "song-2413",
     "title": "溯Reverse",
-    "originalArtist": "CORSAK & 馬吟吟",
+    "originalArtist": "CORSAK",
     "tags": [],
     "performances": [
       {
@@ -62208,7 +62208,7 @@
   {
     "id": "song-2423",
     "title": "One Touch",
-    "originalArtist": "Milet",
+    "originalArtist": "milet",
     "tags": [],
     "performances": [
       {
@@ -62273,7 +62273,7 @@
   },
   {
     "id": "song-2425",
-    "title": "We can't be friends",
+    "title": "we can't be friends",
     "originalArtist": "Ariana Grande",
     "tags": [],
     "performances": [
@@ -62292,7 +62292,7 @@
   {
     "id": "song-2426",
     "title": "心のそばに",
-    "originalArtist": "Belle（CV：中村佳穗）",
+    "originalArtist": "Belle",
     "tags": [],
     "performances": [
       {
@@ -62578,7 +62578,7 @@
   {
     "id": "song-2438",
     "title": "不識月",
-    "originalArtist": "Luna Safari",
+    "originalArtist": "LunaSafari",
     "tags": [],
     "performances": [
       {
@@ -62596,7 +62596,7 @@
   {
     "id": "song-2439",
     "title": "Bang Bang",
-    "originalArtist": "Jessie J & Ariana Grande & Nicki Minaj",
+    "originalArtist": "Jessie J-Ariana Grande-Nicki Minaj",
     "tags": [],
     "performances": [
       {
@@ -62667,7 +62667,7 @@
   },
   {
     "id": "song-2443",
-    "title": "Wake up your hero",
+    "title": "Wake Up Your Hero",
     "originalArtist": "P5X《女神異聞錄：夜幕魅影》",
     "tags": [],
     "performances": [
@@ -62776,7 +62776,7 @@
   {
     "id": "song-2449",
     "title": "黑暗的巴洛克",
-    "originalArtist": "黑美人姊妹花",
+    "originalArtist": "黑美人姐妹花",
     "tags": [],
     "performances": [
       {
@@ -62896,7 +62896,7 @@
   {
     "id": "song-2454",
     "title": "Nectar",
-    "originalArtist": "まふまふ feat. nqrse",
+    "originalArtist": "まふまふ",
     "tags": [],
     "performances": [
       {
@@ -62932,7 +62932,7 @@
   {
     "id": "song-2456",
     "title": "Rewrite The Stars",
-    "originalArtist": "/Zac Efron & Zendaya",
+    "originalArtist": "Zac Efron & Zendaya",
     "tags": [],
     "performances": [
       {
@@ -62996,7 +62996,7 @@
   {
     "id": "song-2459",
     "title": "すずめ",
-    "originalArtist": "RADWIMPS feat.十明",
+    "originalArtist": "RADWIMPS ft.十明",
     "tags": [],
     "performances": [
       {
@@ -63024,7 +63024,7 @@
   {
     "id": "song-2460",
     "title": "はなればなれの君へ",
-    "originalArtist": "belle",
+    "originalArtist": "Belle",
     "tags": [],
     "performances": [
       {
@@ -63051,7 +63051,7 @@
   },
   {
     "id": "song-2461",
-    "title": "Fall in love",
+    "title": "Fall in Love",
     "originalArtist": "九九 & 陳忻玥",
     "tags": [],
     "performances": [
@@ -63069,7 +63069,7 @@
   },
   {
     "id": "song-2462",
-    "title": "Ex's and Oh's",
+    "title": "Ex's & Oh's",
     "originalArtist": "Elle King",
     "tags": [],
     "performances": [
@@ -63088,7 +63088,7 @@
   {
     "id": "song-2463",
     "title": "星期三或禮拜三",
-    "originalArtist": "魏如萱 & 岑寧兒",
+    "originalArtist": "魏如萱",
     "tags": [],
     "performances": [
       {
@@ -63495,7 +63495,7 @@
   },
   {
     "id": "song-2484",
-    "title": "If I Were a Boy",
+    "title": "If I Were A Boy",
     "originalArtist": "Beyoncé",
     "tags": [],
     "performances": [
@@ -63595,7 +63595,7 @@
   },
   {
     "id": "song-2489",
-    "title": "Can I be Your Baby?",
+    "title": "Can I be your baby",
     "originalArtist": "山東",
     "tags": [],
     "performances": [
@@ -63680,7 +63680,7 @@
   {
     "id": "song-2492",
     "title": "有點甜",
-    "originalArtist": "汪蘇瀧 & By2",
+    "originalArtist": "汪蘇瀧&By2",
     "tags": [],
     "performances": [
       {
@@ -63733,7 +63733,7 @@
   },
   {
     "id": "song-2495",
-    "title": "Everything Will Be OK",
+    "title": "Everything will be Ok",
     "originalArtist": "王OK & 李天責",
     "tags": [],
     "performances": [
@@ -63751,7 +63751,7 @@
   },
   {
     "id": "song-2496",
-    "title": "The Winter Takes It All",
+    "title": "The Winner Takes It All",
     "originalArtist": "ABBA",
     "tags": [],
     "performances": [
@@ -63769,8 +63769,8 @@
   },
   {
     "id": "song-2497",
-    "title": "Umbrella",
-    "originalArtist": "Mrs. Green Apple",
+    "title": "umbrella",
+    "originalArtist": "Mrs. GREEN APPLE",
     "tags": [],
     "performances": [
       {
@@ -64058,7 +64058,7 @@
   {
     "id": "song-2513",
     "title": "Mr.シャーデンフロイデ",
-    "originalArtist": "ひとしずく・やま△",
+    "originalArtist": "ひとしずく×やま△",
     "tags": [],
     "performances": [
       {
@@ -64093,8 +64093,8 @@
   },
   {
     "id": "song-2515",
-    "title": "NIGHTWALKER",
-    "originalArtist": "TEN",
+    "title": "Nightwalker",
+    "originalArtist": "Ten",
     "tags": [],
     "performances": [
       {
@@ -64211,7 +64211,7 @@
   },
   {
     "id": "song-2521",
-    "title": "Shape Of You",
+    "title": "Shape of You",
     "originalArtist": "Ed Sheeran",
     "tags": [],
     "performances": [
@@ -65180,7 +65180,7 @@
   {
     "id": "song-2567",
     "title": "這條小魚在乎",
-    "originalArtist": "王OK & 洪佩瑜",
+    "originalArtist": "王ok",
     "tags": [],
     "performances": [
       {
@@ -65391,7 +65391,7 @@
   },
   {
     "id": "song-2576",
-    "title": "Winter Thing",
+    "title": "Winter Things",
     "originalArtist": "Ariana Grande",
     "tags": [],
     "performances": [
@@ -65428,7 +65428,7 @@
   {
     "id": "song-2578",
     "title": "真っ白",
-    "originalArtist": "Yama",
+    "originalArtist": "yama",
     "tags": [],
     "performances": [
       {
@@ -65481,7 +65481,7 @@
   },
   {
     "id": "song-2581",
-    "title": "Back to December",
+    "title": "Back To December",
     "originalArtist": "Taylor Swift",
     "tags": [],
     "performances": [
@@ -66005,7 +66005,7 @@
   },
   {
     "id": "song-2609",
-    "title": "we can’t be friends",
+    "title": "we can't be friends",
     "originalArtist": "Ariana Grande",
     "tags": [],
     "performances": [
@@ -66023,7 +66023,7 @@
   },
   {
     "id": "song-2610",
-    "title": "BUNNY GIRL",
+    "title": "Bunny Girl",
     "originalArtist": "AKASAKI",
     "tags": [],
     "performances": [
@@ -66042,7 +66042,7 @@
   {
     "id": "song-2611",
     "title": "マトリョシカ",
-    "originalArtist": "ハチ (with 韶花)",
+    "originalArtist": "ハチ",
     "tags": [],
     "performances": [
       {
@@ -66060,7 +66060,7 @@
   {
     "id": "song-2612",
     "title": "響念 Missing",
-    "originalArtist": "響Hibiki (with 波 · 路譜)",
+    "originalArtist": "響Hibiki",
     "tags": [],
     "performances": [
       {
@@ -66078,7 +66078,7 @@
   {
     "id": "song-2613",
     "title": "私は最強",
-    "originalArtist": "Ado (with 流川莉蘿)",
+    "originalArtist": "Ado",
     "tags": [],
     "performances": [
       {
@@ -66095,8 +66095,8 @@
   },
   {
     "id": "song-2614",
-    "title": "Blank space",
-    "originalArtist": "Taylor Swift (with 梨亞卓恩)",
+    "title": "Blank Space",
+    "originalArtist": "Taylor Swift",
     "tags": [],
     "performances": [
       {
@@ -66114,7 +66114,7 @@
   {
     "id": "song-2615",
     "title": "APT.",
-    "originalArtist": "ROSÉ & Bruno Mars (with 唐牛ミラ)",
+    "originalArtist": "ROSÉ & Bruno Mars",
     "tags": [],
     "performances": [
       {
@@ -66150,7 +66150,7 @@
   {
     "id": "song-2617",
     "title": "玫瑰少年",
-    "originalArtist": "蔡依林 (with 涅菈)",
+    "originalArtist": "蔡依林",
     "tags": [],
     "performances": [
       {
@@ -66186,7 +66186,7 @@
   {
     "id": "song-2619",
     "title": "フォニイ",
-    "originalArtist": "ツミキ (with 帕洛特)",
+    "originalArtist": "ツミキ",
     "tags": [],
     "performances": [
       {
@@ -66204,7 +66204,7 @@
   {
     "id": "song-2620",
     "title": "アヤノの幸福理論",
-    "originalArtist": "じん (with 萊菈．希格娜斯)",
+    "originalArtist": "じん",
     "tags": [],
     "performances": [
       {
@@ -66222,7 +66222,7 @@
   {
     "id": "song-2621",
     "title": "レイメイ",
-    "originalArtist": "酸欠少女さユり & MY FIRST STORY (with 諾特)",
+    "originalArtist": "さユりxMY FIRST STORY",
     "tags": [],
     "performances": [
       {
@@ -66240,7 +66240,7 @@
   {
     "id": "song-2622",
     "title": "小手拉大手",
-    "originalArtist": "梁靜茹 (with 紫茗)",
+    "originalArtist": "梁靜茹-辻亞彌乃",
     "tags": [],
     "performances": [
       {
@@ -66258,7 +66258,7 @@
   {
     "id": "song-2623",
     "title": "I'm still alive today",
-    "originalArtist": "96猫 (with 歐妲)",
+    "originalArtist": "96猫",
     "tags": [],
     "performances": [
       {
@@ -66276,7 +66276,7 @@
   {
     "id": "song-2624",
     "title": "大藝術家",
-    "originalArtist": "蔡依林 (with 洛可洛斯特)",
+    "originalArtist": "蔡依林",
     "tags": [],
     "performances": [
       {
@@ -66294,7 +66294,7 @@
   {
     "id": "song-2625",
     "title": "地球をあげる",
-    "originalArtist": "はるまきごはん (with 水縹そまる)",
+    "originalArtist": "はるまきごはん-LUMi",
     "tags": [],
     "performances": [
       {
@@ -66312,7 +66312,7 @@
   {
     "id": "song-2626",
     "title": "曇天",
-    "originalArtist": "DOES (with 祈菈‧貝希毛絲)",
+    "originalArtist": "DOES",
     "tags": [],
     "performances": [
       {
@@ -66348,7 +66348,7 @@
   {
     "id": "song-2628",
     "title": "点描の唄",
-    "originalArtist": "Mrs. GREEN APPLE (with 蘿貝塔)",
+    "originalArtist": "Mrs. GREEN APPLE",
     "tags": [],
     "performances": [
       {
@@ -66366,7 +66366,7 @@
   {
     "id": "song-2629",
     "title": "Shallow",
-    "originalArtist": "Lady Gaga & Bradley Cooper (with 515)",
+    "originalArtist": "Lady Gaga & Bradley Cooper",
     "tags": [],
     "performances": [
       {
@@ -66384,7 +66384,7 @@
   {
     "id": "song-2630",
     "title": "ギラギラ",
-    "originalArtist": "Ado (with Ellise)",
+    "originalArtist": "Ado",
     "tags": [],
     "performances": [
       {
@@ -66402,7 +66402,7 @@
   {
     "id": "song-2631",
     "title": "劣等上等",
-    "originalArtist": "ギガP (with 麵音白湯)",
+    "originalArtist": "ギガP",
     "tags": [],
     "performances": [
       {
@@ -66438,7 +66438,7 @@
   {
     "id": "song-2633",
     "title": "怪獣の花唄",
-    "originalArtist": "Vaundy (with 玖宵)",
+    "originalArtist": "Vaundy",
     "tags": [],
     "performances": [
       {
@@ -66456,7 +66456,7 @@
   {
     "id": "song-2634",
     "title": "magnet",
-    "originalArtist": "流星P (with 露熙妲)",
+    "originalArtist": "流星P",
     "tags": [],
     "performances": [
       {
@@ -66474,7 +66474,7 @@
   {
     "id": "song-2635",
     "title": "神のまにまに",
-    "originalArtist": "れるりり (with sazki)",
+    "originalArtist": "れるりり",
     "tags": [],
     "performances": [
       {
@@ -66492,7 +66492,7 @@
   {
     "id": "song-2636",
     "title": "我還年輕我還年輕",
-    "originalArtist": "老王樂隊 (with 半點)",
+    "originalArtist": "老王樂隊",
     "tags": [],
     "performances": [
       {
@@ -66510,7 +66510,7 @@
   {
     "id": "song-2637",
     "title": "My Dearest",
-    "originalArtist": "supercell (with 克蕾)",
+    "originalArtist": "Supercell",
     "tags": [],
     "performances": [
       {
@@ -66528,7 +66528,7 @@
   {
     "id": "song-2638",
     "title": "大魚",
-    "originalArtist": "周深 (with 沐橙)",
+    "originalArtist": "周深",
     "tags": [],
     "performances": [
       {
@@ -66546,7 +66546,7 @@
   {
     "id": "song-2639",
     "title": "いーあるふぁんくらぶ",
-    "originalArtist": "みきとP (with 心咲KOE)",
+    "originalArtist": "みきとP",
     "tags": [],
     "performances": [
       {
@@ -66564,7 +66564,7 @@
   {
     "id": "song-2640",
     "title": "晩餐歌",
-    "originalArtist": "tuki. (with 涅默)",
+    "originalArtist": "tuki.",
     "tags": [],
     "performances": [
       {
@@ -66581,8 +66581,8 @@
   },
   {
     "id": "song-2641",
-    "title": "Fall in love",
-    "originalArtist": "九九 & 陳忻玥 (with TSMATCH火柴)",
+    "title": "Fall in Love",
+    "originalArtist": "九九 & 陳忻玥",
     "tags": [],
     "performances": [
       {
@@ -66600,7 +66600,7 @@
   {
     "id": "song-2642",
     "title": "サムライハート",
-    "originalArtist": "SPYAIR (with 久田はくぜん)",
+    "originalArtist": "SPYAIR",
     "tags": [],
     "performances": [
       {
@@ -66618,7 +66618,7 @@
   {
     "id": "song-2643",
     "title": "夜咄ディセイブ",
-    "originalArtist": "じん (with 瓦西瓦瓦)",
+    "originalArtist": "じん",
     "tags": [],
     "performances": [
       {
@@ -66736,7 +66736,7 @@
   {
     "id": "song-2649",
     "title": "慢慢喜歡你",
-    "originalArtist": "莫文蔚 (with 浠Mizuki)",
+    "originalArtist": "莫文蔚",
     "tags": [],
     "performances": [
       {
@@ -66754,7 +66754,7 @@
   {
     "id": "song-2650",
     "title": "Day by Day",
-    "originalArtist": "浠Mizuki (with 浠Mizuki)",
+    "originalArtist": "浠Mizuki",
     "tags": [],
     "performances": [
       {
@@ -66772,7 +66772,7 @@
   {
     "id": "song-2651",
     "title": "Siɹən",
-    "originalArtist": "浠Mizuki feat.Ring 誓約之聲",
+    "originalArtist": "浠Mizuki",
     "tags": [],
     "performances": [
       {
@@ -66790,7 +66790,7 @@
   {
     "id": "song-2652",
     "title": "I'm still alive today",
-    "originalArtist": "96猫 (with 浠Mizuki)",
+    "originalArtist": "96猫",
     "tags": [],
     "performances": [
       {
@@ -66808,7 +66808,7 @@
   {
     "id": "song-2653",
     "title": "響念",
-    "originalArtist": "響Hibiki (with 浠Mizuki)",
+    "originalArtist": "響Hibiki",
     "tags": [],
     "performances": [
       {
@@ -66880,7 +66880,7 @@
   {
     "id": "song-2657",
     "title": "-ERROR",
-    "originalArtist": "niki (with 浠Mizuki)",
+    "originalArtist": "niki",
     "tags": [],
     "performances": [
       {
@@ -66934,7 +66934,7 @@
   {
     "id": "song-2660",
     "title": "粛聖!!ロリ神レクイエム",
-    "originalArtist": "しぐれうい (with 浠Mizuki)",
+    "originalArtist": "しぐれうい",
     "tags": [],
     "performances": [
       {
@@ -66952,7 +66952,7 @@
   {
     "id": "song-2661",
     "title": "ハム太郎とっとこうた",
-    "originalArtist": "河井リツ子 (with 浠Mizuki)",
+    "originalArtist": "河井リツ子",
     "tags": [],
     "performances": [
       {
@@ -67016,7 +67016,7 @@
   {
     "id": "song-2664",
     "title": "堪折",
-    "originalArtist": "Ring 誓約之聲",
+    "originalArtist": "Ring",
     "tags": [],
     "performances": [
       {
@@ -67142,7 +67142,7 @@
   {
     "id": "song-2671",
     "title": "Bang Bang",
-    "originalArtist": "Jessie J ft. Ariana Grande, Nicki Minaj",
+    "originalArtist": "Jessie J-Ariana Grande-Nicki Minaj",
     "tags": [],
     "performances": [
       {
@@ -67297,7 +67297,7 @@
   },
   {
     "id": "song-2678",
-    "title": "dum dum",
+    "title": "Dum Dum",
     "originalArtist": "Jeff Satur",
     "tags": [],
     "performances": [
@@ -67398,7 +67398,7 @@
   {
     "id": "song-2683",
     "title": "天文特徵",
-    "originalArtist": "HUSH!",
+    "originalArtist": "HUSH",
     "tags": [],
     "performances": [
       {
@@ -67885,8 +67885,8 @@
   },
   {
     "id": "song-2709",
-    "title": "Gimme x Gimme",
-    "originalArtist": "八王子P × Giga(ギガ) feat. 初音ミク・鏡音リ",
+    "title": "Gimme×Gimme",
+    "originalArtist": "八王子P × Giga",
     "tags": [],
     "performances": [
       {
@@ -67904,7 +67904,7 @@
   {
     "id": "song-2710",
     "title": "A Million Dreams",
-    "originalArtist": "The Greatest Snowman",
+    "originalArtist": "The Greatest Showman",
     "tags": [],
     "performances": [
       {
@@ -67958,7 +67958,7 @@
   {
     "id": "song-2713",
     "title": "I Wanna Be Your Slave",
-    "originalArtist": "MÅNESKIN",
+    "originalArtist": "Måneskin",
     "tags": [],
     "performances": [
       {
@@ -67975,8 +67975,8 @@
   },
   {
     "id": "song-2714",
-    "title": "Kings",
-    "originalArtist": "Angela",
+    "title": "KINGS",
+    "originalArtist": "angela-atsuko-KATSU",
     "tags": [],
     "performances": [
       {
@@ -68066,7 +68066,7 @@
   {
     "id": "song-2719",
     "title": "誇り高きアイドル",
-    "originalArtist": "HoneyWorks ft.Kotoha",
+    "originalArtist": "HoneyWorks",
     "tags": [],
     "performances": [
       {
@@ -68101,8 +68101,8 @@
   },
   {
     "id": "song-2721",
-    "title": "Day By Day",
-    "originalArtist": "浠 Mizuki",
+    "title": "Day by Day",
+    "originalArtist": "浠Mizuki",
     "tags": [],
     "performances": [
       {
@@ -68120,7 +68120,7 @@
   {
     "id": "song-2722",
     "title": "潜水花",
-    "originalArtist": "浠 Mizuki",
+    "originalArtist": "浠Mizuki",
     "tags": [],
     "performances": [
       {
@@ -68138,7 +68138,7 @@
   {
     "id": "song-2723",
     "title": "Siɹən",
-    "originalArtist": "浠 Mizuki ft. 誓約之聲 Ring",
+    "originalArtist": "浠Mizuki",
     "tags": [],
     "performances": [
       {
@@ -68174,7 +68174,7 @@
   {
     "id": "song-2725",
     "title": "Bunny Girl",
-    "originalArtist": "AKSAKI",
+    "originalArtist": "AKASAKI",
     "tags": [],
     "performances": [
       {
@@ -68192,7 +68192,7 @@
   {
     "id": "song-2726",
     "title": "Bang Bang",
-    "originalArtist": "Jessie J, Ariana Grande, Nicki Minaj",
+    "originalArtist": "Jessie J-Ariana Grande-Nicki Minaj",
     "tags": [],
     "performances": [
       {
@@ -68220,7 +68220,7 @@
   {
     "id": "song-2727",
     "title": "私は最強",
-    "originalArtist": "ADO",
+    "originalArtist": "Ado",
     "tags": [],
     "performances": [
       {
@@ -68294,7 +68294,7 @@
   {
     "id": "song-2730",
     "title": "桜華残響",
-    "originalArtist": "浠 Mizuki",
+    "originalArtist": "浠Mizuki",
     "tags": [],
     "performances": [
       {
@@ -68330,7 +68330,7 @@
   {
     "id": "song-2732",
     "title": "未知未踏アルスハイル",
-    "originalArtist": "浠 Mizuki",
+    "originalArtist": "浠Mizuki",
     "tags": [],
     "performances": [
       {
@@ -68394,7 +68394,7 @@
   {
     "id": "song-2735",
     "title": "チューリングラブ",
-    "originalArtist": "ナナヲアカリ ft. Sou",
+    "originalArtist": "ナナヲアカリ & Sou",
     "tags": [],
     "performances": [
       {
@@ -68430,7 +68430,7 @@
   {
     "id": "song-2737",
     "title": "ベノム",
-    "originalArtist": "かいりきベア  ft.flower",
+    "originalArtist": "かいりきベア",
     "tags": [],
     "performances": [
       {
@@ -68466,7 +68466,7 @@
   {
     "id": "song-2739",
     "title": "アイのシナリオ",
-    "originalArtist": "CHiCO with HoneyWoks",
+    "originalArtist": "CHiCO with HoneyWorks",
     "tags": [],
     "performances": [
       {
@@ -68601,7 +68601,7 @@
   },
   {
     "id": "song-2746",
-    "title": "今晚的星星我都打給你",
+    "title": "今晚的星星我都摘給你",
     "originalArtist": "龍槍Dragonpike",
     "tags": [],
     "performances": [
@@ -68638,7 +68638,7 @@
   {
     "id": "song-2748",
     "title": "走建國路回家但後座少ㄌ泥",
-    "originalArtist": "多多 x 以捷",
+    "originalArtist": "多多",
     "tags": [],
     "performances": [
       {
@@ -68692,7 +68692,7 @@
   {
     "id": "song-2751",
     "title": "ふたりごと",
-    "originalArtist": "TRUE & 茅原実里 ft.浠 Mizuki",
+    "originalArtist": "TRUE & 茅原実里",
     "tags": [],
     "performances": [
       {
@@ -68837,7 +68837,7 @@
   },
   {
     "id": "song-2758",
-    "title": "Golden Hour",
+    "title": "golden hour",
     "originalArtist": "JVKE",
     "tags": [],
     "performances": [
@@ -68892,7 +68892,7 @@
   {
     "id": "song-2761",
     "title": "Calc.",
-    "originalArtist": "ジミーサムP ft. 初音ミク",
+    "originalArtist": "ジミーサムP",
     "tags": [],
     "performances": [
       {
@@ -68964,7 +68964,7 @@
   {
     "id": "song-2765",
     "title": "glow",
-    "originalArtist": "keeno  ft. 初音ミク",
+    "originalArtist": "keeno",
     "tags": [],
     "performances": [
       {
@@ -68982,7 +68982,7 @@
   {
     "id": "song-2766",
     "title": "二息步行",
-    "originalArtist": "DECO*27 ft. 初音ミク",
+    "originalArtist": "DECO*27",
     "tags": [],
     "performances": [
       {
@@ -69036,7 +69036,7 @@
   {
     "id": "song-2769",
     "title": "Fairytale, [reunion]",
-    "originalArtist": "buzz ft. GUMI",
+    "originalArtist": "buzzG",
     "tags": [],
     "performances": [
       {
@@ -69054,7 +69054,7 @@
   {
     "id": "song-2770",
     "title": "心做し",
-    "originalArtist": "蝶々P ft. GUMI",
+    "originalArtist": "蝶々P",
     "tags": [],
     "performances": [
       {
@@ -69118,7 +69118,7 @@
   {
     "id": "song-2773",
     "title": "ベノム",
-    "originalArtist": "かいりきベア ft. flower",
+    "originalArtist": "かいりきベア",
     "tags": [],
     "performances": [
       {
@@ -69136,7 +69136,7 @@
   {
     "id": "song-2774",
     "title": "新時代",
-    "originalArtist": "ADO",
+    "originalArtist": "Ado",
     "tags": [],
     "performances": [
       {
@@ -69226,7 +69226,7 @@
   {
     "id": "song-2779",
     "title": "漫夜Sleepless",
-    "originalArtist": "澪 Rei",
+    "originalArtist": "澪Rei",
     "tags": [],
     "performances": [
       {
@@ -69603,7 +69603,7 @@
   },
   {
     "id": "song-2800",
-    "title": "bunny girl",
+    "title": "Bunny Girl",
     "originalArtist": "AKASAKI",
     "tags": [],
     "performances": [
@@ -69739,7 +69739,7 @@
   },
   {
     "id": "song-2807",
-    "title": "Be Crazy For Me",
+    "title": "Be Crazy for me",
     "originalArtist": "EIKO Starring 96猫",
     "tags": [],
     "performances": [
@@ -69776,7 +69776,7 @@
   {
     "id": "song-2809",
     "title": "渉り星",
-    "originalArtist": "Islet ft.Sando Aoi×夕凪夜",
+    "originalArtist": "Islet",
     "tags": [],
     "performances": [
       {
@@ -69812,7 +69812,7 @@
   {
     "id": "song-2811",
     "title": "愛に出会い恋は続く",
-    "originalArtist": "HoneyWorks ft. Kotoha",
+    "originalArtist": "HoneyWorks",
     "tags": [],
     "performances": [
       {
@@ -69830,7 +69830,7 @@
   {
     "id": "song-2812",
     "title": "白日夢",
-    "originalArtist": "Islet ft. 倚水",
+    "originalArtist": "Islet",
     "tags": [],
     "performances": [
       {
@@ -69847,7 +69847,7 @@
   },
   {
     "id": "song-2813",
-    "title": "カタオモト",
+    "title": "カタオモイ",
     "originalArtist": "Aimer",
     "tags": [],
     "performances": [
@@ -69866,7 +69866,7 @@
   {
     "id": "song-2814",
     "title": "Closer",
-    "originalArtist": "The Chainsmokers ft. Halsey",
+    "originalArtist": "The Chainsmokers",
     "tags": [],
     "performances": [
       {
@@ -69893,7 +69893,7 @@
   },
   {
     "id": "song-2815",
-    "title": "I Ain’t Worried",
+    "title": "I Ain't Worried",
     "originalArtist": "OneRepublic",
     "tags": [],
     "performances": [
@@ -70074,7 +70074,7 @@
   {
     "id": "song-2825",
     "title": "在加納共和國離婚",
-    "originalArtist": "DIOR 大穎 & 菲道爾 ft. 漏打 Loda",
+    "originalArtist": "大穎 & 菲道爾",
     "tags": [],
     "performances": [
       {
@@ -70145,7 +70145,7 @@
   },
   {
     "id": "song-2829",
-    "title": "Love Is An Open Door",
+    "title": "Love Is an Open Door",
     "originalArtist": "Kristen Bell & Santino Fontana",
     "tags": [],
     "performances": [
@@ -70164,7 +70164,7 @@
   {
     "id": "song-2830",
     "title": "Side to Side",
-    "originalArtist": "Ariana Grande ft. Nicki Minaj",
+    "originalArtist": "Ariana Grande",
     "tags": [],
     "performances": [
       {
@@ -70181,7 +70181,7 @@
   },
   {
     "id": "song-2831",
-    "title": "Way Back Into Home",
+    "title": "Way Back Into Love",
     "originalArtist": "Hugh Grant & Haley Bennett",
     "tags": [],
     "performances": [
@@ -70245,7 +70245,7 @@
   },
   {
     "id": "song-2834",
-    "title": "你，好不好？",
+    "title": "你，好不好",
     "originalArtist": "周興哲",
     "tags": [],
     "performances": [
@@ -70602,7 +70602,7 @@
   {
     "id": "song-2851",
     "title": "My Medicine",
-    "originalArtist": "The Pretty Reckles",
+    "originalArtist": "The Pretty Reckless",
     "tags": [],
     "performances": [
       {
@@ -70620,7 +70620,7 @@
   {
     "id": "song-2852",
     "title": "What is love???",
-    "originalArtist": "JU!IE",
+    "originalArtist": "JU!iE",
     "tags": [],
     "performances": [
       {
@@ -70637,8 +70637,8 @@
   },
   {
     "id": "song-2853",
-    "title": "Fly Me to the Moon",
-    "originalArtist": "Frank Sinatra & Count Basie",
+    "title": "Fly Me To The Moon",
+    "originalArtist": "Frank Sinatra",
     "tags": [],
     "performances": [
       {
@@ -70674,7 +70674,7 @@
   {
     "id": "song-2855",
     "title": "小夜子",
-    "originalArtist": "みきとP  ft. 初音ミク",
+    "originalArtist": "みきとP",
     "tags": [],
     "performances": [
       {
@@ -70692,7 +70692,7 @@
   {
     "id": "song-2856",
     "title": "君の脈で踊りたかった",
-    "originalArtist": "ピコン ft. 初音ミク",
+    "originalArtist": "ピコン",
     "tags": [],
     "performances": [
       {
@@ -70745,7 +70745,7 @@
   },
   {
     "id": "song-2859",
-    "title": "還是要相信愛情啊",
+    "title": "還是要相信愛情啊混蛋們",
     "originalArtist": "魏如萱",
     "tags": [],
     "performances": [
@@ -70764,7 +70764,7 @@
   {
     "id": "song-2860",
     "title": "溯Reverse",
-    "originalArtist": "CORSAK ft. 馬吟吟",
+    "originalArtist": "CORSAK",
     "tags": [],
     "performances": [
       {
@@ -70835,7 +70835,7 @@
   },
   {
     "id": "song-2864",
-    "title": "We Can't Be Friend",
+    "title": "we can't be friends",
     "originalArtist": "Ariana Grande",
     "tags": [],
     "performances": [
@@ -70853,7 +70853,7 @@
   },
   {
     "id": "song-2865",
-    "title": "Sway to My Beat In Cosmos",
+    "title": "Sway to My Beat in Cosmos",
     "originalArtist": "Chevy",
     "tags": [],
     "performances": [
@@ -70918,7 +70918,7 @@
   {
     "id": "song-2868",
     "title": "おもかげ",
-    "originalArtist": "milet × Aimer × 幾田りら",
+    "originalArtist": "milet & Aimer & 幾田りら",
     "tags": [],
     "performances": [
       {
@@ -71007,7 +71007,7 @@
   },
   {
     "id": "song-2873",
-    "title": "Clover Wish",
+    "title": "Clover wish",
     "originalArtist": "ChamJam",
     "tags": [],
     "performances": [
@@ -71026,7 +71026,7 @@
   {
     "id": "song-2874",
     "title": "フラレガイガール",
-    "originalArtist": "酸欠少女 さユり",
+    "originalArtist": "酸欠少女さユり",
     "tags": [],
     "performances": [
       {
@@ -71079,7 +71079,7 @@
   },
   {
     "id": "song-2877",
-    "title": "Nerve Enough",
+    "title": "Never Enough",
     "originalArtist": "Loren Allred",
     "tags": [],
     "performances": [
@@ -71152,7 +71152,7 @@
   {
     "id": "song-2881",
     "title": "umbrella",
-    "originalArtist": "Mrs.GREENAPPLE",
+    "originalArtist": "Mrs. GREEN APPLE",
     "tags": [],
     "performances": [
       {
@@ -71260,7 +71260,7 @@
   {
     "id": "song-2887",
     "title": "灰色と青",
-    "originalArtist": "米津玄師 & 菅田将暉",
+    "originalArtist": "米津玄師-菅田将暉",
     "tags": [],
     "performances": [
       {
@@ -71350,7 +71350,7 @@
   {
     "id": "song-2892",
     "title": "Gimme×Gimme",
-    "originalArtist": "八王子P & Giga",
+    "originalArtist": "八王子P × Giga",
     "tags": [],
     "performances": [
       {
@@ -71450,7 +71450,7 @@
   {
     "id": "song-2897",
     "title": "打上花火",
-    "originalArtist": "DAOKO & 米津玄師",
+    "originalArtist": "DAOKO × 米津玄師",
     "tags": [],
     "performances": [
       {
@@ -71467,7 +71467,7 @@
   },
   {
     "id": "song-2898",
-    "title": "Lovely",
+    "title": "lovely",
     "originalArtist": "Khalid & Billie Eilish",
     "tags": [],
     "performances": [
@@ -71486,7 +71486,7 @@
   {
     "id": "song-2899",
     "title": "熱戀情節",
-    "originalArtist": "吳子健Remi & Kiya",
+    "originalArtist": "吳子健REmi & KIYA",
     "tags": [],
     "performances": [
       {
@@ -71568,7 +71568,7 @@
   {
     "id": "song-2903",
     "title": "畫地為牢",
-    "originalArtist": "雲の泣 & 葉里",
+    "originalArtist": "云の泣 & 葉里",
     "tags": [],
     "performances": [
       {
@@ -71586,7 +71586,7 @@
   {
     "id": "song-2904",
     "title": "We Don't Talk Anymore",
-    "originalArtist": "Charlie Puth & Selena Gomez",
+    "originalArtist": "Charlie Puth",
     "tags": [],
     "performances": [
       {
@@ -71658,7 +71658,7 @@
   {
     "id": "song-2908",
     "title": "チューリングラブ",
-    "originalArtist": "ナナヲアカリ feat.Sou",
+    "originalArtist": "ナナヲアカリ & Sou",
     "tags": [],
     "performances": [
       {
@@ -71676,7 +71676,7 @@
   {
     "id": "song-2909",
     "title": "レイメイ",
-    "originalArtist": "さユり & MY FIRST STORY",
+    "originalArtist": "さユりxMY FIRST STORY",
     "tags": [],
     "performances": [
       {
@@ -71730,7 +71730,7 @@
   {
     "id": "song-2912",
     "title": "在加納共和國離婚",
-    "originalArtist": "DIOR大穎 & 菲道爾",
+    "originalArtist": "大穎 & 菲道爾",
     "tags": [],
     "performances": [
       {
@@ -71766,7 +71766,7 @@
   {
     "id": "song-2914",
     "title": "手心的薔薇",
-    "originalArtist": "林俊傑 feat.鄧紫棋",
+    "originalArtist": "林俊傑",
     "tags": [],
     "performances": [
       {
@@ -71802,7 +71802,7 @@
   {
     "id": "song-2916",
     "title": "病名は愛だった",
-    "originalArtist": "Neru & z'5",
+    "originalArtist": "Neru・z'5",
     "tags": [],
     "performances": [
       {
@@ -71892,7 +71892,7 @@
   {
     "id": "song-2921",
     "title": "你的行李",
-    "originalArtist": "謝震廷 feat.徐靖玟",
+    "originalArtist": "謝震廷",
     "tags": [],
     "performances": [
       {
@@ -72054,7 +72054,7 @@
   {
     "id": "song-2930",
     "title": "失眠飛行",
-    "originalArtist": "接個吻， 開一槍 & 沈以誠 & 薛明媛",
+    "originalArtist": "接個吻，開一槍 & 沈以誠 & 薛明媛",
     "tags": [],
     "performances": [
       {
@@ -72090,7 +72090,7 @@
   {
     "id": "song-2932",
     "title": "涼涼",
-    "originalArtist": "楊宗緯 & 張碧晨",
+    "originalArtist": "楊宗緯-張碧晨",
     "tags": [],
     "performances": [
       {
@@ -72208,7 +72208,7 @@
   {
     "id": "song-2938",
     "title": "你被寫在我的歌裡",
-    "originalArtist": "蘇打綠 feat.陳嘉樺",
+    "originalArtist": "蘇打綠",
     "tags": [],
     "performances": [
       {
@@ -72316,7 +72316,7 @@
   {
     "id": "song-2944",
     "title": "有點甜",
-    "originalArtist": "汪蘇瀧 & BY2",
+    "originalArtist": "汪蘇瀧&By2",
     "tags": [],
     "performances": [
       {
@@ -72334,7 +72334,7 @@
   {
     "id": "song-2945",
     "title": "OST",
-    "originalArtist": "ASH ISLAND feat. Chanmina",
+    "originalArtist": "ASH ISLAND",
     "tags": [],
     "performances": [
       {
@@ -72352,7 +72352,7 @@
   {
     "id": "song-2946",
     "title": "おなじ話",
-    "originalArtist": "ハンバートハンバート",
+    "originalArtist": "ハンバート ハンバート",
     "tags": [],
     "performances": [
       {
@@ -72370,7 +72370,7 @@
   {
     "id": "song-2947",
     "title": "不該",
-    "originalArtist": "周杰倫 & 張惠妹",
+    "originalArtist": "周杰倫",
     "tags": [],
     "performances": [
       {
@@ -72487,7 +72487,7 @@
   },
   {
     "id": "song-2953",
-    "title": "asphyxia",
+    "title": "Asphyxia",
     "originalArtist": "Cö shu Nie",
     "tags": [],
     "performances": [
@@ -72707,8 +72707,8 @@
   },
   {
     "id": "song-2963",
-    "title": "moves like jagger",
-    "originalArtist": "maroon 5 & christina aguilera",
+    "title": "Moves Like Jagger",
+    "originalArtist": "Maroon 5",
     "tags": [],
     "performances": [
       {
@@ -72743,7 +72743,7 @@
   },
   {
     "id": "song-2965",
-    "title": "kiss me",
+    "title": "Kiss Me",
     "originalArtist": "Sixpence None The Richer",
     "tags": [],
     "performances": [
@@ -72851,8 +72851,8 @@
   },
   {
     "id": "song-2971",
-    "title": "rewrite the stars",
-    "originalArtist": "zac efron & zendaya",
+    "title": "Rewrite The Stars",
+    "originalArtist": "Zac Efron & Zendaya",
     "tags": [],
     "performances": [
       {
@@ -72869,8 +72869,8 @@
   },
   {
     "id": "song-2972",
-    "title": "fly me to the moon",
-    "originalArtist": "francis sinatra",
+    "title": "Fly Me To The Moon",
+    "originalArtist": "Frank Sinatra",
     "tags": [],
     "performances": [
       {
@@ -72887,7 +72887,7 @@
   },
   {
     "id": "song-2973",
-    "title": "sunday morning",
+    "title": "Sunday Morning",
     "originalArtist": "Maroon 5",
     "tags": [],
     "performances": [
@@ -72905,8 +72905,8 @@
   },
   {
     "id": "song-2974",
-    "title": "best part",
-    "originalArtist": "Daniel Caesar & H.E.R.",
+    "title": "Best Part",
+    "originalArtist": "Daniel Caesar",
     "tags": [],
     "performances": [
       {
@@ -72941,7 +72941,7 @@
   },
   {
     "id": "song-2976",
-    "title": "a thousand years",
+    "title": "A Thousand Years",
     "originalArtist": "Christina Perri",
     "tags": [],
     "performances": [
@@ -72959,7 +72959,7 @@
   },
   {
     "id": "song-2977",
-    "title": "テールの唄",
+    "title": "テルーの唄",
     "originalArtist": "手嶌葵",
     "tags": [],
     "performances": [
@@ -72977,7 +72977,7 @@
   },
   {
     "id": "song-2978",
-    "title": "Fix you",
+    "title": "Fix You",
     "originalArtist": "Coldplay",
     "tags": [],
     "performances": [
@@ -72995,7 +72995,7 @@
   },
   {
     "id": "song-2979",
-    "title": "Fall in love",
+    "title": "Fall in Love",
     "originalArtist": "九九 Sophie Chen x 陳忻玥 Vicky Chen",
     "tags": [],
     "performances": [
@@ -73517,7 +73517,7 @@
   },
   {
     "id": "song-3008",
-    "title": "Keep cold",
+    "title": "Keep Cold",
     "originalArtist": "Numcha",
     "tags": [],
     "performances": [
@@ -73536,7 +73536,7 @@
   {
     "id": "song-3009",
     "title": "七彩的微風",
-    "originalArtist": "珍珠美人魚",
+    "originalArtist": "真珠美人魚",
     "tags": [],
     "performances": [
       {
@@ -73572,7 +73572,7 @@
   {
     "id": "song-3011",
     "title": "恋はきっと急上昇",
-    "originalArtist": "のぼる↑",
+    "originalArtist": "のぼる↑P",
     "tags": [],
     "performances": [
       {
@@ -73646,7 +73646,7 @@
   {
     "id": "song-3014",
     "title": "愛的華爾滋",
-    "originalArtist": "鄭爽 & 俞灝明",
+    "originalArtist": "鄭爽",
     "tags": [],
     "performances": [
       {
@@ -73664,7 +73664,7 @@
   {
     "id": "song-3015",
     "title": "Think of You",
-    "originalArtist": "オフィーリア (CV：Acane Madder)",
+    "originalArtist": "オフィーリア(acane_madder)",
     "tags": [],
     "performances": [
       {
@@ -73735,7 +73735,7 @@
   },
   {
     "id": "song-3019",
-    "title": "Everything will be OK",
+    "title": "Everything will be Ok",
     "originalArtist": "王OK & 李天責",
     "tags": [],
     "performances": [
@@ -73807,7 +73807,7 @@
   },
   {
     "id": "song-3023",
-    "title": "NIne Point Eight",
+    "title": "Nine point eight",
     "originalArtist": "Mili",
     "tags": [],
     "performances": [
@@ -73897,7 +73897,7 @@
   },
   {
     "id": "song-3028",
-    "title": "白 My Side",
+    "title": "白 my Side",
     "originalArtist": "浠Mizuki",
     "tags": [],
     "performances": [
@@ -74286,7 +74286,7 @@
   {
     "id": "song-3049",
     "title": "lovely",
-    "originalArtist": "Billie Eilish ft. Khalid",
+    "originalArtist": "Khalid & Billie Eilish",
     "tags": [],
     "performances": [
       {
@@ -74339,7 +74339,7 @@
   },
   {
     "id": "song-3052",
-    "title": "能遇見,就很不錯了",
+    "title": "能遇見，就很不錯了",
     "originalArtist": "菲道爾",
     "tags": [],
     "performances": [
@@ -74375,7 +74375,7 @@
   },
   {
     "id": "song-3054",
-    "title": "despair",
+    "title": "Despair",
     "originalArtist": "luz",
     "tags": [],
     "performances": [
@@ -74393,7 +74393,7 @@
   },
   {
     "id": "song-3055",
-    "title": "さよならの夏~コクリコ坂から〜",
+    "title": "さよならの夏～コクリコ坂から～",
     "originalArtist": "手嶌葵",
     "tags": [],
     "performances": [
@@ -74483,7 +74483,7 @@
   },
   {
     "id": "song-3060",
-    "title": "CUPID",
+    "title": "Cupid",
     "originalArtist": "FIFTY FIFTY",
     "tags": [],
     "performances": [
@@ -74502,7 +74502,7 @@
   {
     "id": "song-3061",
     "title": "失眠飛行",
-    "originalArtist": "接個吻， 開一槍、沈以誠 、薛明媛",
+    "originalArtist": "接個吻，開一槍 & 沈以誠 & 薛明媛",
     "tags": [],
     "performances": [
       {
@@ -74555,8 +74555,8 @@
   },
   {
     "id": "song-3064",
-    "title": "Note's 'N' Words",
-    "originalArtist": "One Ok Rock",
+    "title": "Notes'n'Words",
+    "originalArtist": "ONE OK ROCK",
     "tags": [],
     "performances": [
       {
@@ -74645,7 +74645,7 @@
   },
   {
     "id": "song-3069",
-    "title": "Autumn Leaves",
+    "title": "AUTUMN LEAVES",
     "originalArtist": "Laura Fygi",
     "tags": [],
     "performances": [
@@ -74825,7 +74825,7 @@
   },
   {
     "id": "song-3079",
-    "title": "one touch",
+    "title": "One Touch",
     "originalArtist": "milet",
     "tags": [],
     "performances": [
@@ -75042,7 +75042,7 @@
   {
     "id": "song-3091",
     "title": "約束をしよう",
-    "originalArtist": "Supercell",
+    "originalArtist": "supercell",
     "tags": [],
     "performances": [
       {
@@ -75077,8 +75077,8 @@
   },
   {
     "id": "song-3093",
-    "title": "Hail to the King",
-    "originalArtist": "Avenged Sevenfold Future",
+    "title": "Hail To The King",
+    "originalArtist": "Avenged Sevenfold",
     "tags": [],
     "performances": [
       {
@@ -75131,7 +75131,7 @@
   },
   {
     "id": "song-3096",
-    "title": "Hate Me (Sometimes)",
+    "title": "Hate me (Sometimes)",
     "originalArtist": "Stand Atlantic",
     "tags": [],
     "performances": [
@@ -75168,7 +75168,7 @@
   {
     "id": "song-3098",
     "title": "堪折",
-    "originalArtist": "Ring誓約之聲",
+    "originalArtist": "Ring",
     "tags": [],
     "performances": [
       {
@@ -75329,7 +75329,7 @@
   },
   {
     "id": "song-3107",
-    "title": "Master Of Puppet",
+    "title": "Master of Puppets",
     "originalArtist": "Metallica",
     "tags": [],
     "performances": [
@@ -75671,7 +75671,7 @@
   },
   {
     "id": "song-3126",
-    "title": "真夜中のドア〜Stay With Me",
+    "title": "真夜中のドア〜stay with me",
     "originalArtist": "松原みき",
     "tags": [],
     "performances": [
@@ -76175,7 +76175,7 @@
   },
   {
     "id": "song-3154",
-    "title": "When Christmas Comes To Town",
+    "title": "When Christmas Comes to Town",
     "originalArtist": "Matthew Hall & Meagan Moore",
     "tags": [],
     "performances": [
@@ -76212,7 +76212,7 @@
   {
     "id": "song-3156",
     "title": "サンドリヨン",
-    "originalArtist": "シグナルP (浠Mizuki＆澪Rei)",
+    "originalArtist": "シグナルP",
     "tags": [],
     "performances": [
       {
@@ -76320,7 +76320,7 @@
   {
     "id": "song-3162",
     "title": "Zoo",
-    "originalArtist": "Shakira (浠Mizuki)",
+    "originalArtist": "Shakira",
     "tags": [],
     "performances": [
       {
@@ -76356,7 +76356,7 @@
   {
     "id": "song-3164",
     "title": "永遠前夜",
-    "originalArtist": "TENBLANK (浠Mizuki)",
+    "originalArtist": "TENBLANK",
     "tags": [],
     "performances": [
       {
@@ -76374,7 +76374,7 @@
   {
     "id": "song-3165",
     "title": "Rain On Me",
-    "originalArtist": "Lady Gaga, Ariana Grande (浠Mizuki＆煌Kirali)",
+    "originalArtist": "Lady Gaga & Ariana Grande",
     "tags": [],
     "performances": [
       {
