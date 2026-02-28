@@ -150,6 +150,33 @@ def create_app(db_path: str | Path | None = None) -> Flask:
             conn.close()
 
     # ------------------------------------------------------------------
+    # API: set start timestamp
+    # ------------------------------------------------------------------
+
+    @app.route("/api/songs/<int:song_pk>/start-timestamp", methods=["PUT"])
+    def api_set_start_timestamp(song_pk: int):
+        """Overwrite start_timestamp for a parsed song."""
+        from mizukilens.cache import update_song_start_timestamp
+
+        data = request.get_json(silent=True)
+        if not data or "startTimestamp" not in data:
+            return jsonify({"error": "Missing startTimestamp in request body"}), 400
+
+        start_ts = data["startTimestamp"]
+        if not isinstance(start_ts, str) or not start_ts.strip():
+            return jsonify({"error": "startTimestamp must be a non-empty string"}), 400
+
+        conn = _open()
+        try:
+            updated = update_song_start_timestamp(conn, song_pk, start_ts.strip())
+            if not updated:
+                return jsonify({"error": f"Song {song_pk} not found"}), 404
+            _maybe_reapprove_stream(conn, song_pk)
+            return jsonify({"ok": True, "songId": song_pk, "startTimestamp": start_ts.strip()})
+        finally:
+            conn.close()
+
+    # ------------------------------------------------------------------
     # API: clear end timestamp
     # ------------------------------------------------------------------
 

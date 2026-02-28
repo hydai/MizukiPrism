@@ -484,6 +484,67 @@ class TestApiSetEndTimestamp:
 
 
 # ===========================================================================
+# SECTION 7b: Flask API — PUT /api/songs/<id>/start-timestamp
+# ===========================================================================
+
+class TestApiSetStartTimestamp:
+    def test_set_start_timestamp(self, client) -> None:
+        resp = client.get("/api/streams/abc123/songs")
+        song_id = resp.get_json()[0]["id"]
+
+        resp = client.put(
+            f"/api/songs/{song_id}/start-timestamp",
+            data=json.dumps({"startTimestamp": "3:00"}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["ok"] is True
+        assert data["startTimestamp"] == "3:00"
+
+    def test_verify_via_get(self, client) -> None:
+        resp = client.get("/api/streams/abc123/songs")
+        song_id = resp.get_json()[0]["id"]
+
+        client.put(
+            f"/api/songs/{song_id}/start-timestamp",
+            data=json.dumps({"startTimestamp": "3:00"}),
+            content_type="application/json",
+        )
+
+        resp = client.get("/api/streams/abc123/songs")
+        assert resp.get_json()[0]["startTimestamp"] == "3:00"
+
+    def test_missing_body(self, client) -> None:
+        resp = client.put("/api/songs/1/start-timestamp")
+        assert resp.status_code == 400
+
+    def test_missing_field(self, client) -> None:
+        resp = client.put(
+            "/api/songs/1/start-timestamp",
+            data=json.dumps({"wrong": "field"}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 400
+
+    def test_empty_timestamp(self, client) -> None:
+        resp = client.put(
+            "/api/songs/1/start-timestamp",
+            data=json.dumps({"startTimestamp": ""}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 400
+
+    def test_nonexistent_song(self, client) -> None:
+        resp = client.put(
+            "/api/songs/99999/start-timestamp",
+            data=json.dumps({"startTimestamp": "3:00"}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 404
+
+
+# ===========================================================================
 # SECTION 8: Flask API — DELETE /api/songs/<id>/end-timestamp
 # ===========================================================================
 
@@ -628,6 +689,30 @@ class TestStampReapprovesStream:
         c.put(
             f"/api/songs/{songs[0]['id']}/end-timestamp",
             data=json.dumps({"endTimestamp": "5:30"}),
+            content_type="application/json",
+        )
+        conn = open_db(db_path)
+        assert get_stream(conn, "abc123")["status"] == "approved"
+        conn.close()
+
+    def test_start_stamp_on_exported_stream_reapproves(self, db_path: Path) -> None:
+        c = self._make_client(db_path, "exported")
+        songs = c.get("/api/streams/abc123/songs").get_json()
+        c.put(
+            f"/api/songs/{songs[0]['id']}/start-timestamp",
+            data=json.dumps({"startTimestamp": "3:00"}),
+            content_type="application/json",
+        )
+        conn = open_db(db_path)
+        assert get_stream(conn, "abc123")["status"] == "approved"
+        conn.close()
+
+    def test_start_stamp_on_imported_stream_reapproves(self, db_path: Path) -> None:
+        c = self._make_client(db_path, "imported")
+        songs = c.get("/api/streams/abc123/songs").get_json()
+        c.put(
+            f"/api/songs/{songs[0]['id']}/start-timestamp",
+            data=json.dumps({"startTimestamp": "3:00"}),
             content_type="application/json",
         )
         conn = open_db(db_path)
