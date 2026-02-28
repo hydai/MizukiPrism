@@ -112,6 +112,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const playerRef = useRef<any>(null);
   const playerDivId = 'youtube-player';
   const timeUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const loadedVideoIdRef = useRef<string | null>(null);
   const apiLoadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // Refs to always have fresh values in async callbacks
   const queueRef = useRef<Track[]>([]);
@@ -298,20 +299,91 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Initialize YouTube player when ready and track is available
+  // Start (or restart) the time-update polling interval.
+  // Uses refs so the callback always sees fresh track/queue state.
+  const startTimeUpdateInterval = () => {
+    if (timeUpdateIntervalRef.current) {
+      clearInterval(timeUpdateIntervalRef.current);
+    }
+    timeUpdateIntervalRef.current = setInterval(() => {
+      if (playerRef.current && playerRef.current.getCurrentTime) {
+        const current = playerRef.current.getCurrentTime();
+        setCurrentTime(current);
+
+        const track = currentTrackRef.current;
+        // Check if reached end timestamp
+        if (track?.endTimestamp && current >= track.endTimestamp) {
+          // Repeat-one: loop back to start of current track
+          if (repeatModeRef.current === 'one') {
+            playerRef.current.seekTo(track.timestamp, true);
+            return;
+          }
+          // Auto-play next song in queue if available, skipping deleted versions
+          const freshQueue = queueRef.current;
+          if (freshQueue.length > 0 || repeatModeRef.current === 'all') {
+            advanceSkippingDeleted(freshQueue, currentTrackRef.current);
+          } else {
+            playerRef.current.pauseVideo();
+            setIsPlaying(false);
+            if (timeUpdateIntervalRef.current) {
+              clearInterval(timeUpdateIntervalRef.current);
+            }
+          }
+        }
+      }
+    }, 500);
+  };
+
+  // Initialize YouTube player when ready and track is available.
+  // Reuses the existing player instance to preserve autoplay permission.
   useEffect(() => {
     if (!isPlayerReady || !currentTrack) return;
 
     // Clear previous errors when starting new track
     setPlayerError(null);
 
-    // Destroy existing player
-    if (playerRef.current) {
-      playerRef.current.destroy();
+    const player = playerRef.current;
+
+    // --- Reuse existing player ---
+    if (player && loadedVideoIdRef.current) {
+      if (currentTrack.videoId === loadedVideoIdRef.current) {
+        // Same VOD — just seek to the new timestamp
+        const videoDuration = player.getDuration?.() || 0;
+        if (currentTrack.timestamp > 0 && videoDuration > 0 && currentTrack.timestamp >= videoDuration) {
+          player.seekTo(0, true);
+          setTimestampWarning('時間戳可能有誤');
+        } else {
+          player.seekTo(currentTrack.timestamp, true);
+        }
+        player.setVolume(volumeRef.current);
+        if (isMutedRef.current) { player.mute(); } else { player.unMute(); }
+        player.playVideo();
+        setIsPlaying(true);
+        startTimeUpdateInterval();
+        return;
+      } else {
+        // Different VOD — load new video without destroying the iframe
+        loadedVideoIdRef.current = currentTrack.videoId;
+        player.loadVideoById({
+          videoId: currentTrack.videoId,
+          startSeconds: currentTrack.timestamp,
+        });
+        player.setVolume(volumeRef.current);
+        if (isMutedRef.current) { player.mute(); } else { player.unMute(); }
+        setIsPlaying(true);
+        startTimeUpdateInterval();
+        return;
+      }
+    }
+
+    // --- First-time creation ---
+    // Destroy any leftover player (shouldn't happen, but safety)
+    if (player) {
+      player.destroy();
       playerRef.current = null;
     }
 
-    // Create new player
+    loadedVideoIdRef.current = currentTrack.videoId;
     playerRef.current = new window.YT.Player(playerDivId, {
       height: '360',
       width: '640',
@@ -321,6 +393,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         autoplay: 1,
         controls: 1,
         rel: 0,
+        origin: typeof window !== 'undefined' ? window.location.origin : undefined,
       },
       events: {
         onReady: (event: any) => {
@@ -345,42 +418,15 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
           event.target.playVideo();
           setIsPlaying(true);
-
-          // Start time update interval
-          if (timeUpdateIntervalRef.current) {
-            clearInterval(timeUpdateIntervalRef.current);
-          }
-          timeUpdateIntervalRef.current = setInterval(() => {
-            if (playerRef.current && playerRef.current.getCurrentTime) {
-              const current = playerRef.current.getCurrentTime();
-              setCurrentTime(current);
-
-              // Check if reached end timestamp
-              if (currentTrack.endTimestamp && current >= currentTrack.endTimestamp) {
-                // Repeat-one: loop back to start of current track
-                if (repeatModeRef.current === 'one') {
-                  playerRef.current.seekTo(currentTrack.timestamp, true);
-                  return;
-                }
-                // Auto-play next song in queue if available, skipping deleted versions
-                const freshQueue = queueRef.current;
-                if (freshQueue.length > 0 || repeatModeRef.current === 'all') {
-                  advanceSkippingDeleted(freshQueue, currentTrackRef.current);
-                } else {
-                  playerRef.current.pauseVideo();
-                  setIsPlaying(false);
-                  if (timeUpdateIntervalRef.current) {
-                    clearInterval(timeUpdateIntervalRef.current);
-                  }
-                }
-              }
-            }
-          }, 500);
+          startTimeUpdateInterval();
         },
         onStateChange: (event: any) => {
           // YT.PlayerState: PLAYING=1, PAUSED=2, ENDED=0
           if (event.data === 1) {
             setIsPlaying(true);
+            // Update duration (needed after loadVideoById since onReady doesn't re-fire)
+            const d = event.target.getDuration?.();
+            if (d > 0) setDuration(d);
           } else if (event.data === 2) {
             setIsPlaying(false);
           } else if (event.data === 0) {
@@ -406,11 +452,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           // 100: Video not found / removed
           // 101: Video not allowed in embedded players
           // 150: Same as 101 (owner restricted embedding)
-          if ([100, 101, 150].includes(event.data)) {
+          const errorVideoId = loadedVideoIdRef.current;
+          if ([100, 101, 150].includes(event.data) && errorVideoId) {
             setPlayerError('此影片已無法播放');
-            setUnavailableVideoIds(prev => new Set([...prev, currentTrack.videoId]));
-            // Note: we intentionally do NOT set isPlaying=false here to avoid
-            // breaking the playback state machine. The error is shown in the UI.
+            setUnavailableVideoIds(prev => new Set([...prev, errorVideoId]));
           }
         },
       },
