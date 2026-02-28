@@ -3,6 +3,13 @@
 # Keeps interactive prompts intact so you can confirm/skip each stream.
 set -euo pipefail
 
+CACHE_DB="${MIZUKILENS_CACHE:-$HOME/.local/share/mizukilens/cache.db}"
+# Resolve MIZUKILENS to absolute path before cd (relative paths would break).
+MIZUKILENS="${MIZUKILENS_CMD:-mizukilens}"
+if [[ "$MIZUKILENS" == */* && -x "$MIZUKILENS" ]]; then
+  MIZUKILENS="$(cd "$(dirname "$MIZUKILENS")" && pwd)/$(basename "$MIZUKILENS")"
+fi
+
 # Resolve repo root (eximport needs data/songs.json to be findable from cwd).
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -11,9 +18,6 @@ if [[ ! -f "$REPO_ROOT/data/songs.json" ]]; then
   exit 1
 fi
 cd "$REPO_ROOT"
-
-CACHE_DB="${MIZUKILENS_CACHE:-$HOME/.local/share/mizukilens/cache.db}"
-MIZUKILENS="${MIZUKILENS_CMD:-mizukilens}"
 
 if [[ ! -f "$CACHE_DB" ]]; then
   echo "Error: cache DB not found at $CACHE_DB"
