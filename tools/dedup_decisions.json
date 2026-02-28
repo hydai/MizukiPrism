@@ -12173,7 +12173,7 @@
     "similarity": 0.957,
     "canonical_title": "The Winner Takes It All",
     "canonical_artist": "ABBA",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2496",
@@ -12202,7 +12202,7 @@
     "similarity": 0.8,
     "canonical_title": "カタオモイ",
     "canonical_artist": "Aimer",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-210",
@@ -12237,7 +12237,7 @@
     "similarity": 0.944,
     "canonical_title": "If I Ain't Got You",
     "canonical_artist": "Alicia Keys",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1830",
@@ -12264,9 +12264,9 @@
     "category": "B",
     "subcategory": "B2",
     "similarity": 0.973,
-    "canonical_title": "We Can't Be Friend",
+    "canonical_title": "we can't be friends",
     "canonical_artist": "Ariana Grande",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2425",
@@ -12301,7 +12301,7 @@
     "similarity": 0.96,
     "canonical_title": "Winter Things",
     "canonical_artist": "Ariana Grande",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2576",
@@ -12324,7 +12324,7 @@
     "similarity": 0.941,
     "canonical_title": "Rather Be",
     "canonical_artist": "Clean Bandit",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2125",
@@ -12353,7 +12353,7 @@
     "similarity": 0.824,
     "canonical_title": "溯Reverse",
     "canonical_artist": "CORSAK",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1268",
@@ -12388,7 +12388,7 @@
     "similarity": 1.0,
     "canonical_title": "Bling-Bang-Bang-Born",
     "canonical_artist": "Creepy Nuts",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2101",
@@ -12417,7 +12417,7 @@
     "similarity": 0.857,
     "canonical_title": "ゴーストルール",
     "canonical_artist": "DECO*27",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-468",
@@ -12469,7 +12469,7 @@
     "similarity": 0.857,
     "canonical_title": "你站在雲林 我輸得徹底👆😑👇",
     "canonical_artist": "Diiton",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-238",
@@ -12498,7 +12498,7 @@
     "similarity": 0.833,
     "canonical_title": "Ex's & Oh's",
     "canonical_artist": "Elle King",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1711",
@@ -12521,7 +12521,7 @@
     "similarity": 0.875,
     "canonical_title": "可愛くてごめん",
     "canonical_artist": "HoneyWorks",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1988",
@@ -12556,7 +12556,7 @@
     "similarity": 0.889,
     "canonical_title": "Way Back Into Love",
     "canonical_artist": "Hugh Grant & Haley Bennett",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1016",
@@ -12579,7 +12579,7 @@
     "similarity": 0.857,
     "canonical_title": "酔いどれ知らず",
     "canonical_artist": "Kanaria",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1228",
@@ -12602,7 +12602,7 @@
     "similarity": 1.0,
     "canonical_title": "フクロウ～フクロウが知らせる客が来たと～",
     "canonical_artist": "KOKIA",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-120",
@@ -12631,7 +12631,7 @@
     "similarity": 0.917,
     "canonical_title": "Never Enough",
     "canonical_artist": "Loren Allred",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2877",
@@ -12666,7 +12666,7 @@
     "similarity": 0.8,
     "canonical_title": "Sugar",
     "canonical_artist": "Maroon 5",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1490",
@@ -12693,9 +12693,9 @@
     "category": "B",
     "subcategory": "B2",
     "similarity": 0.97,
-    "canonical_title": "Master Of Puppet",
+    "canonical_title": "Master of Puppets",
     "canonical_artist": "Metallica",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-3107",
@@ -12718,7 +12718,7 @@
     "similarity": 0.824,
     "canonical_title": "病名は愛だった",
     "canonical_artist": "Neru・z'5",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1118",
@@ -12764,7 +12764,7 @@
     "similarity": 1.0,
     "canonical_title": "Notes'n'Words",
     "canonical_artist": "ONE OK ROCK",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1443",
@@ -12787,7 +12787,7 @@
     "similarity": 1.0,
     "canonical_title": "Jump Up Super Star!",
     "canonical_artist": "Super Mario Odyssey",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1244",
@@ -12816,7 +12816,7 @@
     "similarity": 0.8,
     "canonical_title": "3时12分",
     "canonical_artist": "TAKU INOUE-星街すいせい",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1530",
@@ -12839,7 +12839,7 @@
     "similarity": 0.971,
     "canonical_title": "champagne problems",
     "canonical_artist": "Taylor Swift",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2363",
@@ -12868,7 +12868,7 @@
     "similarity": 0.833,
     "canonical_title": "未来のひとへ",
     "canonical_artist": "TRUE",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1702",
@@ -12891,7 +12891,7 @@
     "similarity": 1.0,
     "canonical_title": "The Fox(What Does The Fox Say?)",
     "canonical_artist": "Ylvis",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-432",
@@ -12914,7 +12914,7 @@
     "similarity": 1.0,
     "canonical_title": "好きだから。",
     "canonical_artist": "『ユイカ』",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-884",
@@ -12937,7 +12937,7 @@
     "similarity": 0.889,
     "canonical_title": "生きていたんだよな",
     "canonical_artist": "あいみょん",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-482",
@@ -12960,7 +12960,7 @@
     "similarity": 1.0,
     "canonical_title": "チュルリラ·チュルリラ·ダッダッダ！",
     "canonical_artist": "くらげP",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1953",
@@ -12983,7 +12983,7 @@
     "similarity": 1.0,
     "canonical_title": "ほろよい",
     "canonical_artist": "さんひ",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1503",
@@ -13029,7 +13029,7 @@
     "similarity": 1.0,
     "canonical_title": "rain stops, good-bye",
     "canonical_artist": "におP",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2252",
@@ -13058,7 +13058,7 @@
     "similarity": 1.0,
     "canonical_title": "命に嫌われている。",
     "canonical_artist": "カンザキイオリ",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-412",
@@ -13081,7 +13081,7 @@
     "similarity": 1.0,
     "canonical_title": "この夜に乾杯",
     "canonical_artist": "メガテラ・ゼロ",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2139",
@@ -13127,7 +13127,7 @@
     "similarity": 0.8,
     "canonical_title": "死了都要愛",
     "canonical_artist": "信樂團",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-424",
@@ -13150,7 +13150,7 @@
     "similarity": 0.833,
     "canonical_title": "Gimme×Gimme",
     "canonical_artist": "八王子P × Giga",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2709",
@@ -13185,7 +13185,7 @@
     "similarity": 1.0,
     "canonical_title": "你，好不好",
     "canonical_artist": "周興哲",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2834",
@@ -13208,7 +13208,7 @@
     "similarity": 1.0,
     "canonical_title": "Butter-Fly",
     "canonical_artist": "和田光司",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2094",
@@ -13231,7 +13231,7 @@
     "similarity": 1.0,
     "canonical_title": "きみだけは。",
     "canonical_artist": "夏代孝明",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1029",
@@ -13277,7 +13277,7 @@
     "similarity": 1.0,
     "canonical_title": "斑馬斑馬",
     "canonical_artist": "宋冬野",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-939",
@@ -13306,7 +13306,7 @@
     "similarity": 1.0,
     "canonical_title": "Ahoy!! 我ら宝鐘海賊団",
     "canonical_artist": "宝鐘マリン",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-359",
@@ -13329,7 +13329,7 @@
     "similarity": 1.0,
     "canonical_title": "Can I be your baby",
     "canonical_artist": "山東",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-3120",
@@ -13352,7 +13352,7 @@
     "similarity": 1.0,
     "canonical_title": "さよならの夏～コクリコ坂から～",
     "canonical_artist": "手嶌葵",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-3055",
@@ -13387,7 +13387,7 @@
     "similarity": 0.8,
     "canonical_title": "テルーの唄",
     "canonical_artist": "手嶌葵",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-123",
@@ -13410,7 +13410,7 @@
     "similarity": 0.966,
     "canonical_title": "Stellar Stellar",
     "canonical_artist": "星街すいせい",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2308",
@@ -13439,7 +13439,7 @@
     "similarity": 0.909,
     "canonical_title": "いのちの名前",
     "canonical_artist": "木村弓",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2071",
@@ -13462,7 +13462,7 @@
     "similarity": 0.923,
     "canonical_title": "像天堂的懸崖",
     "canonical_artist": "李佳薇",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1420",
@@ -13485,7 +13485,7 @@
     "similarity": 0.833,
     "canonical_title": "瑠璃色の地球",
     "canonical_artist": "松本隆-平井夏美-松田聖子",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1177",
@@ -13508,7 +13508,7 @@
     "similarity": 1.0,
     "canonical_title": "Luminous 冬明けのボヤージュ",
     "canonical_artist": "浠Mizuki",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-344",
@@ -13531,7 +13531,7 @@
     "similarity": 0.909,
     "canonical_title": "未知未踏アルスハイル Piano ver.",
     "canonical_artist": "浠Mizuki",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1805",
@@ -13560,7 +13560,7 @@
     "similarity": 1.0,
     "canonical_title": "漫夜Sleepless",
     "canonical_artist": "澪Rei",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2095",
@@ -13583,7 +13583,7 @@
     "similarity": 1.0,
     "canonical_title": "我多喜歡你你會知道",
     "canonical_artist": "王俊琪",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2493",
@@ -13606,7 +13606,7 @@
     "similarity": 1.0,
     "canonical_title": "アメヲマツ、",
     "canonical_artist": "美波",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2044",
@@ -13629,7 +13629,7 @@
     "similarity": 0.857,
     "canonical_title": "カワキヲアメク",
     "canonical_artist": "美波",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-164",
@@ -13652,7 +13652,7 @@
     "similarity": 1.0,
     "canonical_title": "我還年輕我還年輕",
     "canonical_artist": "老王樂隊",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-546",
@@ -13673,9 +13673,9 @@
     "category": "B",
     "subcategory": "B2",
     "similarity": 0.96,
-    "canonical_title": "sweets parade",
+    "canonical_title": "Sweets Parade",
     "canonical_artist": "花澤香菜",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-145",
@@ -13704,7 +13704,7 @@
     "similarity": 0.875,
     "canonical_title": "殺死那個石家莊人",
     "canonical_artist": "萬能青年旅店",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2682",
@@ -13727,7 +13727,7 @@
     "similarity": 1.0,
     "canonical_title": "心拍数♯0822",
     "canonical_artist": "蝶々P",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1573",
@@ -13750,7 +13750,7 @@
     "similarity": 1.0,
     "canonical_title": "碎吧，睡吧",
     "canonical_artist": "許淨淳",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-1360",
@@ -13771,9 +13771,9 @@
     "category": "B",
     "subcategory": "B2",
     "similarity": 0.889,
-    "canonical_title": "殘酷な天使のテーゼ",
+    "canonical_title": "残酷な天使のテーゼ",
     "canonical_artist": "高橋洋子",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-703",
@@ -13825,7 +13825,7 @@
     "similarity": 0.842,
     "canonical_title": "還是要相信愛情啊混蛋們",
     "canonical_artist": "魏如萱",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2381",
@@ -13848,7 +13848,7 @@
     "similarity": 0.9,
     "canonical_title": "今晚的星星我都摘給你",
     "canonical_artist": "龍槍Dragonpike",
-    "decision": "skip",
+    "decision": "accept",
     "songs": [
       {
         "id": "song-2746",
