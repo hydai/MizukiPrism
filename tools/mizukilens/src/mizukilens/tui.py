@@ -27,6 +27,7 @@ import re
 import sqlite3
 from typing import Any
 
+from rich.markup import escape
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -736,7 +737,7 @@ class ReviewApp(App[None]):
             # Truncate title for display
             if len(title) > 28:
                 title = title[:25] + "..."
-            label = f"{icon} {date}\n  {title}"
+            label = f"{icon} {date}\n  {escape(title)}"
             lv.append(ListItem(Label(label)))
 
         # Select first item if available
@@ -812,7 +813,7 @@ class ReviewApp(App[None]):
         if len(title) > 40:
             title = title[:37] + "..."
         bar.update(
-            f"{icon} {title}  |  状態: {status_label}  |  "
+            f"{icon} {escape(title)}  |  状態: {status_label}  |  "
             f"[dim]a:確認 s:スキップ x:排除 e:編輯 n:新増 d:刪除 r:再擷取 c:候選 ?:幫助[/dim]"
         )
 
