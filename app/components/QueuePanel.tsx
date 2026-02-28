@@ -107,7 +107,7 @@ export default function QueuePanel() {
 
               {/* Track Info */}
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-white truncate text-sm">
+                <div className="font-bold text-white truncate text-sm">
                   {track.title}
                 </div>
                 <div className="text-xs text-white/60 truncate">

@@ -95,7 +95,7 @@ export default function BottomSheet({
           borderBottom: 'none',
           touchAction: 'none',
         }}
-        data-testid={testId}
+        data-testid={testId ? `${testId}-mobile` : undefined}
       >
         {/* Drag handle pill */}
         <div
