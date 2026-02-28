@@ -1,10 +1,14 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import PlayerWrapper from "./components/PlayerWrapper";
 
 export const metadata: Metadata = {
   title: "MizukiPrism - Official Song Archive",
   description: "清楚系歌勢 V-Streamer,帶給你如夢似幻的歌聲。",
+};
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

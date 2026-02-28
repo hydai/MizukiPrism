@@ -79,7 +79,7 @@ export default function MiniPlayer() {
   return (
     <div
       data-testid="mini-player"
-      className="fixed left-0 right-0 z-[60] bottom-16 lg:bottom-0"
+      className="fixed left-0 right-0 z-[60] mini-player-bottom"
       style={{ display: isNowPlayingPage ? 'none' : undefined }}
     >
       {/* ── MOBILE MINI PLAYER (hidden on lg+) ── */}

@@ -470,13 +470,13 @@ export default function Home() {
         </div>
       </SidebarNav>
 
-      {/* Mobile TopBar — 56px, fixed top, mobile only */}
+      {/* Mobile TopBar — 56px + safe area, fixed top, mobile only */}
       <div
         data-testid="mobile-topbar"
         className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-center"
         style={{
           height: '56px',
-          padding: '0 20px',
+          padding: 'var(--safe-area-top) 20px 0 20px',
           background: 'var(--bg-surface-frosted)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
@@ -2097,13 +2097,12 @@ export default function Home() {
       </main>
       </div>
 
-      {/* Mobile BottomNav — 64px, fixed bottom, mobile only */}
+      {/* Mobile BottomNav — 64px + safe area, fixed bottom, mobile only */}
       <nav
         data-testid="mobile-bottom-nav"
         className="lg:hidden fixed bottom-0 left-0 right-0 z-[70] flex items-start justify-around"
         style={{
-          height: '64px',
-          padding: '8px 0 16px 0',
+          padding: '8px 0 calc(16px + var(--safe-area-bottom)) 0',
           background: 'var(--bg-surface-frosted)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',

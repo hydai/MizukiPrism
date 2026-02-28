@@ -5,6 +5,10 @@
 @tailwind utilities;
 
 :root {
+  /* === Safe Area Insets === */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+
   /* === Colors: Accent === */
   --accent-pink: #EC4899;
   --accent-pink-dark: #DB2777;
@@ -114,6 +118,16 @@ body {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.3);
+}
+
+/* Mini player positioning with safe area support */
+.mini-player-bottom {
+  bottom: calc(64px + var(--safe-area-bottom));
+}
+@media (min-width: 1024px) {
+  .mini-player-bottom {
+    bottom: 0;
+  }
 }
 
 /* Hover-safe row highlight — only on devices that support hover */
