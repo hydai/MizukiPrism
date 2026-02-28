@@ -1354,3 +1354,81 @@ class TestPasteAction:
 
         stream = get_stream(db, "paste03")
         assert stream["status"] == "extracted"
+
+
+# ===========================================================================
+# SECTION: Unapprove stream keybinding (z)
+# ===========================================================================
+
+
+class TestUnapproveStream:
+    """Tests for the unapprove (z) keybinding and action."""
+
+    def test_unapprove_binding_exists(self, db: sqlite3.Connection) -> None:
+        """Verify the 'z' keybinding is registered for unapprove_stream."""
+        app = ReviewApp(conn=db)
+        binding_keys = [b.key for b in app.BINDINGS]
+        assert "z" in binding_keys
+
+    def test_unapprove_action_method_exists(self, db: sqlite3.Connection) -> None:
+        """Verify ReviewApp has the action_unapprove_stream method."""
+        app = ReviewApp(conn=db)
+        assert hasattr(app, "action_unapprove_stream")
+        assert callable(app.action_unapprove_stream)
+
+    def test_do_unapprove_stream_sets_extracted(self, db: sqlite3.Connection) -> None:
+        """Approve a stream, then unapprove — status should be extracted."""
+        _add_stream(db, "vid001", status="extracted")
+        _add_songs(db, "vid001")
+
+        # First approve it
+        update_stream_status(db, "vid001", "approved")
+        assert get_stream(db, "vid001")["status"] == "approved"
+
+        # Now unapprove via the internal method
+        app = ReviewApp(conn=db)
+        app._conn = db
+        app._streams = list(list_streams(db))
+        app._current_stream_idx = 0
+
+        with patch.object(app, "notify"), \
+             patch.object(app, "_load_streams_preserving_selection"):
+            app._do_unapprove_stream("vid001")
+
+        stream = get_stream(db, "vid001")
+        assert stream["status"] == "extracted"
+
+    def test_unapprove_non_approved_stream_fails(
+        self, db: sqlite3.Connection
+    ) -> None:
+        """Unapprove on an extracted stream shows error notification."""
+        _add_stream(db, "vid001", status="extracted")
+
+        app = ReviewApp(conn=db)
+        app._conn = db
+        app._streams = list(list_streams(db))
+        app._current_stream_idx = 0
+
+        with patch.object(app, "notify") as mock_notify:
+            app._do_unapprove_stream("vid001")
+            mock_notify.assert_called_once()
+            msg = mock_notify.call_args[0][0]
+            assert "取消承認できません" in msg
+
+    def test_unapprove_no_stream_selected_noop(
+        self, db: sqlite3.Connection
+    ) -> None:
+        """action_unapprove_stream returns early when no stream is selected."""
+        app = ReviewApp(conn=db)
+        app._conn = db
+        app._streams = []
+        app._current_stream_idx = -1
+
+        with patch.object(app, "notify") as mock_notify:
+            app.action_unapprove_stream()
+            mock_notify.assert_not_called()
+
+    def test_help_text_includes_unapprove(self) -> None:
+        """Verify help text mentions the [z] keybinding for unapprove."""
+        assert "[z]" in HelpDialog.HELP_TEXT
+        assert "取消承認" in HelpDialog.HELP_TEXT

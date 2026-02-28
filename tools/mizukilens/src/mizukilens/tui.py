@@ -17,7 +17,7 @@ Layout:
   │   歌回 Vol.10    │                          │
   │                  │                          │
   ├──────────────────┴──────────────────────────┤
-  │ [a]確認 [s]跳過 [x]排除 [e]編輯 [r]再擷取 [u]URL │
+  │ [a]確認 [z]取消 [s]跳過 [x]排除 [e]編輯 [r]再擷取  │
   └─────────────────────────────────────────────┘
 """
 
@@ -309,6 +309,7 @@ class HelpDialog(ModalScreen[None]):
 
 [bold cyan]場次操作 / Stream actions:[/bold cyan]
   [a]  確認 (Approve) — ストリームを承認
+  [z]  取消承認 (Unapprove) — 承認を取り消して再審核
   [s]  スキップ (Skip) — 現在のステータスを維持
   [x]  排除 (Exclude) — ストリームを対象外にする
   [r]  再擷取 (Re-fetch) — コメント/説明を再取得して再解析
@@ -652,6 +653,7 @@ class ReviewApp(App[None]):
 
     BINDINGS = [
         Binding("a", "approve_stream", "確認", show=True),
+        Binding("z", "unapprove_stream", "取消承認 (Unapprove)", show=True),
         Binding("s", "skip_stream", "スキップ", show=True),
         Binding("x", "exclude_stream", "排除", show=True),
         Binding("e", "edit_song", "編輯", show=True),
@@ -882,6 +884,31 @@ class ReviewApp(App[None]):
         try:
             update_stream_status(self._conn, video_id, "approved")
             self.notify("ストリームを承認しました ●")
+            self._load_streams_preserving_selection()
+        except (ValueError, KeyError) as exc:
+            self.notify(f"エラー: {exc}", severity="error")
+
+    def action_unapprove_stream(self) -> None:
+        """Revert an approved stream back to extracted for re-review."""
+        if self._current_stream_idx < 0:
+            return
+        stream = self._streams[self._current_stream_idx]
+        video_id = stream["video_id"]
+        self._do_unapprove_stream(video_id)
+
+    def _do_unapprove_stream(self, video_id: str) -> None:
+        from mizukilens.cache import update_stream_status, is_valid_transition, get_stream
+
+        stream = get_stream(self._conn, video_id)
+        if stream is None:
+            return
+        current = stream["status"]
+        if not is_valid_transition(current, "extracted"):
+            self.notify(f"取消承認できません（{current} → extracted は無効な遷移）")
+            return
+        try:
+            update_stream_status(self._conn, video_id, "extracted")
+            self.notify("承認を取り消しました ○")
             self._load_streams_preserving_selection()
         except (ValueError, KeyError) as exc:
             self.notify(f"エラー: {exc}", severity="error")
