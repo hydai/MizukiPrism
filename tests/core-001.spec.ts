@@ -8,7 +8,7 @@ test.describe('CORE-001: Streamer Profile & Song Catalog (Timeline View)', () =>
     await page.goto(BASE_URL);
 
     // Verify sidebar elements (desktop)
-    await expect(page.getByText('MizukiPlay')).toBeVisible();
+    await expect(page.getByText('MizukiPrism')).toBeVisible();
     await expect(page.getByRole('button', { name: '首頁' })).toBeVisible();
     await expect(page.getByPlaceholder('搜尋歌曲...')).toBeVisible();
     await expect(page.getByText('歌枠回放')).toBeVisible();

@@ -98,7 +98,7 @@ test.describe('FIX-002: Song Data API Load Failure Error Display', () => {
     await page.waitForLoadState('networkidle');
 
     // Sidebar still visible
-    await expect(page.getByText('MizukiPlay')).toBeVisible();
+    await expect(page.getByText('MizukiPrism')).toBeVisible();
     await expect(page.getByRole('button', { name: '首頁' })).toBeVisible();
 
     // Hero section still visible

@@ -85,7 +85,7 @@ export default function SidebarNav({
           className="font-bold text-xl tracking-tight bg-clip-text text-transparent"
           style={{ backgroundImage: 'linear-gradient(135deg, var(--accent-pink), var(--accent-blue))' }}
         >
-          MizukiPlay
+          MizukiPrism
         </span>
       </div>
 
