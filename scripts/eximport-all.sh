@@ -4,6 +4,7 @@
 set -euo pipefail
 
 CACHE_DB="${MIZUKILENS_CACHE:-$HOME/.local/share/mizukilens/cache.db}"
+MIZUKILENS="${MIZUKILENS_CMD:-mizukilens}"
 
 if [[ ! -f "$CACHE_DB" ]]; then
   echo "Error: cache DB not found at $CACHE_DB"
@@ -16,8 +17,9 @@ if ! command -v sqlite3 &>/dev/null; then
   exit 1
 fi
 
-if ! command -v mizukilens &>/dev/null; then
-  echo "Error: mizukilens CLI not found. Install it or activate its venv."
+if ! command -v "$MIZUKILENS" &>/dev/null && [[ ! -x "$MIZUKILENS" ]]; then
+  echo "Error: mizukilens CLI not found at '$MIZUKILENS'."
+  echo "Set MIZUKILENS_CMD to override (e.g. path to venv binary)."
   exit 1
 fi
 
@@ -49,7 +51,7 @@ for i in "${!rows[@]}"; do
   n=$((i + 1))
   echo "--- [$n/$total] $date  $vid  $title ---"
 
-  if mizukilens eximport --stream "$vid"; then
+  if "$MIZUKILENS" eximport --stream "$vid"; then
     ((succeeded++))
   else
     status=$?
