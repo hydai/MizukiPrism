@@ -23,14 +23,14 @@ if ! command -v "$MIZUKILENS" &>/dev/null && [[ ! -x "$MIZUKILENS" ]]; then
   exit 1
 fi
 
-# Query approved streams (tab-separated: video_id, title, date)
+# Query exportable streams — eximport accepts both 'approved' and 'exported'.
 # Read into array without mapfile (Bash 3.2 compat for macOS).
 rows=()
 while IFS= read -r line; do
   rows+=("$line")
 done < <(
   sqlite3 -separator $'\t' "$CACHE_DB" \
-    "SELECT video_id, title, date FROM streams WHERE status = 'approved' ORDER BY date"
+    "SELECT video_id, title, date FROM streams WHERE status IN ('approved', 'exported') ORDER BY date"
 )
 
 total=${#rows[@]}
