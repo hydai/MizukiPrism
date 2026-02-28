@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, MoreHorizontal, Music2, Share2 } from 'lucide-react';
+import { ChevronDown, Music2, Share2 } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useLikedSongs } from '../contexts/LikedSongsContext';
 import { useRecentlyPlayed } from '../contexts/RecentlyPlayedContext';
@@ -154,12 +154,8 @@ export default function NowPlayingPage() {
           <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
             Now Playing
           </span>
-          <button
-            aria-label="More options"
-            style={{ color: 'var(--text-secondary)', padding: '4px' }}
-          >
-            <MoreHorizontal style={{ width: '24px', height: '24px' }} />
-          </button>
+          {/* Spacer to keep title centered */}
+          <div style={{ width: '36px' }} />
         </div>
 
         {/* Main content */}

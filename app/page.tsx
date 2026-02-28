@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, User, WifiOff, ChevronLeft, MoreHorizontal, House } from 'lucide-react';
+import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, User, WifiOff, House } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
@@ -473,7 +473,7 @@ export default function Home() {
       {/* Mobile TopBar — 56px, fixed top, mobile only */}
       <div
         data-testid="mobile-topbar"
-        className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between"
+        className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-center"
         style={{
           height: '56px',
           padding: '0 20px',
@@ -483,28 +483,11 @@ export default function Home() {
           borderBottom: '1px solid var(--border-glass)',
         }}
       >
-        {/* Left: back button */}
-        <button
-          aria-label="Back"
-          style={{ color: 'var(--text-secondary)', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <ChevronLeft style={{ width: '24px', height: '24px' }} />
-        </button>
-
-        {/* Center: Artist label */}
         <span
           style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)' }}
         >
-          Artist
+          {streamerData.name}
         </span>
-
-        {/* Right: more button */}
-        <button
-          aria-label="More options"
-          style={{ color: 'var(--text-secondary)', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <MoreHorizontal style={{ width: '24px', height: '24px' }} />
-        </button>
       </div>
 
       {/* Main Content */}
