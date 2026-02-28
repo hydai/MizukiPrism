@@ -3,6 +3,15 @@
 # Keeps interactive prompts intact so you can confirm/skip each stream.
 set -euo pipefail
 
+# Resolve repo root (eximport needs data/songs.json to be findable from cwd).
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [[ ! -f "$REPO_ROOT/data/songs.json" ]]; then
+  echo "Error: cannot find data/songs.json under $REPO_ROOT"
+  exit 1
+fi
+cd "$REPO_ROOT"
+
 CACHE_DB="${MIZUKILENS_CACHE:-$HOME/.local/share/mizukilens/cache.db}"
 MIZUKILENS="${MIZUKILENS_CMD:-mizukilens}"
 
@@ -35,11 +44,11 @@ done < <(
 
 total=${#rows[@]}
 if [[ $total -eq 0 ]]; then
-  echo "No approved streams found. Nothing to do."
+  echo "No approved/exported streams found. Nothing to do."
   exit 0
 fi
 
-echo "=== Approved streams: $total ==="
+echo "=== Streams to process: $total ==="
 for row in "${rows[@]}"; do
   IFS=$'\t' read -r vid title date <<< "$row"
   echo "  $date  $vid  $title"
