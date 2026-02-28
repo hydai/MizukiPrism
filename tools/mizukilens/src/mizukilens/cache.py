@@ -570,6 +570,27 @@ def update_song_end_timestamp(
     return cur.rowcount > 0
 
 
+def update_song_start_timestamp(
+    conn: sqlite3.Connection,
+    song_id: int,
+    start_timestamp: str,
+) -> bool:
+    """Overwrite start_timestamp for a parsed_songs row.
+
+    Always overwrites unconditionally — no manual flag needed since start
+    timestamps are corrective edits (the original came from a YouTube comment).
+
+    Returns:
+        True if the row was updated, False otherwise (e.g. id not found).
+    """
+    cur = conn.execute(
+        "UPDATE parsed_songs SET start_timestamp = ? WHERE id = ?",
+        (start_timestamp, song_id),
+    )
+    conn.commit()
+    return cur.rowcount > 0
+
+
 _SENTINEL = object()
 
 

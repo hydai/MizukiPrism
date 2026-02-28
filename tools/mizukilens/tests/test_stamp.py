@@ -20,6 +20,7 @@ from mizukilens.cache import (
     update_song_details,
     update_song_duration,
     update_song_end_timestamp,
+    update_song_start_timestamp,
     update_stream_status,
     upsert_parsed_songs,
     upsert_stream,
@@ -147,6 +148,38 @@ class TestClearSongEndTimestamp:
     def test_clear_existing_returns_true(self, populated_db: sqlite3.Connection) -> None:
         songs = get_parsed_songs(populated_db, "abc123")
         assert clear_song_end_timestamp(populated_db, songs[0]["id"]) is True
+
+
+# ===========================================================================
+# SECTION 2b: Cache — update_song_start_timestamp
+# ===========================================================================
+
+class TestUpdateSongStartTimestamp:
+    def test_update_start_timestamp(self, populated_db: sqlite3.Connection) -> None:
+        songs = get_parsed_songs(populated_db, "abc123")
+        song_id = songs[0]["id"]
+        assert update_song_start_timestamp(populated_db, song_id, "3:00") is True
+        updated = get_parsed_songs(populated_db, "abc123")
+        assert updated[0]["start_timestamp"] == "3:00"
+
+    def test_nonexistent_returns_false(self, populated_db: sqlite3.Connection) -> None:
+        assert update_song_start_timestamp(populated_db, 99999, "1:00") is False
+
+    def test_overwrites_existing(self, populated_db: sqlite3.Connection) -> None:
+        songs = get_parsed_songs(populated_db, "abc123")
+        song_id = songs[0]["id"]  # start_timestamp = "4:23"
+        update_song_start_timestamp(populated_db, song_id, "4:00")
+        updated = get_parsed_songs(populated_db, "abc123")
+        assert updated[0]["start_timestamp"] == "4:00"
+
+    def test_does_not_affect_other_fields(self, populated_db: sqlite3.Connection) -> None:
+        songs = get_parsed_songs(populated_db, "abc123")
+        song = songs[2]  # Song C has end_timestamp="16:30"
+        update_song_start_timestamp(populated_db, song["id"], "11:00")
+        updated = get_parsed_songs(populated_db, "abc123")
+        assert updated[2]["start_timestamp"] == "11:00"
+        assert updated[2]["end_timestamp"] == "16:30"
+        assert updated[2]["song_name"] == "Song C"
 
 
 # ===========================================================================
