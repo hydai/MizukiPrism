@@ -230,6 +230,146 @@ def fix_dates_cmd(stream_id: str | None) -> None:
 
 
 # ---------------------------------------------------------------------------
+# fill-artists
+# ---------------------------------------------------------------------------
+
+@main.command("fill-artists")
+@click.option("--dry-run", is_flag=True, help="Preview changes without writing.")
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt.")
+@click.option(
+    "--include-ambiguous", is_flag=True,
+    help="Interactively pick artist for titles with multiple known artists.",
+)
+def fill_artists_cmd(dry_run: bool, yes: bool, include_ambiguous: bool) -> None:
+    """Auto-fill missing originalArtist by cross-referencing existing songs.
+
+    \b
+    Many songs appear in multiple livestreams.  When a song entry has an
+    empty originalArtist but the same title exists with an artist filled in,
+    this command copies the artist across.
+
+    \b
+    Examples:
+      mizukilens fill-artists --dry-run        # preview only
+      mizukilens fill-artists -y               # apply without prompt
+      mizukilens fill-artists --include-ambiguous  # interactively resolve ties
+    """
+    import json
+    import shutil
+    import sys
+
+    from rich.table import Table
+
+    from mizukilens.fill_artists import apply_fill_plan, compute_fill_plan
+
+    # --- Locate data --------------------------------------------------------
+    prism_root = _find_prism_root_from_cwd()
+    if prism_root is None:
+        console.print(
+            "[red]Error:[/red] Could not locate MizukiPrism project root "
+            "(expected data/songs.json). Run from inside the MizukiPrism directory."
+        )
+        sys.exit(1)
+
+    songs_path = prism_root / "data" / "songs.json"
+
+    try:
+        songs_text = songs_path.read_text(encoding="utf-8")
+        songs: list[dict] = json.loads(songs_text)
+    except (OSError, json.JSONDecodeError) as exc:
+        console.print(f"[red]Error:[/red] {exc}")
+        sys.exit(1)
+
+    # --- Compute plan -------------------------------------------------------
+    candidates = compute_fill_plan(songs)
+
+    if not candidates:
+        console.print("[dim]All songs already have an artist — nothing to do.[/dim]")
+        return
+
+    unique = [c for c in candidates if c.match_type == "unique"]
+    ambiguous = [c for c in candidates if c.match_type == "ambiguous"]
+    no_match = [c for c in candidates if c.match_type == "no_match"]
+
+    # --- Display unique matches (auto-fill) ---------------------------------
+    if unique:
+        table = Table(title="Auto-fill (unique match)", show_lines=False)
+        table.add_column("Song ID", style="dim")
+        table.add_column("Title")
+        table.add_column("Artist", style="green")
+        for c in unique:
+            table.add_row(c.song_id, c.title, c.chosen_artist or "")
+        console.print(table)
+
+    # --- Handle ambiguous (interactive, if requested) -----------------------
+    if ambiguous and include_ambiguous:
+        console.print(f"\n[yellow]Ambiguous titles:[/yellow] {len(ambiguous)}")
+        for c in ambiguous:
+            sorted_artists = sorted(c.artists.items(), key=lambda x: -x[1])
+            console.print(f'\n? "[bold]{c.title}[/bold]" ({c.song_id}) has multiple artists:')
+            for i, (artist, count) in enumerate(sorted_artists, 1):
+                console.print(f"    [{i}] {artist}  ({count} occurrence{'s' if count != 1 else ''})")
+            console.print("    [s] Skip")
+
+            choice = click.prompt(
+                "  Select",
+                type=str,
+                default="s",
+            )
+            if choice.lower() == "s":
+                continue
+            try:
+                idx = int(choice) - 1
+                if 0 <= idx < len(sorted_artists):
+                    c.chosen_artist = sorted_artists[idx][0]
+                    c.match_type = "unique"  # promoted
+                else:
+                    console.print("  [dim]Invalid choice — skipping.[/dim]")
+            except ValueError:
+                console.print("  [dim]Invalid choice — skipping.[/dim]")
+    elif ambiguous:
+        console.print(
+            f"\n[yellow]Skipped {len(ambiguous)} ambiguous title(s).[/yellow]  "
+            "Use --include-ambiguous to resolve interactively."
+        )
+
+    if no_match:
+        console.print(f"[dim]{len(no_match)} song(s) had no matching title — cannot auto-fill.[/dim]")
+
+    # --- Count actionable fills ---------------------------------------------
+    to_fill = [c for c in candidates if c.chosen_artist is not None]
+    if not to_fill:
+        console.print("\n[dim]No songs to fill.[/dim]")
+        return
+
+    # --- Dry run? -----------------------------------------------------------
+    if dry_run:
+        console.print(f"\n[cyan]Dry run:[/cyan] {len(to_fill)} song(s) would be updated.")
+        return
+
+    # --- Confirm ------------------------------------------------------------
+    if not yes:
+        confirmed = click.confirm(
+            f"\nFill artist for {len(to_fill)} song(s)?", default=True,
+        )
+        if not confirmed:
+            console.print("[dim]Cancelled.[/dim]")
+            return
+
+    # --- Backup & write -----------------------------------------------------
+    shutil.copy2(songs_path, songs_path.with_suffix(".json.bak"))
+
+    count = apply_fill_plan(songs, candidates)
+
+    with songs_path.open("w", encoding="utf-8") as fh:
+        json.dump(songs, fh, ensure_ascii=False, indent=2)
+        fh.write("\n")
+
+    console.print(f"\n[bold green]Done![/bold green]  Filled artist for {count} song(s).")
+    console.print(f"[dim]Backup: {songs_path.with_suffix('.json.bak')}[/dim]")
+
+
+# ---------------------------------------------------------------------------
 # extract  (implemented)
 # ---------------------------------------------------------------------------
 
