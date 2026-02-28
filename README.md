@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="MizukiPrism-Banner.png" alt="MizukiPrism" width="600" />
+</p>
+
 # MizukiPrism
 
 Song catalog and player for VTuber 浠Mizuki's karaoke livestream archive — browse songs, watch timestamped VOD clips, and follow along with synced lyrics.
