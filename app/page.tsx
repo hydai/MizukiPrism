@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff, House } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
@@ -12,9 +12,11 @@ import PlaylistPanel from './components/PlaylistPanel';
 import LikedSongsPanel from './components/LikedSongsPanel';
 import RecentlyPlayedPanel from './components/RecentlyPlayedPanel';
 import CreatePlaylistDialog from './components/CreatePlaylistDialog';
-import AddToPlaylistDropdown from './components/AddToPlaylistDropdown';
 import AlbumArt from './components/AlbumArt';
 import SidebarNav from './components/SidebarNav';
+import TimelineRow from './components/TimelineRow';
+import SongCard from './components/SongCard';
+import MobileSearchRow from './components/MobileSearchRow';
 
 interface Performance {
   id: string;
@@ -48,12 +50,6 @@ interface FlattenedSong extends Song {
   searchString: string;
   albumArtUrl?: string;
 }
-
-const formatTime = (seconds: number): string => {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-};
 
 type ViewMode = 'timeline' | 'grouped';
 
@@ -132,15 +128,16 @@ export default function Home() {
   }, []);
 
   const { currentTrack, playTrack, addToQueue, apiLoadError, unavailableVideoIds, timestampWarning, clearTimestampWarning, skipNotification, clearSkipNotification, shuffleOn, toggleShuffle } = usePlayer();
+  const currentTrackId = currentTrack?.id ?? null;
   const { playlists, storageError, clearStorageError } = usePlaylist();
   const { likedCount } = useLikedSongs();
   const { recentCount } = useRecentlyPlayed();
 
-  const handleAddToQueue = (track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number; endTimestamp?: number; albumArtUrl?: string }) => {
+  const handleAddToQueue = useCallback((track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number; endTimestamp?: number; albumArtUrl?: string }) => {
     addToQueue(track);
     setToastMessage('已加入播放佇列');
     setShowToast(true);
-  };
+  }, [addToQueue]);
 
   const handlePlayAll = () => {
     type TrackInfo = { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number; endTimestamp?: number; albumArtUrl?: string };
@@ -167,10 +164,10 @@ export default function Home() {
     available.slice(1).forEach(t => addToQueue(t));
   };
 
-  const handleAddToPlaylistSuccess = () => {
+  const handleAddToPlaylistSuccess = useCallback(() => {
     setToastMessage('已加入播放清單');
     setShowToast(true);
-  };
+  }, []);
 
   // Show storage error toast
   useEffect(() => {
@@ -212,7 +209,7 @@ export default function Home() {
     sessionStorage.setItem('mizukiprism-view-mode', viewMode);
   }, [viewMode]);
 
-  const toggleSongExpansion = (songId: string) => {
+  const toggleSongExpansion = useCallback((songId: string) => {
     setExpandedSongs(prev => {
       const newSet = new Set(prev);
       if (newSet.has(songId)) {
@@ -222,7 +219,7 @@ export default function Home() {
       }
       return newSet;
     });
-  };
+  }, []);
 
   const allArtists = useMemo(() => {
     const artists = new Set<string>();
@@ -1283,256 +1280,18 @@ export default function Home() {
                       </div>
                     )
                   ) : (
-                    flattenedSongs.map((song, index) => {
-                      const isCurrentlyPlaying = currentTrack?.id === song.performanceId;
-                      return (
-                        <div
-                          key={`${song.id}-${song.performanceId}`}
-                          data-testid="performance-row"
-                          className="group hover-row grid grid-cols-[32px_40px_1fr_60px] lg:grid-cols-[32px_40px_2fr_2fr_100px_60px] gap-0 items-center transition-all cursor-default"
-                          style={{
-                            borderRadius: 'var(--radius-lg)',
-                            padding: 'var(--space-3) var(--space-4)',
-                            background: isCurrentlyPlaying
-                              ? '#FCE7F320'
-                              : undefined,
-                          }}
-                        >
-                          {/* # column: row number / play button — visible on mobile and desktop */}
-                          <div
-                            className="flex items-center justify-center relative"
-                            style={{ width: '32px', height: '32px' }}
-                          >
-                            {/* Mobile: play icon or spinning disc when playing */}
-                            {isCurrentlyPlaying ? (
-                              <Disc3
-                                className="lg:hidden animate-spin"
-                                style={{
-                                  width: '18px',
-                                  height: '18px',
-                                  color: 'var(--accent-pink)',
-                                  animationDuration: '3s',
-                                }}
-                              />
-                            ) : (
-                              <Play
-                                className="lg:hidden"
-                                style={{
-                                  width: '14px',
-                                  height: '14px',
-                                  color: 'var(--text-tertiary)',
-                                  fill: 'currentColor',
-                                }}
-                              />
-                            )}
-                            {/* Desktop: number that fades on hover, replaced by play button */}
-                            <span
-                              className="hidden lg:block group-hover:opacity-0 transition-opacity font-mono text-sm select-none"
-                              style={{ color: 'var(--text-tertiary)' }}
-                            >
-                              {index + 1}
-                            </span>
-                            <button
-                              onClick={() => {
-                                if (!unavailableVideoIds.has(song.videoId)) {
-                                  playTrack({
-                                    id: song.performanceId,
-                                    songId: song.id,
-                                    title: song.title,
-                                    originalArtist: song.originalArtist,
-                                    videoId: song.videoId,
-                                    timestamp: song.timestamp,
-                                    endTimestamp: song.endTimestamp,
-                                    albumArtUrl: song.albumArtUrl,
-                                  });
-                                }
-                              }}
-                              disabled={unavailableVideoIds.has(song.videoId)}
-                              data-testid="play-button"
-                              className={`hidden lg:flex absolute inset-0 items-center justify-center opacity-0 group-hover:opacity-100 transition-all ${
-                                unavailableVideoIds.has(song.videoId)
-                                  ? 'cursor-not-allowed'
-                                  : 'transform hover:scale-110'
-                              }`}
-                              style={{
-                                color: unavailableVideoIds.has(song.videoId)
-                                  ? 'var(--text-muted)'
-                                  : 'var(--accent-pink)',
-                              }}
-                            >
-                              <Play className="w-4 h-4 fill-current" />
-                            </button>
-                          </div>
-
-                          {/* Album art column — 32×32 thumbnail */}
-                          <div className="flex items-center justify-center">
-                            <AlbumArt
-                              src={song.albumArtUrl}
-                              alt={`${song.title} - ${song.originalArtist}`}
-                              size={32}
-                            />
-                          </div>
-
-                          {/* Title column: song title + artist + NoteBadge */}
-                          <div
-                            className="min-w-0 lg:pl-3 cursor-pointer"
-                            onClick={() => {
-                              if (!unavailableVideoIds.has(song.videoId)) {
-                                playTrack({
-                                  id: song.performanceId,
-                                  songId: song.id,
-                                  title: song.title,
-                                  originalArtist: song.originalArtist,
-                                  videoId: song.videoId,
-                                  timestamp: song.timestamp,
-                                  endTimestamp: song.endTimestamp,
-                                  albumArtUrl: song.albumArtUrl,
-                                });
-                              }
-                            }}
-                          >
-                            {/* Unified title block — vertical stack, responsive font sizing */}
-                            <div className="flex flex-col gap-0.5">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <div
-                                  className="font-bold truncate"
-                                  style={{
-                                    fontSize: '15px',
-                                    color: isCurrentlyPlaying ? 'var(--accent-pink-dark)' : 'var(--text-primary)',
-                                  }}
-                                >
-                                  {song.title}
-                                </div>
-                                {song.note && (
-                                  <span
-                                    className="inline-flex items-center border font-medium flex-shrink-0"
-                                    style={{
-                                      background: 'var(--bg-accent-blue-muted)',
-                                      color: 'var(--accent-blue)',
-                                      borderColor: 'var(--border-accent-blue)',
-                                      borderRadius: 'var(--radius-pill)',
-                                      fontSize: 'var(--font-size-xs)',
-                                      padding: 'var(--space-1) var(--space-3)',
-                                    }}
-                                  >
-                                    {song.note}
-                                  </span>
-                                )}
-                              </div>
-                              <div
-                                className="truncate"
-                                style={{
-                                  fontSize: '13px',
-                                  color: 'var(--text-secondary)',
-                                }}
-                              >
-                                {song.originalArtist}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Stream title column (desktop only) */}
-                          <div
-                            className="hidden lg:flex items-center min-w-0 pl-3"
-                            style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}
-                          >
-                            <span className="truncate">{song.streamTitle}</span>
-                          </div>
-
-                          {/* Date column (desktop only) */}
-                          <div
-                            className="hidden lg:flex items-center pl-3 font-mono"
-                            style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}
-                          >
-                            {song.date}
-                          </div>
-
-                          {/* Duration / Actions column */}
-                          <div
-                            className="flex items-center justify-end gap-1.5"
-                            style={{ color: 'var(--text-secondary)' }}
-                          >
-                            <button
-                              onClick={() => handleAddToQueue({
-                                id: song.performanceId,
-                                songId: song.id,
-                                title: song.title,
-                                originalArtist: song.originalArtist,
-                                videoId: song.videoId,
-                                timestamp: song.timestamp,
-                                endTimestamp: song.endTimestamp,
-                                albumArtUrl: song.albumArtUrl,
-                              })}
-                              className="lg:opacity-0 lg:group-hover:opacity-100 transition-all transform hover:scale-110"
-                              style={{
-                                background: 'var(--bg-surface)',
-                                padding: 'var(--space-2)',
-                                borderRadius: 'var(--radius-circle)',
-                                boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-                                color: 'var(--text-secondary)',
-                              }}
-                              title="加入佇列"
-                              data-testid="add-to-queue"
-                              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--accent-pink)'; }}
-                              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                            <div
-                              className="lg:opacity-0 lg:group-hover:opacity-100 transition-all"
-                              style={{
-                                background: 'var(--bg-surface)',
-                                padding: 'var(--space-2)',
-                                borderRadius: 'var(--radius-circle)',
-                                boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-                                color: 'var(--text-secondary)',
-                              }}
-                            >
-                              <AddToPlaylistDropdown
-                                version={{
-                                  performanceId: song.performanceId,
-                                  songTitle: song.title,
-                                  originalArtist: song.originalArtist,
-                                  videoId: song.videoId,
-                                  timestamp: song.timestamp,
-                                }}
-                                onSuccess={handleAddToPlaylistSuccess}
-                              />
-                            </div>
-                            <a
-                              href={`https://www.youtube.com/watch?v=${song.videoId}&t=${song.timestamp}s`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="lg:opacity-0 lg:group-hover:opacity-100 transition-all transform hover:scale-110"
-                              style={{
-                                background: 'var(--bg-surface)',
-                                padding: 'var(--space-2)',
-                                borderRadius: 'var(--radius-circle)',
-                                boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-                                color: 'var(--text-secondary)',
-                                display: 'flex',
-                                alignItems: 'center',
-                              }}
-                              title="在 YouTube 開啟"
-                              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#FF0000'; }}
-                              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </a>
-                            <span
-                              className="font-mono text-right"
-                              style={{
-                                minWidth: '40px',
-                                fontSize: 'var(--font-size-sm)',
-                                color: 'var(--text-secondary)',
-                              }}
-                            >
-                              {formatTime(song.timestamp)}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })
+                    flattenedSongs.map((song, index) => (
+                      <TimelineRow
+                        key={`${song.id}-${song.performanceId}`}
+                        song={song}
+                        index={index}
+                        isCurrentlyPlaying={currentTrackId === song.performanceId}
+                        isUnavailable={unavailableVideoIds.has(song.videoId)}
+                        onPlay={playTrack}
+                        onAddToQueue={handleAddToQueue}
+                        onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
+                      />
+                    ))
                   )}
                 </div>
               </>
@@ -1560,305 +1319,18 @@ export default function Home() {
                     </div>
                   )
                 ) : (
-                  groupedSongs.map((song) => {
-                    const isExpanded = expandedSongs.has(song.id);
-                    const sortedPerformances = [...song.performances].sort(
-                      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-                    );
-
-                    return (
-                      <div
-                        key={song.id}
-                        data-testid="song-card"
-                        className="overflow-hidden transition-all"
-                        style={{
-                          background: 'var(--bg-surface-glass)',
-                          border: '1px solid var(--border-glass)',
-                          borderRadius: 'var(--radius-xl)',
-                          backdropFilter: 'blur(8px)',
-                          WebkitBackdropFilter: 'blur(8px)',
-                        }}
-                      >
-                        {/* Song Header - Clickable */}
-                        <button
-                          onClick={() => toggleSongExpansion(song.id)}
-                          className="w-full flex items-center justify-between transition-all group hover-row"
-                          style={{
-                            padding: 'var(--space-5) var(--space-6)',
-                          }}
-                        >
-                          <div className="flex items-start gap-4 flex-1 text-left">
-                            <div
-                              className="flex items-center justify-center flex-shrink-0"
-                              style={{
-                                width: '64px',
-                                height: '64px',
-                                borderRadius: 'var(--radius-lg)',
-                                background: 'linear-gradient(135deg, var(--bg-accent-pink-muted), var(--bg-accent-blue-muted))',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                              }}
-                            >
-                              <Disc3 className="w-8 h-8" style={{ color: 'var(--text-secondary)' }} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3
-                                className="font-bold truncate"
-                                style={{ fontSize: 'var(--font-size-lg)', color: 'var(--text-primary)', lineHeight: 1.3 }}
-                              >
-                                {song.title}
-                              </h3>
-                              <p
-                                className="truncate mt-1"
-                                style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}
-                              >
-                                {song.originalArtist}
-                              </p>
-                              <div className="flex items-center gap-2 mt-2">
-                                <span
-                                  className="font-bold"
-                                  style={{
-                                    fontSize: 'var(--font-size-xs)',
-                                    color: 'var(--accent-pink)',
-                                    background: 'var(--bg-accent-pink-muted)',
-                                    padding: 'var(--space-1) var(--space-3)',
-                                    borderRadius: 'var(--radius-pill)',
-                                    border: '1px solid var(--border-accent-pink)',
-                                  }}
-                                >
-                                  {song.performances.length} 個版本
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div
-                            className="ml-4 transition-colors"
-                            style={{ color: 'var(--text-tertiary)' }}
-                          >
-                            {isExpanded ? (
-                              <ChevronDown className="w-5 h-5" />
-                            ) : (
-                              <ChevronRight className="w-5 h-5" />
-                            )}
-                          </div>
-                        </button>
-
-                        {/* Expanded Versions List */}
-                        {isExpanded && (
-                          <div
-                            data-testid="versions-list"
-                            className="space-y-0.5 px-3 pb-3"
-                            style={{
-                              borderTop: '1px solid var(--border-table)',
-                              paddingTop: 'var(--space-3)',
-                            }}
-                          >
-                            {sortedPerformances.map((perf) => (
-                              <div
-                                key={perf.id}
-                                data-testid="version-row"
-                                className="group/version hover-row grid grid-cols-[1fr_60px] lg:grid-cols-[32px_1fr_140px_60px] gap-0 items-center transition-all"
-                                style={{
-                                  borderRadius: 'var(--radius-lg)',
-                                  padding: 'var(--space-3) var(--space-4)',
-                                }}
-                              >
-                                {/* Play button column — desktop only */}
-                                <div
-                                  className="hidden lg:flex items-center justify-center"
-                                  style={{ width: '32px', height: '32px' }}
-                                >
-                                  <button
-                                    onClick={() => {
-                                      if (!unavailableVideoIds.has(perf.videoId)) {
-                                        playTrack({
-                                          id: perf.id,
-                                          songId: song.id,
-                                          title: song.title,
-                                          originalArtist: song.originalArtist,
-                                          videoId: perf.videoId,
-                                          timestamp: perf.timestamp,
-                                          endTimestamp: perf.endTimestamp ?? undefined,
-                                          albumArtUrl: song.albumArtUrl,
-                                        });
-                                      }
-                                    }}
-                                    disabled={unavailableVideoIds.has(perf.videoId)}
-                                    data-testid="play-button"
-                                    className={`w-8 h-8 rounded-full text-white flex items-center justify-center opacity-0 group-hover/version:opacity-100 transition-all flex-shrink-0 ${
-                                      unavailableVideoIds.has(perf.videoId)
-                                        ? 'cursor-not-allowed'
-                                        : 'hover:scale-110'
-                                    }`}
-                                    style={{
-                                      background: unavailableVideoIds.has(perf.videoId)
-                                        ? 'var(--text-muted)'
-                                        : 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
-                                      boxShadow: '0 2px 8px rgba(244, 114, 182, 0.3)',
-                                    }}
-                                  >
-                                    <Play className="w-3.5 h-3.5 fill-current" style={{ marginLeft: '1px' }} />
-                                  </button>
-                                </div>
-
-                                {/* Date + Note + Stream title */}
-                                <div className="min-w-0 pl-1 lg:pl-3 flex items-center gap-2 lg:block">
-                                  {/* Mobile play button */}
-                                  <button
-                                    onClick={() => {
-                                      if (!unavailableVideoIds.has(perf.videoId)) {
-                                        playTrack({
-                                          id: perf.id,
-                                          songId: song.id,
-                                          title: song.title,
-                                          originalArtist: song.originalArtist,
-                                          videoId: perf.videoId,
-                                          timestamp: perf.timestamp,
-                                          endTimestamp: perf.endTimestamp ?? undefined,
-                                          albumArtUrl: song.albumArtUrl,
-                                        });
-                                      }
-                                    }}
-                                    disabled={unavailableVideoIds.has(perf.videoId)}
-                                    data-testid="mobile-play-button"
-                                    className={`lg:hidden flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full ${
-                                      unavailableVideoIds.has(perf.videoId) ? 'cursor-not-allowed opacity-40' : ''
-                                    }`}
-                                    style={{
-                                      background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
-                                      color: 'white',
-                                    }}
-                                  >
-                                    <Play className="w-3.5 h-3.5 fill-current" style={{ marginLeft: '1px' }} />
-                                  </button>
-                                  <div className="min-w-0 flex-1 lg:flex-none">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span
-                                      className="font-mono text-sm"
-                                      style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}
-                                    >
-                                      {perf.date}
-                                    </span>
-                                    {perf.note && (
-                                      <span
-                                        className="inline-flex items-center border border-blue-200 text-blue-500 bg-blue-50 font-medium"
-                                        style={{
-                                          background: 'var(--bg-accent-blue-muted)',
-                                          color: 'var(--accent-blue)',
-                                          borderRadius: 'var(--radius-pill)',
-                                          fontSize: 'var(--font-size-xs)',
-                                          padding: 'var(--space-1) var(--space-3)',
-                                        }}
-                                      >
-                                        {perf.note}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p
-                                    className="truncate mt-0.5"
-                                    style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}
-                                  >
-                                    {perf.streamTitle}
-                                  </p>
-                                  </div>
-                                </div>
-
-                                {/* Date column desktop (extra info hidden on mobile) */}
-                                <div
-                                  className="hidden lg:flex items-center min-w-0 pl-3"
-                                  style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)' }}
-                                >
-                                </div>
-
-                                {/* Actions + Duration */}
-                                <div
-                                  className="flex items-center justify-end gap-1.5"
-                                  style={{ color: 'var(--text-secondary)' }}
-                                >
-                                  <button
-                                    onClick={() => handleAddToQueue({
-                                      id: perf.id,
-                                      songId: song.id,
-                                      title: song.title,
-                                      originalArtist: song.originalArtist,
-                                      videoId: perf.videoId,
-                                      timestamp: perf.timestamp,
-                                      endTimestamp: perf.endTimestamp ?? undefined,
-                                      albumArtUrl: song.albumArtUrl,
-                                    })}
-                                    className="opacity-0 group-hover/version:opacity-100 transition-all transform hover:scale-110"
-                                    style={{
-                                      background: 'var(--bg-surface)',
-                                      padding: 'var(--space-2)',
-                                      borderRadius: 'var(--radius-circle)',
-                                      boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-                                      color: 'var(--text-secondary)',
-                                    }}
-                                    title="加入佇列"
-                                    data-testid="add-to-queue"
-                                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--accent-pink)'; }}
-                                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
-                                  >
-                                    <Plus className="w-4 h-4" />
-                                  </button>
-                                  <div
-                                    className="opacity-0 group-hover/version:opacity-100 transition-all"
-                                    style={{
-                                      background: 'var(--bg-surface)',
-                                      padding: 'var(--space-2)',
-                                      borderRadius: 'var(--radius-circle)',
-                                      boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-                                      color: 'var(--text-secondary)',
-                                    }}
-                                  >
-                                    <AddToPlaylistDropdown
-                                      version={{
-                                        performanceId: perf.id,
-                                        songTitle: song.title,
-                                        originalArtist: song.originalArtist,
-                                        videoId: perf.videoId,
-                                        timestamp: perf.timestamp,
-                                      }}
-                                      onSuccess={handleAddToPlaylistSuccess}
-                                    />
-                                  </div>
-                                  <a
-                                    href={`https://www.youtube.com/watch?v=${perf.videoId}&t=${perf.timestamp}s`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="opacity-0 group-hover/version:opacity-100 transition-all transform hover:scale-110"
-                                    style={{
-                                      background: 'var(--bg-surface)',
-                                      padding: 'var(--space-2)',
-                                      borderRadius: 'var(--radius-circle)',
-                                      boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-                                      color: 'var(--text-secondary)',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                    }}
-                                    title="在 YouTube 開啟"
-                                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#FF0000'; }}
-                                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
-                                  >
-                                    <ExternalLink className="w-4 h-4" />
-                                  </a>
-                                  <span
-                                    className="font-mono text-right"
-                                    style={{
-                                      minWidth: '40px',
-                                      fontSize: 'var(--font-size-sm)',
-                                      color: 'var(--text-secondary)',
-                                    }}
-                                  >
-                                    {formatTime(perf.timestamp)}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
+                  groupedSongs.map((song) => (
+                    <SongCard
+                      key={song.id}
+                      song={song}
+                      isExpanded={expandedSongs.has(song.id)}
+                      onToggleExpand={toggleSongExpansion}
+                      onPlay={playTrack}
+                      onAddToQueue={handleAddToQueue}
+                      onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
+                      unavailableVideoIds={unavailableVideoIds}
+                    />
+                  ))
                 )}
               </div>
             )}
@@ -1920,60 +1392,15 @@ export default function Home() {
               </div>
               {/* Search results */}
               <div className="space-y-0.5">
-                {flattenedSongs.map((song, index) => {
-                  const isCurrentlyPlaying = currentTrack?.id === song.performanceId;
-                  return (
-                    <div
-                      key={`search-${song.id}-${song.performanceId}`}
-                      data-testid="performance-row"
-                      className="flex items-center gap-3 transition-all cursor-default"
-                      style={{
-                        borderRadius: 'var(--radius-lg)',
-                        padding: '12px 16px',
-                        background: isCurrentlyPlaying ? 'var(--bg-accent-pink-muted)' : undefined,
-                      }}
-                    >
-                      <button
-                        onClick={() => {
-                          if (!unavailableVideoIds.has(song.videoId)) {
-                            playTrack({
-                              id: song.performanceId,
-                              songId: song.id,
-                              title: song.title,
-                              originalArtist: song.originalArtist,
-                              videoId: song.videoId,
-                              timestamp: song.timestamp,
-                              endTimestamp: song.endTimestamp,
-                              albumArtUrl: song.albumArtUrl,
-                            });
-                          }
-                        }}
-                        disabled={unavailableVideoIds.has(song.videoId)}
-                        className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full ${unavailableVideoIds.has(song.videoId) ? 'opacity-40 cursor-not-allowed' : ''}`}
-                        style={{
-                          background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
-                          color: 'white',
-                        }}
-                      >
-                        <Play className="w-4 h-4 fill-current" style={{ marginLeft: '2px' }} />
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <div
-                          className="font-bold truncate"
-                          style={{ fontSize: '15px', fontWeight: 600, color: isCurrentlyPlaying ? 'var(--accent-pink)' : 'var(--text-primary)' }}
-                        >
-                          {song.title}
-                        </div>
-                        <div className="truncate" style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                          {song.originalArtist}
-                        </div>
-                      </div>
-                      <span className="font-mono" style={{ fontSize: '13px', color: 'var(--text-secondary)', minWidth: '40px', textAlign: 'right' }}>
-                        {formatTime(song.timestamp)}
-                      </span>
-                    </div>
-                  );
-                })}
+                {flattenedSongs.map((song) => (
+                  <MobileSearchRow
+                    key={`search-${song.id}-${song.performanceId}`}
+                    song={song}
+                    isCurrentlyPlaying={currentTrackId === song.performanceId}
+                    isUnavailable={unavailableVideoIds.has(song.videoId)}
+                    onPlay={playTrack}
+                  />
+                ))}
                 {flattenedSongs.length === 0 && (
                   <div className="py-16 text-center" style={{ color: 'var(--text-tertiary)' }}>
                     <p className="text-base font-medium" style={{ color: 'var(--text-secondary)' }}>找不到符合條件的歌曲</p>

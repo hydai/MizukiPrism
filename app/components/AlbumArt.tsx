@@ -70,6 +70,7 @@ export default function AlbumArt({ src, alt, size, borderRadius }: AlbumArtProps
       <img
         src={src}
         alt={alt}
+        loading="lazy"
         onError={() => setImgError(true)}
         onLoad={() => setImgLoaded(true)}
         style={{
