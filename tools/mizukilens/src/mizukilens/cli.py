@@ -1079,13 +1079,13 @@ def _find_prism_root_from_cwd() -> "Path | None":
 
 @main.group("metadata")
 def metadata_group() -> None:
-    """Manage song metadata (album art, lyrics) fetched from external APIs.
+    """Manage song metadata (album art) fetched from external APIs.
 
     \b
     Subcommands:
-      fetch    — fetch metadata from iTunes (album art) and LRCLIB (lyrics)
+      fetch    — fetch album art metadata from iTunes
       status   — view metadata status for all songs
-      override — manually override album art URL and/or lyrics
+      override — manually override album art URL and/or duration
       clear    — remove metadata entries so they can be re-fetched
     """
 
@@ -1101,18 +1101,12 @@ def metadata_group() -> None:
               help="Fetch a specific song by ID.")
 @click.option("--force", is_flag=True, default=False,
               help="Allow overwriting manual entries.")
-@click.option("--lyrics-only", "lyrics_only", is_flag=True, default=False,
-              help="Only fetch lyrics from LRCLIB (skip iTunes).")
-@click.option("--art-only", "art_only", is_flag=True, default=False,
-              help="Only fetch album art from iTunes (skip LRCLIB).")
 def metadata_fetch_cmd(
     mode: str,
     song_id: str | None,
     force: bool,
-    lyrics_only: bool,
-    art_only: bool,
 ) -> None:
-    """Fetch album art and lyrics metadata from iTunes and LRCLIB.
+    """Fetch album art metadata from iTunes.
 
     \b
     Examples:
@@ -1120,8 +1114,6 @@ def metadata_fetch_cmd(
       mizukilens metadata fetch --stale         # re-fetch entries >90 days old
       mizukilens metadata fetch --all           # re-fetch everything
       mizukilens metadata fetch --song song-1   # fetch one specific song
-      mizukilens metadata fetch --art-only      # iTunes only
-      mizukilens metadata fetch --lyrics-only   # LRCLIB only
     """
     import sys
     import json
@@ -1136,14 +1128,6 @@ def metadata_fetch_cmd(
         is_stale,
         STALE_DAYS,
     )
-
-    if lyrics_only and art_only:
-        console.print("[red]Error:[/red] --lyrics-only and --art-only cannot be used together.")
-        sys.exit(1)
-
-    # Determine fetch flags
-    do_art = not lyrics_only
-    do_lyrics = not art_only
 
     # Locate MizukiPrism root
     prism_root = _find_prism_root_from_cwd()
@@ -1205,10 +1189,6 @@ def metadata_fetch_cmd(
         return
 
     console.print(f"[cyan]Fetching metadata for[/cyan] [bold]{len(target_songs)}[/bold] songs...")
-    if not do_art:
-        console.print("[dim](Lyrics only — iTunes skipped)[/dim]")
-    if not do_lyrics:
-        console.print("[dim](Art only — LRCLIB skipped)[/dim]")
 
     # --- Fetch with progress bar ---
     matched = 0
@@ -1239,8 +1219,6 @@ def metadata_fetch_cmd(
                 result = fetch_song_metadata(
                     song=song,
                     metadata_dir=metadata_dir,
-                    fetch_art=do_art,
-                    fetch_lyrics=do_lyrics,
                 )
             except Exception as exc:  # noqa: BLE001
                 console.print(f"\n[red]Unexpected error[/red] for song {song.get('id')}: {exc}")
@@ -1296,7 +1274,7 @@ def metadata_status_cmd(detail: bool, filter_status: str | None) -> None:
     """Show metadata status for all songs.
 
     \b
-    Cross-references songs.json with song-metadata.json and song-lyrics.json.
+    Cross-references songs.json with song-metadata.json.
     Songs without a metadata entry are shown as 'pending'.
 
     \b
@@ -1334,7 +1312,7 @@ def metadata_status_cmd(detail: bool, filter_status: str | None) -> None:
     if filter_status is not None:
         records = [
             r for r in records
-            if r.cover_status == filter_status or r.lyrics_status == filter_status
+            if r.cover_status == filter_status
         ]
 
     # Status styling
@@ -1365,7 +1343,6 @@ def metadata_status_cmd(detail: bool, filter_status: str | None) -> None:
     tbl.add_column("Song Title", style="bold", min_width=20)
     tbl.add_column("Original Artist", min_width=12)
     tbl.add_column("Cover", no_wrap=True)
-    tbl.add_column("Lyrics", no_wrap=True)
     tbl.add_column("Confidence", no_wrap=True)
     tbl.add_column("Fetched", no_wrap=True)
     if detail:
@@ -1378,15 +1355,13 @@ def metadata_status_cmd(detail: bool, filter_status: str | None) -> None:
             r.title,
             r.original_artist,
             _fmt_status(r.cover_status),
-            _fmt_status(r.lyrics_status),
             _fmt_confidence(r.match_confidence),
             _fmt_fetched(r.fetched_at),
         ]
         if detail:
             row.append(r.album_art_url or "[dim]\u2014[/dim]")
             row.append(str(r.itunes_track_id) if r.itunes_track_id is not None else "[dim]\u2014[/dim]")
-            # Show first non-None error
-            last_err = r.cover_last_error or r.lyrics_last_error or ""
+            last_err = r.cover_last_error or ""
             row.append(last_err or "[dim]\u2014[/dim]")
         tbl.add_row(*row)
 
@@ -1426,7 +1401,7 @@ def metadata_clear_cmd(song_id: str | None, clear_all: bool, force: bool) -> Non
     """Clear metadata entries for a song or all songs.
 
     \b
-    Removes SongMetadata and SongLyrics entries so the song can be re-fetched.
+    Removes SongMetadata entries so the song can be re-fetched.
     Does NOT remove ArtistInfo — artist records are shared across songs.
 
     \b
@@ -1462,22 +1437,19 @@ def metadata_clear_cmd(song_id: str | None, clear_all: bool, force: bool) -> Non
     songs_path = prism_root / "data" / "songs.json"
     metadata_dir = prism_root / "data" / "metadata"
     metadata_path = metadata_dir / "song-metadata.json"
-    lyrics_path = metadata_dir / "song-lyrics.json"
 
     if clear_all:
         # --- Clear all ---
         metadata_records = read_metadata_file(metadata_path)
-        lyrics_records = read_metadata_file(lyrics_path)
         n_meta = len(metadata_records)
-        n_lyrics = len(lyrics_records)
 
-        if n_meta == 0 and n_lyrics == 0:
+        if n_meta == 0:
             console.print("[dim]No metadata entries to clear.[/dim]")
             return
 
         if not force:
             confirmed = click.confirm(
-                f"Clear ALL song metadata and lyrics? This will reset {n_meta} entries. [y/N]",
+                f"Clear ALL song metadata? This will reset {n_meta} entries. [y/N]",
                 default=False,
                 prompt_suffix=" ",
             )
@@ -1486,9 +1458,8 @@ def metadata_clear_cmd(song_id: str | None, clear_all: bool, force: bool) -> Non
                 return
 
         write_metadata_file(metadata_path, [])
-        write_metadata_file(lyrics_path, [])
         console.print(
-            f"Cleared all song metadata ({n_meta} entries) and lyrics ({n_lyrics} entries)"
+            f"Cleared all song metadata ({n_meta} entries)"
         )
 
     else:
@@ -1497,13 +1468,11 @@ def metadata_clear_cmd(song_id: str | None, clear_all: bool, force: bool) -> Non
 
         # Load metadata files
         metadata_records = read_metadata_file(metadata_path)
-        lyrics_records = read_metadata_file(lyrics_path)
 
         # Check if there's anything to clear
         has_meta = any(r.get("songId") == song_id for r in metadata_records)
-        has_lyrics = any(r.get("songId") == song_id for r in lyrics_records)
 
-        if not has_meta and not has_lyrics:
+        if not has_meta:
             console.print(f"No metadata found for song ID '{song_id}'")
             return
 
@@ -1546,9 +1515,7 @@ def metadata_clear_cmd(song_id: str | None, clear_all: bool, force: bool) -> Non
 
         # Remove entries
         new_meta = [r for r in metadata_records if r.get("songId") != song_id]
-        new_lyrics = [r for r in lyrics_records if r.get("songId") != song_id]
         write_metadata_file(metadata_path, new_meta)
-        write_metadata_file(lyrics_path, new_lyrics)
 
         if song_title is not None:
             console.print(f"Cleared metadata for '{song_title}'")
@@ -1560,17 +1527,13 @@ def metadata_clear_cmd(song_id: str | None, clear_all: bool, force: bool) -> Non
 @click.argument("song_id", metavar="SONG_ID")
 @click.option("--album-art-url", "album_art_url", type=str, default=None, metavar="URL",
               help="Manually specify album art URL.")
-@click.option("--lyrics", "lyrics_file", type=click.Path(dir_okay=False), default=None, metavar="FILE",
-              help="Path to a lyrics file (LRC or plain text).")
 @click.option("--duration", "duration", type=int, default=None, metavar="SECONDS",
               help="Manually set track duration in seconds.")
-def metadata_override_cmd(song_id: str, album_art_url: str | None, lyrics_file: str | None, duration: int | None) -> None:
-    """Manually override album art URL, lyrics, and/or duration for a song.
+def metadata_override_cmd(song_id: str, album_art_url: str | None, duration: int | None) -> None:
+    """Manually override album art URL and/or duration for a song.
 
     \b
-    At least one of --album-art-url, --lyrics, or --duration must be provided.
-    LRC format auto-detected: if file contains [MM:SS.xx] timestamps,
-    stores as syncedLyrics; otherwise stores as plainLyrics.
+    At least one of --album-art-url or --duration must be provided.
 
     \b
     Sets fetchStatus: 'manual', matchConfidence: 'manual' to prevent
@@ -1579,27 +1542,24 @@ def metadata_override_cmd(song_id: str, album_art_url: str | None, lyrics_file: 
     \b
     Examples:
       mizukilens metadata override song-1 --album-art-url "https://example.com/cover.jpg"
-      mizukilens metadata override song-1 --lyrics song.lrc
       mizukilens metadata override song-1 --duration 243
-      mizukilens metadata override song-1 --album-art-url URL --lyrics song.lrc
+      mizukilens metadata override song-1 --album-art-url URL --duration 243
     """
     import sys
     import json
     from pathlib import Path
     from mizukilens.metadata import (
-        is_lrc_format,
         read_metadata_file,
         write_metadata_file,
         upsert_song_metadata,
-        upsert_song_lyrics,
         _now_iso,
     )
 
     # Validate: at least one option must be provided
-    if album_art_url is None and lyrics_file is None and duration is None:
+    if album_art_url is None and duration is None:
         console.print(
-            "[red]Error:[/red] At least one of [bold]--album-art-url[/bold], "
-            "[bold]--lyrics[/bold], or [bold]--duration[/bold] must be provided."
+            "[red]Error:[/red] At least one of [bold]--album-art-url[/bold] "
+            "or [bold]--duration[/bold] must be provided."
         )
         sys.exit(1)
 
@@ -1609,21 +1569,6 @@ def metadata_override_cmd(song_id: str, album_art_url: str | None, lyrics_file: 
             "[red]Error:[/red] Duration must be a positive number of seconds."
         )
         sys.exit(1)
-
-    # Validate lyrics file exists if provided
-    lyrics_path: Path | None = None
-    if lyrics_file is not None:
-        lyrics_path = Path(lyrics_file).resolve()
-        if not lyrics_path.exists():
-            console.print(
-                f"[red]Error:[/red] Lyrics file not found: [bold]{lyrics_path}[/bold]"
-            )
-            sys.exit(1)
-        if not lyrics_path.is_file():
-            console.print(
-                f"[red]Error:[/red] Lyrics path is not a file: [bold]{lyrics_path}[/bold]"
-            )
-            sys.exit(1)
 
     # Locate MizukiPrism root
     prism_root = _find_prism_root_from_cwd()
@@ -1721,37 +1666,6 @@ def metadata_override_cmd(song_id: str, album_art_url: str | None, lyrics_file: 
         metadata_records = upsert_song_metadata(metadata_records, song_meta_entry)
         write_metadata_file(metadata_path, metadata_records)
 
-    # --- Lyrics override ---
-    if lyrics_path is not None:
-        try:
-            lyrics_content = lyrics_path.read_text(encoding="utf-8")
-        except OSError as exc:
-            console.print(f"[red]Error:[/red] Could not read lyrics file: {exc}")
-            sys.exit(1)
-
-        lrc_format = is_lrc_format(lyrics_content)
-
-        lyrics_file_path = metadata_dir / "song-lyrics.json"
-        lyrics_records = read_metadata_file(lyrics_file_path)
-
-        if lrc_format:
-            synced_lyrics = lyrics_content
-            plain_lyrics = None
-        else:
-            synced_lyrics = None
-            plain_lyrics = lyrics_content
-
-        lyrics_entry: dict = {
-            "songId": song_id,
-            "fetchStatus": "manual",
-            "syncedLyrics": synced_lyrics,
-            "plainLyrics": plain_lyrics,
-            "fetchedAt": now,
-            "lastError": None,
-        }
-        lyrics_records = upsert_song_lyrics(lyrics_records, lyrics_entry)
-        write_metadata_file(lyrics_file_path, lyrics_records)
-
     # --- Output confirmation ---
     console.print()
     if song_title is not None:
@@ -1767,9 +1681,6 @@ def metadata_override_cmd(song_id: str, album_art_url: str | None, lyrics_file: 
         overridden.append(f"[green]Album art URL[/green]: {album_art_url}")
     if duration is not None:
         overridden.append(f"[green]Duration[/green]: {duration}s")
-    if lyrics_path is not None:
-        lyrics_kind = "synced (LRC)" if is_lrc_format(lyrics_content) else "plain text"  # type: ignore[possibly-undefined]
-        overridden.append(f"[green]Lyrics[/green]: {lyrics_path.name} ({lyrics_kind})")
 
     for item in overridden:
         console.print(f"  Overrode {item}")

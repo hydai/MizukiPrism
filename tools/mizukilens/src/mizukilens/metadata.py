@@ -1,4 +1,4 @@
-"""Metadata module for MizukiLens — iTunes album art and LRCLIB lyrics fetching.
+"""Metadata module for MizukiLens — iTunes album art fetching.
 
 Fetches music metadata from external APIs and stores results in static JSON
 files under data/metadata/ in the MizukiPrism project root.
@@ -14,14 +14,8 @@ _strip_featuring(artist: str) -> str
 _clean_title(title: str) -> str
     Remove CJK/special punctuation from title for cleaner search queries.
 
-is_lrc_format(content: str) -> bool
-    Return True if the content contains at least one LRC timestamp line.
-
 fetch_itunes_metadata(artist: str, title: str) -> dict | None
     Search iTunes for a track, returning structured metadata.
-
-fetch_lrclib_lyrics(artist: str, title: str) -> dict | None
-    Search LRCLIB for synced/plain lyrics.
 
 read_metadata_file(path: Path) -> list[dict]
     Load a JSON array from a metadata file (graceful on missing/corrupt).
@@ -32,13 +26,10 @@ write_metadata_file(path: Path, data: list[dict]) -> None
 upsert_song_metadata(records: list[dict], entry: dict) -> list[dict]
     Upsert a SongMetadata record by songId.
 
-upsert_song_lyrics(records: list[dict], entry: dict) -> list[dict]
-    Upsert a SongLyrics record by songId.
-
 upsert_artist_info(records: list[dict], entry: dict) -> list[dict]
     Upsert an ArtistInfo record by normalizedArtist.
 
-fetch_song_metadata(song: dict, metadata_dir: Path, fetch_art: bool, fetch_lyrics: bool) -> FetchResult
+fetch_song_metadata(song: dict, metadata_dir: Path, fetch_art: bool) -> FetchResult
     Fetch and persist metadata for a single song.
 
 get_metadata_status(songs_path: Path, metadata_dir: Path) -> list[SongStatusRecord]
@@ -64,11 +55,9 @@ from typing import Any
 # ---------------------------------------------------------------------------
 
 ITUNES_SEARCH_URL = "https://itunes.apple.com/search"
-LRCLIB_SEARCH_URL = "https://lrclib.net/api/search"
 
-# Rate limiting: iTunes ~20 req/min → 3s between calls; LRCLIB uses same
+# Rate limiting: iTunes ~20 req/min → 3s between calls
 _ITUNES_MIN_INTERVAL_SEC = 3.0
-_LRCLIB_MIN_INTERVAL_SEC = 0.2
 _TIMEOUT_SEC = 5.0
 
 # Staleness threshold: 90 days
@@ -80,7 +69,6 @@ STALE_DAYS = 90
 # ---------------------------------------------------------------------------
 
 _last_itunes_call: float = 0.0
-_last_lrclib_call: float = 0.0
 
 
 def _wait_itunes() -> None:
@@ -90,15 +78,6 @@ def _wait_itunes() -> None:
     if elapsed < _ITUNES_MIN_INTERVAL_SEC:
         time.sleep(_ITUNES_MIN_INTERVAL_SEC - elapsed)
     _last_itunes_call = time.monotonic()
-
-
-def _wait_lrclib() -> None:
-    """Enforce minimum interval between LRCLIB API calls."""
-    global _last_lrclib_call
-    elapsed = time.monotonic() - _last_lrclib_call
-    if elapsed < _LRCLIB_MIN_INTERVAL_SEC:
-        time.sleep(_LRCLIB_MIN_INTERVAL_SEC - elapsed)
-    _last_lrclib_call = time.monotonic()
 
 
 # ---------------------------------------------------------------------------
@@ -155,28 +134,6 @@ def normalize_artist(name: str) -> str:
         normalize_artist("Ado")             -> "ado"
     """
     return " ".join(name.lower().strip().split())
-
-
-# LRC timestamp pattern: [MM:SS] or [MM:SS.xx] or [MM:SS.xxx]
-_LRC_TIMESTAMP_RE = re.compile(r"\[\d{2}:\d{2}[.\d]*\]")
-
-
-def is_lrc_format(content: str) -> bool:
-    """Return True if the content contains at least one LRC timestamp line.
-
-    LRC format detection: a line matches if it contains a timestamp of the
-    form ``[MM:SS]``, ``[MM:SS.xx]``, or ``[MM:SS.xxx]``.
-
-    Examples::
-
-        is_lrc_format("[00:05.00] Test lyric line\\n")  -> True
-        is_lrc_format("Just plain text\\n")             -> False
-        is_lrc_format("[01:23] line\\n[02:34] more\\n") -> True
-    """
-    for line in content.splitlines():
-        if _LRC_TIMESTAMP_RE.search(line):
-            return True
-    return False
 
 
 # ---------------------------------------------------------------------------
@@ -298,64 +255,6 @@ def fetch_itunes_metadata(original_artist: str, title: str) -> dict | None:
 
 
 # ---------------------------------------------------------------------------
-# LRCLIB API client
-# ---------------------------------------------------------------------------
-
-def fetch_lrclib_lyrics(original_artist: str, title: str) -> dict:
-    """Search LRCLIB for synced or plain lyrics.
-
-    Uses a single search strategy (LRCLIB's own fuzzy matching).
-    Prefers results with syncedLyrics; falls back to plainLyrics.
-
-    Returns a dict with keys:
-      - ``synced_lyrics``: LRC-format string or None
-      - ``plain_lyrics``: plain text or None
-      - ``matched``: bool — whether any result was found
-      - ``last_error``: error message string or None
-    """
-    _wait_lrclib()
-
-    params = urllib.parse.urlencode({
-        "artist_name": original_artist,
-        "track_name": title,
-    })
-    url = f"{LRCLIB_SEARCH_URL}?{params}"
-
-    try:
-        results = _http_get_json(url)
-    except TimeoutError:
-        return {"synced_lyrics": None, "plain_lyrics": None, "matched": False, "last_error": "timeout"}
-    except (urllib.error.URLError, json.JSONDecodeError) as exc:
-        return {"synced_lyrics": None, "plain_lyrics": None, "matched": False, "last_error": str(exc)}
-
-    if not results or not isinstance(results, list):
-        return {"synced_lyrics": None, "plain_lyrics": None, "matched": False, "last_error": None}
-
-    # Prefer a result with synced lyrics
-    synced_result = next((r for r in results if r.get("syncedLyrics")), None)
-    if synced_result:
-        return {
-            "synced_lyrics": synced_result["syncedLyrics"],
-            "plain_lyrics": synced_result.get("plainLyrics"),
-            "matched": True,
-            "last_error": None,
-        }
-
-    # Fallback: take first result's plain lyrics
-    first = results[0]
-    plain = first.get("plainLyrics")
-    if plain:
-        return {
-            "synced_lyrics": None,
-            "plain_lyrics": plain,
-            "matched": True,
-            "last_error": None,
-        }
-
-    return {"synced_lyrics": None, "plain_lyrics": None, "matched": False, "last_error": None}
-
-
-# ---------------------------------------------------------------------------
 # File I/O
 # ---------------------------------------------------------------------------
 
@@ -417,18 +316,6 @@ def upsert_song_metadata(records: list[dict], entry: dict) -> list[dict]:
     return new_records
 
 
-def upsert_song_lyrics(records: list[dict], entry: dict) -> list[dict]:
-    """Upsert a SongLyrics record by songId.
-
-    If a record with the same songId exists, it is replaced. Otherwise,
-    the entry is appended. Returns a new list.
-    """
-    song_id = entry["songId"]
-    new_records = [r for r in records if r.get("songId") != song_id]
-    new_records.append(entry)
-    return new_records
-
-
 def upsert_artist_info(records: list[dict], entry: dict) -> list[dict]:
     """Upsert an ArtistInfo record by normalizedArtist.
 
@@ -453,22 +340,13 @@ class FetchResult:
     title: str
     original_artist: str
     art_status: str  # 'matched', 'no_match', 'error', 'skipped'
-    lyrics_status: str  # 'matched', 'no_match', 'error', 'skipped'
     art_confidence: str | None = None
     art_error: str | None = None
-    lyrics_error: str | None = None
 
     @property
     def overall_status(self) -> str:
         """Return 'matched', 'no_match', 'error', or 'skipped'."""
-        statuses = {self.art_status, self.lyrics_status}
-        if statuses == {"skipped"}:
-            return "skipped"
-        if "matched" in statuses:
-            return "matched"
-        if "error" in statuses:
-            return "error"
-        return "no_match"
+        return self.art_status
 
 
 # ---------------------------------------------------------------------------
@@ -484,18 +362,16 @@ def fetch_song_metadata(
     song: dict,
     metadata_dir: Path,
     fetch_art: bool = True,
-    fetch_lyrics: bool = True,
 ) -> FetchResult:
     """Fetch and persist metadata for a single song.
 
-    Reads the three metadata JSON files, performs API calls, upserts the
+    Reads the metadata JSON files, performs API calls, upserts the
     results, and writes the files back.
 
     Args:
         song: A song dict with at least ``id``, ``title``, ``originalArtist``.
         metadata_dir: Path to the ``data/metadata/`` directory.
         fetch_art: Whether to call the iTunes API.
-        fetch_lyrics: Whether to call the LRCLIB API.
 
     Returns:
         A :class:`FetchResult` describing what was fetched.
@@ -506,12 +382,10 @@ def fetch_song_metadata(
 
     # File paths
     metadata_path = metadata_dir / "song-metadata.json"
-    lyrics_path = metadata_dir / "song-lyrics.json"
     artist_path = metadata_dir / "artist-info.json"
 
     # Load current records
     metadata_records = read_metadata_file(metadata_path)
-    lyrics_records = read_metadata_file(lyrics_path)
     artist_records = read_metadata_file(artist_path)
 
     now = _now_iso()
@@ -582,58 +456,18 @@ def fetch_song_metadata(
             }
             metadata_records = upsert_song_metadata(metadata_records, song_meta_entry)
 
-    # --- LRCLIB ---
-    lyrics_status = "skipped"
-    lyrics_error: str | None = None
-
-    if fetch_lyrics:
-        lrc_result = fetch_lrclib_lyrics(original_artist, title)
-
-        if lrc_result["matched"]:
-            lyrics_status = "matched"
-            lyrics_entry: dict[str, Any] = {
-                "songId": song_id,
-                "fetchStatus": "matched",
-                "syncedLyrics": lrc_result.get("synced_lyrics"),
-                "plainLyrics": lrc_result.get("plain_lyrics"),
-                "fetchedAt": now,
-                "lastError": None,
-            }
-            lyrics_records = upsert_song_lyrics(lyrics_records, lyrics_entry)
-        else:
-            err = lrc_result.get("last_error")
-            if err is not None:
-                lyrics_status = "error"
-                lyrics_error = err
-            else:
-                lyrics_status = "no_match"
-
-            lyrics_entry = {
-                "songId": song_id,
-                "fetchStatus": lyrics_status,
-                "syncedLyrics": None,
-                "plainLyrics": None,
-                "fetchedAt": now,
-                "lastError": lyrics_error,
-            }
-            lyrics_records = upsert_song_lyrics(lyrics_records, lyrics_entry)
-
     # --- Persist ---
     if fetch_art:
         write_metadata_file(metadata_path, metadata_records)
         write_metadata_file(artist_path, artist_records)
-    if fetch_lyrics:
-        write_metadata_file(lyrics_path, lyrics_records)
 
     return FetchResult(
         song_id=song_id,
         title=title,
         original_artist=original_artist,
         art_status=art_status,
-        lyrics_status=lyrics_status,
         art_confidence=art_confidence,
         art_error=art_error,
-        lyrics_error=lyrics_error,
     )
 
 
@@ -668,13 +502,11 @@ class SongStatusRecord:
     title: str
     original_artist: str
     cover_status: str           # 'matched', 'no_match', 'error', 'manual', 'pending'
-    lyrics_status: str          # 'matched', 'no_match', 'error', 'manual', 'pending'
     match_confidence: str | None = None   # 'exact', 'fuzzy', 'manual', or None
     fetched_at: str | None = None         # ISO 8601 date string (date portion only)
     album_art_url: str | None = None
     itunes_track_id: int | None = None
     cover_last_error: str | None = None
-    lyrics_last_error: str | None = None
 
 
 def get_metadata_status(
@@ -684,7 +516,7 @@ def get_metadata_status(
     """Cross-reference songs.json with metadata files to compute per-song status.
 
     ``pending`` is a virtual status: songs in songs.json with NO entry in
-    song-metadata.json / song-lyrics.json are reported as ``pending``.
+    song-metadata.json are reported as ``pending``.
 
     Args:
         songs_path: Path to data/songs.json.
@@ -707,11 +539,9 @@ def get_metadata_status(
 
     # Load metadata files
     metadata_records = read_metadata_file(metadata_dir / "song-metadata.json")
-    lyrics_records = read_metadata_file(metadata_dir / "song-lyrics.json")
 
-    # Build lookup dicts
+    # Build lookup dict
     metadata_by_id: dict[str, dict] = {r["songId"]: r for r in metadata_records if "songId" in r}
-    lyrics_by_id: dict[str, dict] = {r["songId"]: r for r in lyrics_records if "songId" in r}
 
     records: list[SongStatusRecord] = []
     for song in all_songs:
@@ -720,7 +550,6 @@ def get_metadata_status(
         artist = song.get("originalArtist", "")
 
         meta = metadata_by_id.get(song_id)
-        lyric = lyrics_by_id.get(song_id)
 
         # Cover status
         if meta is None:
@@ -743,26 +572,16 @@ def get_metadata_status(
             itunes_track_id = meta.get("itunesTrackId")
             cover_last_error = meta.get("lastError")
 
-        # Lyrics status
-        if lyric is None:
-            lyrics_status = "pending"
-            lyrics_last_error = None
-        else:
-            lyrics_status = lyric.get("fetchStatus", "pending")
-            lyrics_last_error = lyric.get("lastError")
-
         records.append(SongStatusRecord(
             song_id=song_id,
             title=title,
             original_artist=artist,
             cover_status=cover_status,
-            lyrics_status=lyrics_status,
             match_confidence=match_confidence,
             fetched_at=fetched_at,
             album_art_url=album_art_url,
             itunes_track_id=itunes_track_id,
             cover_last_error=cover_last_error,
-            lyrics_last_error=lyrics_last_error,
         ))
 
     return records

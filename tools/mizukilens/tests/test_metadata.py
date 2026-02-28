@@ -1,20 +1,17 @@
-"""Tests for mizukilens.metadata — iTunes + LRCLIB integration.
+"""Tests for mizukilens.metadata — iTunes integration.
 
 Coverage:
   - normalize_artist()
   - fetch_itunes_metadata() — all strategies, no-match, timeout, HTTP error
-  - fetch_lrclib_lyrics()   — synced, plain, no-match, timeout, HTTP error
   - read_metadata_file()    — normal, missing, corrupt
   - write_metadata_file()   — basic write
   - upsert_song_metadata()  — insert, update
-  - upsert_song_lyrics()    — insert, update
   - upsert_artist_info()    — insert, update
   - is_stale()              — fresh, stale, missing
   - fetch_song_metadata()   — full integration (mocked APIs), all branches
   - get_metadata_status()   — cross-reference logic, pending/matched/no_match
   - CLI: metadata fetch     — --missing, --stale, --all, --song, --force,
-                              --lyrics-only, --art-only, error handling,
-                              rate-limiting/min-interval
+                              error handling, rate-limiting/min-interval
   - CLI: metadata status    — basic, --filter, --detail, empty, all-pending, summary
 """
 
@@ -25,7 +22,7 @@ import time
 import urllib.error
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
@@ -38,15 +35,12 @@ from mizukilens.metadata import (
     _clean_title,
     _strip_featuring,
     fetch_itunes_metadata,
-    fetch_lrclib_lyrics,
     fetch_song_metadata,
     get_metadata_status,
-    is_lrc_format,
     is_stale,
     normalize_artist,
     read_metadata_file,
     upsert_artist_info,
-    upsert_song_lyrics,
     upsert_song_metadata,
     write_metadata_file,
 )
@@ -74,19 +68,6 @@ def make_itunes_track(
         "collectionName": album_title,
         "trackTimeMillis": duration_ms,
         "artworkUrl100": "https://example.com/art100x100bb.jpg",
-    }
-
-
-def make_lrclib_result(
-    synced: str | None = "[00:01.00] Hello world",
-    plain: str | None = "Hello world",
-) -> dict:
-    return {
-        "id": 1,
-        "trackName": "Test Song",
-        "artistName": "Test Artist",
-        "syncedLyrics": synced,
-        "plainLyrics": plain,
     }
 
 
@@ -351,78 +332,6 @@ class TestItunesConditionalStrategies:
 
 
 # ---------------------------------------------------------------------------
-# fetch_lrclib_lyrics — mocked _http_get_json
-# ---------------------------------------------------------------------------
-
-class TestFetchLrclibLyrics:
-    def test_synced_lyrics_returned(self):
-        """Returns synced lyrics when available."""
-        lrc_result = make_lrclib_result(synced="[00:01.00] Hello")
-        with patch("mizukilens.metadata._http_get_json", return_value=[lrc_result]):
-            result = fetch_lrclib_lyrics("Test Artist", "Test Song")
-
-        assert result["matched"] is True
-        assert result["synced_lyrics"] == "[00:01.00] Hello"
-
-    def test_prefers_synced_over_plain(self):
-        """When multiple results exist, picks the one with synced lyrics."""
-        plain_only = make_lrclib_result(synced=None, plain="Plain only")
-        synced = make_lrclib_result(synced="[00:01.00] Synced", plain="Both")
-        with patch("mizukilens.metadata._http_get_json", return_value=[plain_only, synced]):
-            result = fetch_lrclib_lyrics("Test Artist", "Test Song")
-
-        assert result["synced_lyrics"] == "[00:01.00] Synced"
-
-    def test_falls_back_to_plain_lyrics(self):
-        """When no result has synced lyrics, returns first result's plainLyrics."""
-        plain_only = make_lrclib_result(synced=None, plain="Plain lyrics text")
-        with patch("mizukilens.metadata._http_get_json", return_value=[plain_only]):
-            result = fetch_lrclib_lyrics("Test Artist", "Test Song")
-
-        assert result["matched"] is True
-        assert result["synced_lyrics"] is None
-        assert result["plain_lyrics"] == "Plain lyrics text"
-
-    def test_no_match_empty_results(self):
-        """Empty list → matched=False."""
-        with patch("mizukilens.metadata._http_get_json", return_value=[]):
-            result = fetch_lrclib_lyrics("Unknown Artist", "Unknown Song")
-
-        assert result["matched"] is False
-        assert result["last_error"] is None
-
-    def test_timeout_marks_error(self):
-        with patch("mizukilens.metadata._http_get_json", side_effect=TimeoutError("timeout")):
-            result = fetch_lrclib_lyrics("Test Artist", "Test Song")
-
-        assert result["matched"] is False
-        assert result["last_error"] == "timeout"
-
-    def test_url_error_marks_error(self):
-        with patch("mizukilens.metadata._http_get_json",
-                   side_effect=urllib.error.URLError("network error")):
-            result = fetch_lrclib_lyrics("Test Artist", "Test Song")
-
-        assert result["matched"] is False
-        assert result["last_error"] is not None
-
-    def test_json_decode_error(self):
-        import json as _json
-        with patch("mizukilens.metadata._http_get_json",
-                   side_effect=_json.JSONDecodeError("msg", "doc", 0)):
-            result = fetch_lrclib_lyrics("Test Artist", "Test Song")
-
-        assert result["matched"] is False
-
-    def test_non_list_response(self):
-        """Non-list API response → no match."""
-        with patch("mizukilens.metadata._http_get_json", return_value={"error": "not found"}):
-            result = fetch_lrclib_lyrics("Test Artist", "Test Song")
-
-        assert result["matched"] is False
-
-
-# ---------------------------------------------------------------------------
 # read_metadata_file
 # ---------------------------------------------------------------------------
 
@@ -531,29 +440,6 @@ class TestUpsertSongMetadata:
 
 
 # ---------------------------------------------------------------------------
-# upsert_song_lyrics
-# ---------------------------------------------------------------------------
-
-class TestUpsertSongLyrics:
-    def test_insert_new_record(self):
-        entry = {"songId": "song-1", "fetchStatus": "matched", "syncedLyrics": "[00:01.00] Hi"}
-        result = upsert_song_lyrics([], entry)
-        assert len(result) == 1
-
-    def test_update_existing_record(self):
-        old = {"songId": "song-1", "fetchStatus": "no_match", "syncedLyrics": None}
-        new = {"songId": "song-1", "fetchStatus": "matched", "syncedLyrics": "[00:01.00] Hi"}
-        result = upsert_song_lyrics([old], new)
-        assert len(result) == 1
-        assert result[0]["fetchStatus"] == "matched"
-
-    def test_returns_new_list(self):
-        original = []
-        result = upsert_song_lyrics(original, {"songId": "song-1"})
-        assert result is not original
-
-
-# ---------------------------------------------------------------------------
 # upsert_artist_info
 # ---------------------------------------------------------------------------
 
@@ -618,7 +504,6 @@ class TestFetchSongMetadata:
         d = tmp_path / "metadata"
         d.mkdir()
         (d / "song-metadata.json").write_text("[]", encoding="utf-8")
-        (d / "song-lyrics.json").write_text("[]", encoding="utf-8")
         (d / "artist-info.json").write_text("[]", encoding="utf-8")
         return d
 
@@ -626,18 +511,13 @@ class TestFetchSongMetadata:
     def song(self):
         return {"id": "song-1", "title": "Test Song", "originalArtist": "Test Artist"}
 
-    def test_matched_itunes_and_lyrics(self, metadata_dir, song):
+    def test_matched_itunes(self, metadata_dir, song):
         track = make_itunes_track()
-        lrc = make_lrclib_result(synced="[00:01.00] Hello")
 
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
             result = fetch_song_metadata(song, metadata_dir)
 
         assert result.art_status == "matched"
-        assert result.lyrics_status == "matched"
         assert result.overall_status == "matched"
 
         # Check files were written
@@ -647,47 +527,18 @@ class TestFetchSongMetadata:
         assert metadata[0]["fetchStatus"] == "matched"
         assert metadata[0]["albumArtUrl"] != ""
 
-        lyrics = json.loads((metadata_dir / "song-lyrics.json").read_text())
-        assert len(lyrics) == 1
-        assert lyrics[0]["syncedLyrics"] == "[00:01.00] Hello"
-
         artists = json.loads((metadata_dir / "artist-info.json").read_text())
         assert len(artists) == 1
         assert artists[0]["normalizedArtist"] == "test artist"
 
     def test_itunes_no_match(self, metadata_dir, song):
-        lrc = make_lrclib_result()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[]),
-            patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", return_value=[]):
             result = fetch_song_metadata(song, metadata_dir)
 
         assert result.art_status == "no_match"
-        assert result.lyrics_status == "matched"
-        # SongMetadata still written with no_match status
-        metadata = json.loads((metadata_dir / "song-metadata.json").read_text())
-        assert metadata[0]["fetchStatus"] == "no_match"
-
-    def test_lyrics_no_match(self, metadata_dir, song):
-        track = make_itunes_track()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
-            result = fetch_song_metadata(song, metadata_dir)
-
-        assert result.art_status == "matched"
-        assert result.lyrics_status == "no_match"
-        lyrics = json.loads((metadata_dir / "song-lyrics.json").read_text())
-        assert lyrics[0]["fetchStatus"] == "no_match"
 
     def test_itunes_error(self, metadata_dir, song):
-        lrc = make_lrclib_result()
-        with (
-            patch("mizukilens.metadata._itunes_search", side_effect=TimeoutError("timeout")),
-            patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", side_effect=TimeoutError("timeout")):
             result = fetch_song_metadata(song, metadata_dir)
 
         assert result.art_status == "error"
@@ -696,49 +547,10 @@ class TestFetchSongMetadata:
         assert metadata[0]["fetchStatus"] == "error"
         assert metadata[0]["lastError"] == "timeout"
 
-    def test_lyrics_error(self, metadata_dir, song):
-        track = make_itunes_track()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", side_effect=TimeoutError("timeout")),
-        ):
-            result = fetch_song_metadata(song, metadata_dir)
-
-        assert result.lyrics_status == "error"
-        assert result.lyrics_error == "timeout"
-        lyrics = json.loads((metadata_dir / "song-lyrics.json").read_text())
-        assert lyrics[0]["fetchStatus"] == "error"
-
-    def test_art_only_skips_lyrics(self, metadata_dir, song):
-        track = make_itunes_track()
-        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
-            result = fetch_song_metadata(song, metadata_dir, fetch_lyrics=False)
-
-        assert result.art_status == "matched"
-        assert result.lyrics_status == "skipped"
-        # lyrics file should remain empty
-        lyrics = json.loads((metadata_dir / "song-lyrics.json").read_text())
-        assert lyrics == []
-
-    def test_lyrics_only_skips_itunes(self, metadata_dir, song):
-        lrc = make_lrclib_result()
-        with patch("mizukilens.metadata._http_get_json", return_value=[lrc]):
-            result = fetch_song_metadata(song, metadata_dir, fetch_art=False)
-
-        assert result.art_status == "skipped"
-        assert result.lyrics_status == "matched"
-        # metadata file should remain empty
-        metadata = json.loads((metadata_dir / "song-metadata.json").read_text())
-        assert metadata == []
-
     def test_upsert_updates_existing_entry(self, metadata_dir, song):
         """Calling fetch twice updates the existing record (upsert behavior)."""
         track = make_itunes_track()
-        lrc = make_lrclib_result()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
             fetch_song_metadata(song, metadata_dir)
             fetch_song_metadata(song, metadata_dir)
 
@@ -752,12 +564,9 @@ class TestFetchSongMetadata:
         song1 = {"id": "song-1", "title": "Song A", "originalArtist": "YOASOBI"}
         song2 = {"id": "song-2", "title": "Song B", "originalArtist": "YOASOBI"}
 
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
-            fetch_song_metadata(song1, metadata_dir, fetch_lyrics=False)
-            fetch_song_metadata(song2, metadata_dir, fetch_lyrics=False)
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
+            fetch_song_metadata(song1, metadata_dir)
+            fetch_song_metadata(song2, metadata_dir)
 
         artists = json.loads((metadata_dir / "artist-info.json").read_text())
         assert len(artists) == 1
@@ -768,11 +577,7 @@ class TestFetchSongMetadata:
         metadata_dir = tmp_path / "brand_new_dir"
         # Don't create it
         track = make_itunes_track()
-        lrc = make_lrclib_result()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
             result = fetch_song_metadata(song, metadata_dir)
 
         assert result.art_status == "matched"
@@ -781,18 +586,15 @@ class TestFetchSongMetadata:
     def test_album_art_url_set_to_xl(self, metadata_dir, song):
         """albumArtUrl is set to the XL URL."""
         track = make_itunes_track()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
-            fetch_song_metadata(song, metadata_dir, fetch_lyrics=False)
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
+            fetch_song_metadata(song, metadata_dir)
 
         metadata = json.loads((metadata_dir / "song-metadata.json").read_text())
         assert metadata[0]["albumArtUrl"] == "https://example.com/art600x600bb.jpg"
 
 
 # ---------------------------------------------------------------------------
-# Rate limiting — _wait_itunes / _wait_lrclib
+# Rate limiting — _wait_itunes
 # ---------------------------------------------------------------------------
 
 class TestRateLimiting:
@@ -869,7 +671,6 @@ class TestCLIMetadataFetch:
             encoding="utf-8",
         )
         (metadata_dir / "song-metadata.json").write_text("[]", encoding="utf-8")
-        (metadata_dir / "song-lyrics.json").write_text("[]", encoding="utf-8")
         (metadata_dir / "artist-info.json").write_text("[]", encoding="utf-8")
         return tmp_path
 
@@ -886,11 +687,7 @@ class TestCLIMetadataFetch:
 
     def test_fetch_missing_fetches_all_when_none_exist(self, prism_root):
         track = make_itunes_track()
-        lrc = make_lrclib_result()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
             result = self._run(["metadata", "fetch", "--missing"], prism_root)
 
         assert result.exit_code == 0
@@ -911,17 +708,13 @@ class TestCLIMetadataFetch:
         )
 
         track = make_itunes_track()
-        lrc = make_lrclib_result()
         fetch_calls = []
 
         def track_itunes(query):
             fetch_calls.append(query)
             return [track]
 
-        with (
-            patch("mizukilens.metadata._itunes_search", side_effect=track_itunes),
-            patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", side_effect=track_itunes):
             result = self._run(["metadata", "fetch", "--missing"], prism_root)
 
         assert result.exit_code == 0
@@ -947,10 +740,7 @@ class TestCLIMetadataFetch:
             fetch_calls.append(query)
             return [track]
 
-        with (
-            patch("mizukilens.metadata._itunes_search", side_effect=track_itunes),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", side_effect=track_itunes):
             result = self._run(["metadata", "fetch", "--stale"], prism_root)
 
         assert result.exit_code == 0
@@ -975,10 +765,7 @@ class TestCLIMetadataFetch:
             fetch_calls.append(query)
             return [track]
 
-        with (
-            patch("mizukilens.metadata._itunes_search", side_effect=track_itunes),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", side_effect=track_itunes):
             result = self._run(["metadata", "fetch", "--all"], prism_root)
 
         assert result.exit_code == 0
@@ -1004,10 +791,7 @@ class TestCLIMetadataFetch:
             fetch_calls.append(query)
             return [track]
 
-        with (
-            patch("mizukilens.metadata._itunes_search", side_effect=track_itunes),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", side_effect=track_itunes):
             result = self._run(["metadata", "fetch", "--all", "--force"], prism_root)
 
         assert result.exit_code == 0
@@ -1023,10 +807,7 @@ class TestCLIMetadataFetch:
             fetch_calls.append(query)
             return [track]
 
-        with (
-            patch("mizukilens.metadata._itunes_search", side_effect=track_itunes),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", side_effect=track_itunes):
             result = self._run(["metadata", "fetch", "--song", "song-1"], prism_root)
 
         assert result.exit_code == 0
@@ -1041,53 +822,6 @@ class TestCLIMetadataFetch:
         result = self._run(["metadata", "fetch", "--song", "song-999"], prism_root)
         assert result.exit_code != 0
 
-    def test_lyrics_only_skips_itunes(self, prism_root):
-        """--lyrics-only skips iTunes API calls."""
-        lrc = make_lrclib_result()
-        itunes_calls = []
-
-        with (
-            patch("mizukilens.metadata._itunes_search", side_effect=lambda q: itunes_calls.append(q) or []),
-            patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
-        ):
-            result = self._run(["metadata", "fetch", "--lyrics-only"], prism_root)
-
-        assert result.exit_code == 0
-        assert itunes_calls == []
-        # Lyrics file should have entries
-        lyrics = json.loads(
-            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
-        )
-        assert len(lyrics) == 2
-
-    def test_art_only_skips_lrclib(self, prism_root):
-        """--art-only skips LRCLIB API calls."""
-        track = make_itunes_track()
-        lrclib_calls = []
-
-        def mock_http_get(url, **kwargs):
-            lrclib_calls.append(url)
-            return []
-
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", side_effect=mock_http_get),
-        ):
-            result = self._run(["metadata", "fetch", "--art-only"], prism_root)
-
-        assert result.exit_code == 0
-        assert lrclib_calls == []
-        # Metadata file should have entries
-        metadata = json.loads(
-            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
-        )
-        assert len(metadata) == 2
-
-    def test_lyrics_only_and_art_only_conflict(self, prism_root):
-        """--lyrics-only and --art-only together should fail."""
-        result = self._run(["metadata", "fetch", "--lyrics-only", "--art-only"], prism_root)
-        assert result.exit_code != 0
-
     def test_api_error_caught_gracefully(self, prism_root):
         """API errors for one song don't stop remaining songs from being processed."""
         call_count = [0]
@@ -1098,10 +832,7 @@ class TestCLIMetadataFetch:
                 raise TimeoutError("timeout")
             return [make_itunes_track()]
 
-        with (
-            patch("mizukilens.metadata._itunes_search", side_effect=side_effect),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", side_effect=side_effect):
             result = self._run(["metadata", "fetch", "--missing"], prism_root)
 
         assert result.exit_code == 0
@@ -1111,10 +842,7 @@ class TestCLIMetadataFetch:
     def test_summary_table_shown(self, prism_root):
         """Summary table is displayed after fetching."""
         track = make_itunes_track()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
             result = self._run(["metadata", "fetch", "--missing"], prism_root)
 
         assert result.exit_code == 0
@@ -1139,10 +867,7 @@ class TestCLIMetadataFetch:
     def test_fetched_at_is_set(self, prism_root):
         """Each fetched entry has a fetchedAt timestamp."""
         track = make_itunes_track()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
             self._run(["metadata", "fetch", "--missing"], prism_root)
 
         metadata = json.loads(
@@ -1156,10 +881,7 @@ class TestCLIMetadataFetch:
     def test_metadata_schema_has_required_fields(self, prism_root):
         """song-metadata.json entries have all required schema fields."""
         track = make_itunes_track()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
             self._run(["metadata", "fetch", "--missing"], prism_root)
 
         metadata = json.loads(
@@ -1170,31 +892,10 @@ class TestCLIMetadataFetch:
             missing = required_fields - set(entry.keys())
             assert missing == set(), f"Missing fields: {missing}"
 
-    def test_lyrics_schema_has_required_fields(self, prism_root):
-        """song-lyrics.json entries have all required schema fields."""
-        track = make_itunes_track()
-        lrc = make_lrclib_result()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
-        ):
-            self._run(["metadata", "fetch", "--missing"], prism_root)
-
-        lyrics = json.loads(
-            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
-        )
-        required_fields = {"songId", "fetchStatus", "syncedLyrics", "plainLyrics", "fetchedAt"}
-        for entry in lyrics:
-            missing = required_fields - set(entry.keys())
-            assert missing == set(), f"Missing fields: {missing}"
-
     def test_artist_info_schema_has_required_fields(self, prism_root):
         """artist-info.json entries have all required schema fields."""
         track = make_itunes_track()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
             self._run(["metadata", "fetch", "--missing"], prism_root)
 
         artists = json.loads(
@@ -1208,11 +909,7 @@ class TestCLIMetadataFetch:
     def test_default_mode_is_missing(self, prism_root):
         """Running `metadata fetch` without a mode flag defaults to --missing."""
         track = make_itunes_track()
-        lrc = make_lrclib_result()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
             result = self._run(["metadata", "fetch"], prism_root)
 
         assert result.exit_code == 0
@@ -1237,10 +934,7 @@ class TestCLIMetadataFetch:
             fetch_calls.append(query)
             return [track]
 
-        with (
-            patch("mizukilens.metadata._itunes_search", side_effect=track_itunes),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", side_effect=track_itunes):
             result = self._run(["metadata", "fetch"], prism_root)
 
         assert result.exit_code == 0
@@ -1254,28 +948,8 @@ class TestCLIMetadataFetch:
 # ---------------------------------------------------------------------------
 
 class TestFetchResultOverallStatus:
-    def test_both_matched(self):
-        r = FetchResult("s1", "T", "A", art_status="matched", lyrics_status="matched")
-        assert r.overall_status == "matched"
-
-    def test_one_matched_one_no_match(self):
-        r = FetchResult("s1", "T", "A", art_status="matched", lyrics_status="no_match")
-        assert r.overall_status == "matched"
-
-    def test_both_no_match(self):
-        r = FetchResult("s1", "T", "A", art_status="no_match", lyrics_status="no_match")
-        assert r.overall_status == "no_match"
-
-    def test_one_error(self):
-        r = FetchResult("s1", "T", "A", art_status="error", lyrics_status="no_match")
-        assert r.overall_status == "error"
-
-    def test_both_skipped(self):
-        r = FetchResult("s1", "T", "A", art_status="skipped", lyrics_status="skipped")
-        assert r.overall_status == "skipped"
-
-    def test_matched_and_skipped(self):
-        r = FetchResult("s1", "T", "A", art_status="matched", lyrics_status="skipped")
+    def test_matched(self):
+        r = FetchResult("s1", "T", "A", art_status="matched")
         assert r.overall_status == "matched"
 
 
@@ -1286,7 +960,7 @@ class TestFetchResultOverallStatus:
 class TestGetMetadataStatus:
     """Unit tests for get_metadata_status() cross-reference logic."""
 
-    def _make_root(self, tmp_path, songs, metadata=None, lyrics=None):
+    def _make_root(self, tmp_path, songs, metadata=None):
         """Set up a minimal project root with data files."""
         data_dir = tmp_path / "data"
         data_dir.mkdir()
@@ -1297,9 +971,6 @@ class TestGetMetadataStatus:
         )
         (metadata_dir / "song-metadata.json").write_text(
             json.dumps(metadata or [], ensure_ascii=False) + "\n", encoding="utf-8"
-        )
-        (metadata_dir / "song-lyrics.json").write_text(
-            json.dumps(lyrics or [], ensure_ascii=False) + "\n", encoding="utf-8"
         )
         return data_dir, metadata_dir
 
@@ -1312,7 +983,6 @@ class TestGetMetadataStatus:
         records = get_metadata_status(data_dir / "songs.json", metadata_dir)
         assert len(records) == 2
         assert all(r.cover_status == "pending" for r in records)
-        assert all(r.lyrics_status == "pending" for r in records)
 
     def test_matched_song_shows_correct_status(self, tmp_path):
         songs = [{"id": "s1", "title": "First Love", "originalArtist": "宇多田光"}]
@@ -1326,19 +996,12 @@ class TestGetMetadataStatus:
             "fetchedAt": "2026-02-20T10:00:00+00:00",
             "lastError": None,
         }]
-        lyrics = [{
-            "songId": "s1",
-            "fetchStatus": "matched",
-            "fetchedAt": "2026-02-20T10:00:00+00:00",
-            "lastError": None,
-        }]
-        data_dir, metadata_dir = self._make_root(tmp_path, songs, metadata, lyrics)
+        data_dir, metadata_dir = self._make_root(tmp_path, songs, metadata)
         records = get_metadata_status(data_dir / "songs.json", metadata_dir)
         assert len(records) == 1
         r = records[0]
         assert r.song_id == "s1"
         assert r.cover_status == "matched"
-        assert r.lyrics_status == "matched"
         assert r.match_confidence == "exact"
         assert r.fetched_at == "2026-02-20"
         assert r.album_art_url == "https://example.com/art.jpg"
@@ -1356,7 +1019,6 @@ class TestGetMetadataStatus:
         data_dir, metadata_dir = self._make_root(tmp_path, songs, metadata)
         records = get_metadata_status(data_dir / "songs.json", metadata_dir)
         assert records[0].cover_status == "no_match"
-        assert records[0].lyrics_status == "pending"  # no lyrics entry
         assert records[0].match_confidence is None
 
     def test_error_status_with_last_error(self, tmp_path):
@@ -1405,28 +1067,6 @@ class TestGetMetadataStatus:
         data_dir, metadata_dir = self._make_root(tmp_path, songs)
         records = get_metadata_status(data_dir / "songs.json", metadata_dir)
         assert [r.song_id for r in records] == ["s3", "s1", "s2"]
-
-    def test_lyrics_status_independent_of_cover(self, tmp_path):
-        """Lyrics can be matched even when cover is no_match."""
-        songs = [{"id": "s1", "title": "Song", "originalArtist": "A"}]
-        metadata = [{
-            "songId": "s1",
-            "fetchStatus": "no_match",
-            "matchConfidence": None,
-            "fetchedAt": "2026-02-20T10:00:00+00:00",
-            "lastError": None,
-        }]
-        lyrics = [{
-            "songId": "s1",
-            "fetchStatus": "matched",
-            "fetchedAt": "2026-02-20T10:00:00+00:00",
-            "lastError": None,
-        }]
-        data_dir, metadata_dir = self._make_root(tmp_path, songs, metadata, lyrics)
-        records = get_metadata_status(data_dir / "songs.json", metadata_dir)
-        r = records[0]
-        assert r.cover_status == "no_match"
-        assert r.lyrics_status == "matched"
 
     def test_manual_status(self, tmp_path):
         songs = [{"id": "s1", "title": "Manual Song", "originalArtist": "A"}]
@@ -1518,18 +1158,6 @@ class TestCLIMetadataStatus:
             json.dumps(metadata) + "\n", encoding="utf-8"
         )
 
-        lyrics = [
-            {
-                "songId": "s1",
-                "fetchStatus": "matched",
-                "fetchedAt": "2026-02-20T10:00:00+00:00",
-                "lastError": None,
-            },
-            # s2, s3, s4 have no lyrics entry -> pending
-        ]
-        (metadata_dir / "song-lyrics.json").write_text(
-            json.dumps(lyrics) + "\n", encoding="utf-8"
-        )
         (metadata_dir / "artist-info.json").write_text("[]", encoding="utf-8")
         return tmp_path
 
@@ -1562,7 +1190,6 @@ class TestCLIMetadataStatus:
         assert "Song Title" in result.output
         assert "Original Artist" in result.output
         assert "Cover" in result.output
-        assert "Lyrics" in result.output
         assert "Confidence" in result.output
         assert "Fetched" in result.output
 
@@ -1654,7 +1281,6 @@ class TestCLIMetadataStatus:
         metadata_dir.mkdir()
         (data_dir / "songs.json").write_text("[]", encoding="utf-8")
         (metadata_dir / "song-metadata.json").write_text("[]", encoding="utf-8")
-        (metadata_dir / "song-lyrics.json").write_text("[]", encoding="utf-8")
         (metadata_dir / "artist-info.json").write_text("[]", encoding="utf-8")
 
         runner = CliRunner(env={"COLUMNS": "250"})
@@ -1707,50 +1333,6 @@ class TestCLIMetadataStatus:
 
 
 # ---------------------------------------------------------------------------
-# is_lrc_format — unit tests
-# ---------------------------------------------------------------------------
-
-class TestIsLrcFormat:
-    """Unit tests for the is_lrc_format() utility function."""
-
-    def test_lrc_with_centiseconds(self):
-        assert is_lrc_format("[00:05.00] Test lyric line") is True
-
-    def test_lrc_with_milliseconds(self):
-        assert is_lrc_format("[01:23.456] Hello world") is True
-
-    def test_lrc_without_decimal(self):
-        assert is_lrc_format("[01:23] Hello world") is True
-
-    def test_plain_text_no_timestamps(self):
-        assert is_lrc_format("Just plain text\nNo timestamps here") is False
-
-    def test_empty_string(self):
-        assert is_lrc_format("") is False
-
-    def test_multiline_lrc_with_some_timestamps(self):
-        content = "Artist: YOASOBI\n[00:05.00] 夜に駆ける\n[00:10.00] 君の手"
-        assert is_lrc_format(content) is True
-
-    def test_multiline_plain_no_timestamps(self):
-        content = "Line one\nLine two\nLine three"
-        assert is_lrc_format(content) is False
-
-    def test_lrc_empty_timed_line(self):
-        """Empty timed line (interlude) is still LRC."""
-        assert is_lrc_format("[00:05.00]") is True
-
-    def test_bracket_without_timestamp_format(self):
-        """Square brackets without MM:SS pattern do not count."""
-        assert is_lrc_format("[Artist: YOASOBI]\nPlain text") is False
-
-    def test_only_one_lrc_line_among_many(self):
-        """A single matching line is sufficient."""
-        content = "Line without timestamp\n[00:01.00] Lyric\nAnother plain line"
-        assert is_lrc_format(content) is True
-
-
-# ---------------------------------------------------------------------------
 # CLI: metadata override
 # ---------------------------------------------------------------------------
 
@@ -1774,7 +1356,6 @@ class TestCLIMetadataOverride:
             encoding="utf-8",
         )
         (metadata_dir / "song-metadata.json").write_text("[]", encoding="utf-8")
-        (metadata_dir / "song-lyrics.json").write_text("[]", encoding="utf-8")
         (metadata_dir / "artist-info.json").write_text("[]", encoding="utf-8")
         return tmp_path
 
@@ -1889,146 +1470,6 @@ class TestCLIMetadataOverride:
         assert metadata[0]["albumArtUrl"] == url
         assert metadata[0]["lastError"] is None
 
-    # --- LRC lyrics override ---
-
-    def test_override_lrc_lyrics_sets_synced_lyrics(self, prism_root, tmp_path):
-        """LRC file populates syncedLyrics and leaves plainLyrics null."""
-        lrc_content = "[00:05.00] Test lyric line\n[00:10.00] Second line\n"
-        lrc_file = tmp_path / "test.lrc"
-        lrc_file.write_text(lrc_content, encoding="utf-8")
-
-        result = self._run(
-            ["metadata", "override", "song-1", "--lyrics", str(lrc_file)],
-            prism_root,
-        )
-        assert result.exit_code == 0
-
-        lyrics = json.loads(
-            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
-        )
-        assert len(lyrics) == 1
-        entry = lyrics[0]
-        assert entry["songId"] == "song-1"
-        assert entry["fetchStatus"] == "manual"
-        assert entry["syncedLyrics"] == lrc_content
-        assert entry["plainLyrics"] is None
-
-    def test_override_plain_lyrics_sets_plain_lyrics(self, prism_root, tmp_path):
-        """Plain text file populates plainLyrics and leaves syncedLyrics null."""
-        plain_content = "First verse\nSecond verse\nNo timestamps here\n"
-        plain_file = tmp_path / "plain.txt"
-        plain_file.write_text(plain_content, encoding="utf-8")
-
-        result = self._run(
-            ["metadata", "override", "song-1", "--lyrics", str(plain_file)],
-            prism_root,
-        )
-        assert result.exit_code == 0
-
-        lyrics = json.loads(
-            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
-        )
-        assert len(lyrics) == 1
-        entry = lyrics[0]
-        assert entry["songId"] == "song-1"
-        assert entry["fetchStatus"] == "manual"
-        assert entry["plainLyrics"] == plain_content
-        assert entry["syncedLyrics"] is None
-
-    def test_override_lyrics_sets_fetched_at(self, prism_root, tmp_path):
-        """fetchedAt is set to a valid ISO 8601 timestamp for lyrics override."""
-        lrc_file = tmp_path / "test.lrc"
-        lrc_file.write_text("[00:01.00] Line one\n", encoding="utf-8")
-
-        self._run(
-            ["metadata", "override", "song-1", "--lyrics", str(lrc_file)],
-            prism_root,
-        )
-
-        lyrics = json.loads(
-            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
-        )
-        entry = lyrics[0]
-        assert entry.get("fetchedAt") is not None
-        datetime.fromisoformat(entry["fetchedAt"])
-
-    def test_override_lyrics_clears_last_error(self, prism_root, tmp_path):
-        """lastError is null after lyrics manual override."""
-        lrc_file = tmp_path / "test.lrc"
-        lrc_file.write_text("[00:01.00] Line one\n", encoding="utf-8")
-
-        self._run(
-            ["metadata", "override", "song-1", "--lyrics", str(lrc_file)],
-            prism_root,
-        )
-
-        lyrics = json.loads(
-            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
-        )
-        assert lyrics[0]["lastError"] is None
-
-    def test_override_lyrics_updates_existing_entry(self, prism_root, tmp_path):
-        """Overriding lyrics replaces existing entry rather than appending."""
-        existing = [
-            {
-                "songId": "song-1",
-                "fetchStatus": "no_match",
-                "syncedLyrics": None,
-                "plainLyrics": None,
-                "fetchedAt": "2026-01-01T00:00:00+00:00",
-                "lastError": "timeout",
-            }
-        ]
-        (prism_root / "data" / "metadata" / "song-lyrics.json").write_text(
-            json.dumps(existing) + "\n", encoding="utf-8"
-        )
-
-        lrc_file = tmp_path / "test.lrc"
-        lrc_file.write_text("[00:01.00] New lyric\n", encoding="utf-8")
-
-        result = self._run(
-            ["metadata", "override", "song-1", "--lyrics", str(lrc_file)],
-            prism_root,
-        )
-        assert result.exit_code == 0
-
-        lyrics = json.loads(
-            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
-        )
-        assert len(lyrics) == 1
-        assert lyrics[0]["fetchStatus"] == "manual"
-        assert lyrics[0]["lastError"] is None
-
-    # --- Override both simultaneously ---
-
-    def test_override_both_album_art_and_lyrics(self, prism_root, tmp_path):
-        """Providing both --album-art-url and --lyrics updates both files."""
-        url = "https://example.com/cover.jpg"
-        lrc_file = tmp_path / "song.lrc"
-        lrc_file.write_text("[00:01.00] Hello\n", encoding="utf-8")
-
-        result = self._run(
-            [
-                "metadata", "override", "song-1",
-                "--album-art-url", url,
-                "--lyrics", str(lrc_file),
-            ],
-            prism_root,
-        )
-        assert result.exit_code == 0
-
-        metadata = json.loads(
-            (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
-        )
-        assert metadata[0]["albumArtUrl"] == url
-        assert metadata[0]["fetchStatus"] == "manual"
-
-        lyrics = json.loads(
-            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
-        )
-        assert lyrics[0]["syncedLyrics"] is not None
-        assert lyrics[0]["fetchStatus"] == "manual"
-
     # --- Non-existent song ID ---
 
     def test_override_nonexistent_song_id_warns_but_succeeds(self, prism_root):
@@ -2050,22 +1491,14 @@ class TestCLIMetadataOverride:
     # --- Validation errors ---
 
     def test_missing_required_options_fails(self, prism_root):
-        """Providing neither --album-art-url nor --lyrics exits with error."""
+        """Providing neither --album-art-url nor --duration exits with error."""
         result = self._run(
             ["metadata", "override", "song-1"],
             prism_root,
         )
         assert result.exit_code != 0
         output_lower = result.output.lower()
-        assert "album-art-url" in output_lower or "lyrics" in output_lower or "at least one" in output_lower
-
-    def test_nonexistent_lyrics_file_fails(self, prism_root):
-        """Specifying a lyrics file that doesn't exist exits with error."""
-        result = self._run(
-            ["metadata", "override", "song-1", "--lyrics", "/nonexistent/lyrics.lrc"],
-            prism_root,
-        )
-        assert result.exit_code != 0
+        assert "album-art-url" in output_lower or "duration" in output_lower or "at least one" in output_lower
 
     # --- Manual status preserved against metadata fetch ---
 
@@ -2087,10 +1520,7 @@ class TestCLIMetadataOverride:
         # Now run `metadata fetch --missing`
         # song-1 already has an entry, so --missing should skip it
         track = make_itunes_track()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
             fetch_result = self._run(
                 ["metadata", "fetch", "--missing"],
                 prism_root,
@@ -2116,10 +1546,7 @@ class TestCLIMetadataOverride:
 
         # Now run `metadata fetch --all --force`
         track = make_itunes_track()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
             fetch_result = self._run(
                 ["metadata", "fetch", "--all", "--force"],
                 prism_root,
@@ -2162,21 +1589,6 @@ class TestCLIMetadataOverride:
         )
         assert metadata[0]["matchConfidence"] == "manual"
 
-    def test_lyrics_fetch_status_is_manual(self, prism_root, tmp_path):
-        """After lyrics override, fetchStatus is exactly 'manual'."""
-        lrc_file = tmp_path / "test.lrc"
-        lrc_file.write_text("[00:01.00] Line\n", encoding="utf-8")
-
-        self._run(
-            ["metadata", "override", "song-1", "--lyrics", str(lrc_file)],
-            prism_root,
-        )
-
-        lyrics = json.loads(
-            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
-        )
-        assert lyrics[0]["fetchStatus"] == "manual"
-
     # --- Output confirmation messages ---
 
     def test_output_shows_song_title(self, prism_root):
@@ -2199,18 +1611,6 @@ class TestCLIMetadataOverride:
         assert result.exit_code == 0
         assert "Album art" in result.output or "album-art" in result.output.lower()
 
-    def test_output_shows_lyrics_overridden(self, prism_root, tmp_path):
-        """Confirmation output mentions lyrics override."""
-        lrc_file = tmp_path / "test.lrc"
-        lrc_file.write_text("[00:01.00] Line\n", encoding="utf-8")
-
-        result = self._run(
-            ["metadata", "override", "song-1", "--lyrics", str(lrc_file)],
-            prism_root,
-        )
-        assert result.exit_code == 0
-        assert "Lyrics" in result.output or "lyrics" in result.output.lower()
-
     def test_manual_status_not_overwritten_by_fetch_all_without_force(self, prism_root):
         """A manual entry is NOT overwritten by `metadata fetch --all` (without --force)."""
         # First, set a manual override
@@ -2222,10 +1622,7 @@ class TestCLIMetadataOverride:
 
         # Now run `metadata fetch --all` WITHOUT --force
         track = make_itunes_track()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
             fetch_result = self._run(
                 ["metadata", "fetch", "--all"],
                 prism_root,
@@ -2345,10 +1742,7 @@ class TestCLIMetadataOverride:
         )
 
         track = make_itunes_track()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
             fetch_result = self._run(
                 ["metadata", "fetch", "--missing"],
                 prism_root,
@@ -2397,7 +1791,7 @@ class TestCLIMetadataClear:
             encoding="utf-8",
         )
 
-        # Pre-populate both songs with matched metadata, lyrics, and artist info
+        # Pre-populate both songs with matched metadata and artist info
         metadata = [
             {
                 "songId": "song-1",
@@ -2426,24 +1820,6 @@ class TestCLIMetadataClear:
                 "lastError": None,
             },
         ]
-        lyrics = [
-            {
-                "songId": "song-1",
-                "fetchStatus": "matched",
-                "syncedLyrics": "[00:01.00] Line one",
-                "plainLyrics": "Line one",
-                "fetchedAt": _fresh_iso(),
-                "lastError": None,
-            },
-            {
-                "songId": "song-2",
-                "fetchStatus": "matched",
-                "syncedLyrics": "[00:01.00] Line two",
-                "plainLyrics": "Line two",
-                "fetchedAt": _fresh_iso(),
-                "lastError": None,
-            },
-        ]
         artist_info = [
             {
                 "normalizedArtist": "宇多田光",
@@ -2462,9 +1838,6 @@ class TestCLIMetadataClear:
         ]
         (metadata_dir / "song-metadata.json").write_text(
             json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
-        (metadata_dir / "song-lyrics.json").write_text(
-            json.dumps(lyrics, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
         (metadata_dir / "artist-info.json").write_text(
             json.dumps(artist_info, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
@@ -2496,21 +1869,6 @@ class TestCLIMetadataClear:
             (prism_root / "data" / "metadata" / "song-metadata.json").read_text()
         )
         song_ids = [e["songId"] for e in metadata]
-        assert "song-1" not in song_ids
-        assert "song-2" in song_ids  # song-2 should be untouched
-
-    def test_clear_specific_song_removes_from_lyrics(self, prism_root):
-        """Clearing a specific song removes its entry from song-lyrics.json."""
-        result = self._run(
-            ["metadata", "clear", "song-1", "--force"],
-            prism_root,
-        )
-        assert result.exit_code == 0
-
-        lyrics = json.loads(
-            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
-        )
-        song_ids = [e["songId"] for e in lyrics]
         assert "song-1" not in song_ids
         assert "song-2" in song_ids  # song-2 should be untouched
 
@@ -2637,19 +1995,6 @@ class TestCLIMetadataClear:
         )
         assert metadata == []
 
-    def test_clear_all_empties_lyrics_file(self, prism_root):
-        """--all --force empties song-lyrics.json to []."""
-        result = self._run(
-            ["metadata", "clear", "--all", "--force"],
-            prism_root,
-        )
-        assert result.exit_code == 0
-
-        lyrics = json.loads(
-            (prism_root / "data" / "metadata" / "song-lyrics.json").read_text()
-        )
-        assert lyrics == []
-
     def test_clear_all_preserves_artist_info(self, prism_root):
         """--all preserves artist-info.json completely."""
         result = self._run(
@@ -2667,14 +2012,14 @@ class TestCLIMetadataClear:
         assert "yoasobi" in normalized
 
     def test_clear_all_output_shows_counts(self, prism_root):
-        """--all output mentions the number of cleared metadata and lyrics entries."""
+        """--all output mentions the number of cleared metadata entries."""
         result = self._run(
             ["metadata", "clear", "--all", "--force"],
             prism_root,
         )
         assert result.exit_code == 0
         output = result.output
-        # Should mention counts (2 metadata entries, 2 lyrics entries)
+        # Should mention counts (2 metadata entries)
         assert "2" in output
         assert "Cleared all" in output
 
@@ -2726,11 +2071,7 @@ class TestCLIMetadataClear:
 
         # Re-fetch
         track = make_itunes_track()
-        lrc = make_lrclib_result()
-        with (
-            patch("mizukilens.metadata._itunes_search", return_value=[track]),
-            patch("mizukilens.metadata._http_get_json", return_value=[lrc]),
-        ):
+        with patch("mizukilens.metadata._itunes_search", return_value=[track]):
             fetch_result = self._run(
                 ["metadata", "fetch", "--song", "song-1"],
                 prism_root,
