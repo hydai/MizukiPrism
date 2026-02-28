@@ -112,34 +112,36 @@ test.describe('CORE-003: Search & Filter', () => {
     await page.screenshot({ path: screenshotPath('ac4-artist-filter') });
   });
 
-  test('AC5: Date range filter shows only performances within range', async ({ page }) => {
-    const dateFrom = page.getByTestId('date-from');
-    const dateTo = page.getByTestId('date-to');
+  test('AC5: Year filter shows only performances from that year', async ({ page }) => {
+    const yearBar = page.getByTestId('year-filter-bar');
+    await expect(yearBar).toBeVisible();
 
-    // Set date range that includes our real data (2025-03-26)
-    await dateFrom.fill('2025-03-01');
-    await dateTo.fill('2025-03-31');
+    // Get total count before filtering
+    const allRows = page.getByTestId('performance-row');
+    const totalCount = await allRows.count();
 
-    // Verify performances within date range are shown
-    const rows = page.getByTestId('performance-row');
-    const count = await rows.count();
-    expect(count).toBeGreaterThan(0);
+    // Click the "2025" year chip in the desktop action bar
+    const chip2025 = yearBar.getByTestId('year-filter-chip').filter({ hasText: '2025' });
+    await chip2025.click();
 
-    // Get dates from the date cells
+    // Verify only 2025 performances are shown
+    const filteredRows = page.getByTestId('performance-row');
+    const filteredCount = await filteredRows.count();
+    expect(filteredCount).toBeGreaterThan(0);
+    expect(filteredCount).toBeLessThan(totalCount);
+
+    // Verify all visible dates are from 2025
     const dateCells = await page.locator('div.font-mono').filter({ hasText: /^\d{4}-\d{2}-\d{2}$/ }).allTextContents();
     for (const dateText of dateCells) {
-      expect(dateText >= '2025-03-01').toBe(true);
-      expect(dateText <= '2025-03-31').toBe(true);
+      expect(dateText.startsWith('2025')).toBe(true);
     }
 
-    // Set a date range that excludes all data
-    await dateFrom.fill('2020-01-01');
-    await dateTo.fill('2020-12-31');
+    // Toggle 2025 off to restore full list
+    await chip2025.click();
+    const restoredCount = await page.getByTestId('performance-row').count();
+    expect(restoredCount).toBe(totalCount);
 
-    // No results should appear
-    await expect(page.getByText('找不到符合條件的歌曲')).toBeVisible();
-
-    await page.screenshot({ path: screenshotPath('ac5-date-range') });
+    await page.screenshot({ path: screenshotPath('ac5-year-filter') });
   });
 
   test('AC6: Stream filter shows only songs from that stream', async ({ page }) => {
@@ -317,9 +319,10 @@ test.describe('CORE-003: Search & Filter', () => {
   });
 
   test('Clear all filters button resets all filter states', async ({ page }) => {
-    // Apply artist filter and date filter
+    // Apply artist filter and year filter
     await page.getByTestId('artist-filter').selectOption('LiSA');
-    await page.getByTestId('date-from').fill('2025-01-01');
+    const yearBar = page.getByTestId('year-filter-bar');
+    await yearBar.getByTestId('year-filter-chip').first().click();
 
     // Verify the clear all button appears
     const clearAllButton = page.getByTestId('clear-all-filters');
@@ -341,6 +344,65 @@ test.describe('CORE-003: Search & Filter', () => {
     await expect(clearAllButton).toBeHidden();
 
     await page.screenshot({ path: screenshotPath('clear-all-filters') });
+  });
+
+  test('AC12: Multi-year selection shows combined results', async ({ page }) => {
+    const yearBar = page.getByTestId('year-filter-bar');
+    await expect(yearBar).toBeVisible();
+
+    // Select 2025
+    const chip2025 = yearBar.getByTestId('year-filter-chip').filter({ hasText: '2025' });
+    await chip2025.click();
+    const count2025 = await page.getByTestId('performance-row').count();
+    expect(count2025).toBeGreaterThan(0);
+
+    // Also select 2026 (multi-select)
+    const chip2026 = yearBar.getByTestId('year-filter-chip').filter({ hasText: '2026' });
+    await chip2026.click();
+    const countBoth = await page.getByTestId('performance-row').count();
+
+    // Combined count should be >= single year count
+    expect(countBoth).toBeGreaterThanOrEqual(count2025);
+
+    // Verify dates are from 2025 or 2026
+    const dateCells = await page.locator('div.font-mono').filter({ hasText: /^\d{4}-\d{2}-\d{2}$/ }).allTextContents();
+    for (const dateText of dateCells) {
+      expect(dateText.startsWith('2025') || dateText.startsWith('2026')).toBe(true);
+    }
+
+    await page.screenshot({ path: screenshotPath('ac12-multi-year') });
+  });
+
+  test('AC13: Sidebar drill-down within year filter', async ({ page }) => {
+    // Set desktop viewport to see sidebar
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.waitForTimeout(300);
+
+    const yearBar = page.getByTestId('year-filter-bar');
+    await expect(yearBar).toBeVisible();
+
+    // Select 2026 year
+    const chip2026 = yearBar.getByTestId('year-filter-chip').filter({ hasText: '2026' });
+    await chip2026.click();
+    const yearCount = await page.getByTestId('performance-row').count();
+    expect(yearCount).toBeGreaterThan(0);
+
+    // Sidebar should show only streams from 2026
+    const streamButtons = page.locator('[data-testid="stream-filter-button"]');
+    const streamTexts = await streamButtons.allTextContents();
+    for (const text of streamTexts) {
+      expect(text).toContain('2026');
+    }
+
+    // Click a specific stream to drill down further
+    if (await streamButtons.count() > 0) {
+      await streamButtons.first().click();
+      const drillDownCount = await page.getByTestId('performance-row').count();
+      expect(drillDownCount).toBeGreaterThan(0);
+      expect(drillDownCount).toBeLessThanOrEqual(yearCount);
+    }
+
+    await page.screenshot({ path: screenshotPath('ac13-sidebar-drill-down') });
   });
 
 });

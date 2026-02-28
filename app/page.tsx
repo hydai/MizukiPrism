@@ -62,8 +62,7 @@ export default function Home() {
   const [streams, setStreams] = useState<{id:string;title:string;date:string;videoId:string}[]>([]);
   const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [selectedYears, setSelectedYears] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>('timeline');
   const [expandedSongs, setExpandedSongs] = useState<Set<string>>(new Set());
   const [showToast, setShowToast] = useState(false);
@@ -231,14 +230,38 @@ export default function Home() {
     return Array.from(artists).sort((a, b) => a.localeCompare(b, 'zh-TW'));
   }, [songs]);
 
-  const hasActiveFilters = searchTerm !== '' || selectedStreamId !== null || selectedArtist !== null || dateFrom !== '' || dateTo !== '';
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    streams.forEach(s => years.add(new Date(s.date).getFullYear()));
+    return Array.from(years).sort((a, b) => b - a);
+  }, [streams]);
+
+  const filteredStreams = useMemo(() => {
+    if (selectedYears.size === 0) return streams;
+    return streams.filter(s => selectedYears.has(new Date(s.date).getFullYear()));
+  }, [streams, selectedYears]);
+
+  const toggleYear = (year: number) => {
+    setSelectedYears(prev => {
+      const next = new Set(prev);
+      if (next.has(year)) next.delete(year); else next.add(year);
+      return next;
+    });
+    setSelectedStreamId(null);
+  };
+
+  const clearYears = () => {
+    setSelectedYears(new Set());
+    setSelectedStreamId(null);
+  };
+
+  const hasActiveFilters = searchTerm !== '' || selectedStreamId !== null || selectedArtist !== null || selectedYears.size > 0;
 
   const clearAllFilters = () => {
     setSearchTerm('');
     setSelectedStreamId(null);
     setSelectedArtist(null);
-    setDateFrom('');
-    setDateTo('');
+    setSelectedYears(new Set());
   };
 
   const flattenedSongs: FlattenedSong[] = useMemo(() => {
@@ -265,11 +288,10 @@ export default function Home() {
       const matchesSearch = song.searchString.includes(lowerTerm);
       const matchesStream = selectedStreamId ? song.streamId === selectedStreamId : true;
       const matchesArtist = selectedArtist ? song.originalArtist === selectedArtist : true;
-      const matchesDateFrom = dateFrom ? song.date >= dateFrom : true;
-      const matchesDateTo = dateTo ? song.date <= dateTo : true;
-      return matchesSearch && matchesStream && matchesArtist && matchesDateFrom && matchesDateTo;
+      const matchesYear = selectedYears.size > 0 ? selectedYears.has(new Date(song.date).getFullYear()) : true;
+      return matchesSearch && matchesStream && matchesArtist && matchesYear;
     });
-  }, [songs, searchTerm, selectedStreamId, selectedArtist, dateFrom, dateTo]);
+  }, [songs, searchTerm, selectedStreamId, selectedArtist, selectedYears]);
 
   // Grouped songs for song-grouped view
   const groupedSongs: Song[] = useMemo(() => {
@@ -281,16 +303,13 @@ export default function Home() {
           ? song.performances.some(p => p.streamId === selectedStreamId)
           : true;
         const matchesArtist = selectedArtist ? song.originalArtist === selectedArtist : true;
-        // For grouped view, filter by date range: show song if any performance is within range
-        const matchesDate = (dateFrom || dateTo) ? song.performances.some(perf => {
-          const matchesDateFrom = dateFrom ? perf.date >= dateFrom : true;
-          const matchesDateTo = dateTo ? perf.date <= dateTo : true;
-          return matchesDateFrom && matchesDateTo;
-        }) : true;
-        return matchesSearch && matchesStream && matchesArtist && matchesDate;
+        const matchesYear = selectedYears.size > 0
+          ? song.performances.some(perf => selectedYears.has(new Date(perf.date).getFullYear()))
+          : true;
+        return matchesSearch && matchesStream && matchesArtist && matchesYear;
       })
       .sort((a, b) => a.title.localeCompare(b.title, 'zh-TW'));
-  }, [songs, searchTerm, selectedStreamId, selectedArtist, dateFrom, dateTo]);
+  }, [songs, searchTerm, selectedStreamId, selectedArtist, selectedYears]);
 
   const gradientText = "bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500";
 
@@ -391,36 +410,25 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Date range */}
-          <div className="space-y-1.5 px-1">
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full font-medium py-2 px-3 outline-none text-sm transition-all"
-              style={{
-                background: 'var(--bg-surface-glass)',
-                border: '1px solid var(--border-glass)',
-                borderRadius: 'var(--radius-lg)',
-                color: 'var(--text-secondary)',
-              }}
-              data-testid="date-from"
-              placeholder="開始日期"
-            />
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-full font-medium py-2 px-3 outline-none text-sm transition-all"
-              style={{
-                background: 'var(--bg-surface-glass)',
-                border: '1px solid var(--border-glass)',
-                borderRadius: 'var(--radius-lg)',
-                color: 'var(--text-secondary)',
-              }}
-              data-testid="date-to"
-              placeholder="結束日期"
-            />
+          {/* Year filter chips */}
+          <div className="flex flex-wrap gap-1.5 px-1" data-testid="year-filter-sidebar">
+            {availableYears.map(year => (
+              <button
+                key={year}
+                data-testid="year-filter-chip"
+                onClick={() => toggleYear(year)}
+                className="font-medium text-sm transition-all"
+                style={{
+                  borderRadius: 'var(--radius-pill)',
+                  padding: '4px 12px',
+                  ...(selectedYears.has(year)
+                    ? { background: 'var(--bg-accent-pink)', color: 'var(--accent-pink)' }
+                    : { background: 'var(--bg-surface-glass)', border: '1px solid var(--border-glass)', color: 'var(--text-secondary)' }),
+                }}
+              >
+                {year}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -430,7 +438,7 @@ export default function Home() {
             className="px-3 py-1.5 mb-1 font-bold uppercase tracking-widest"
             style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-xs)', letterSpacing: '0.1em' }}
           >
-            歌枠回放
+            歌枠回放{selectedYears.size > 0 && ` (${Array.from(selectedYears).sort().join(', ')})`}
           </div>
           <button
             onClick={() => setSelectedStreamId(null)}
@@ -443,7 +451,7 @@ export default function Home() {
           >
             全部歌曲
           </button>
-          {streams.map(stream => (
+          {filteredStreams.map(stream => (
             <button
               key={stream.id}
               data-testid="stream-filter-button"
@@ -953,7 +961,7 @@ export default function Home() {
             </a>
           </div>
 
-          {/* Mobile Stream Scroll — horizontal scrolling row, mobile only */}
+          {/* Mobile Year Filter Scroll — horizontal scrolling row, mobile only */}
           <div
             data-testid="mobile-stream-scroll"
             className="lg:hidden flex items-center flex-shrink-0"
@@ -966,16 +974,16 @@ export default function Home() {
               borderBottom: '1px solid var(--border-glass)',
             }}
           >
-            {/* All streams chip */}
+            {/* All years chip */}
             <button
-              onClick={() => setSelectedStreamId(null)}
+              onClick={clearYears}
               className="flex-shrink-0 font-medium transition-all"
               style={{
                 height: '36px',
                 borderRadius: '12px',
                 padding: '0 16px',
                 fontSize: 'var(--font-size-sm)',
-                ...(selectedStreamId === null
+                ...(selectedYears.size === 0
                   ? {
                       background: '#FDF2F8',
                       border: '1px solid #FBCFE8',
@@ -990,20 +998,19 @@ export default function Home() {
             >
               全部
             </button>
-            {streams.map(stream => (
+            {availableYears.map(year => (
               <button
-                key={stream.id}
-                data-testid="stream-filter-button"
-                onClick={() => setSelectedStreamId(stream.id === selectedStreamId ? null : stream.id)}
+                key={year}
+                data-testid="year-filter-chip"
+                onClick={() => toggleYear(year)}
                 className="flex-shrink-0 font-medium transition-all"
-                title={stream.title}
                 style={{
                   height: '36px',
                   borderRadius: '12px',
                   padding: '0 16px',
                   fontSize: 'var(--font-size-sm)',
                   whiteSpace: 'nowrap',
-                  ...(selectedStreamId === stream.id
+                  ...(selectedYears.has(year)
                     ? {
                         background: '#FDF2F8',
                         border: '1px solid #FBCFE8',
@@ -1016,7 +1023,7 @@ export default function Home() {
                       }),
                 }}
               >
-                {stream.date}
+                {year}
               </button>
             ))}
           </div>
@@ -1140,17 +1147,17 @@ export default function Home() {
             {/* Flexible spacer */}
             <div className="flex-1 hidden lg:block" />
 
-            {/* Right side: Stream Filter Chips */}
-            <div className="hidden lg:flex items-center gap-1.5 flex-wrap">
+            {/* Right side: Year Filter Chips */}
+            <div className="hidden lg:flex items-center gap-1.5 flex-wrap" data-testid="year-filter-bar">
               {/* "全部" chip */}
               <button
-                onClick={() => setSelectedStreamId(null)}
+                onClick={clearYears}
                 className="font-medium transition-all"
                 style={{
                   borderRadius: 'var(--radius-pill)',
                   fontSize: 'var(--font-size-sm)',
                   padding: 'var(--space-2) var(--space-4)',
-                  ...(selectedStreamId === null
+                  ...(selectedYears.size === 0
                     ? {
                         background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
                         color: 'var(--text-on-accent)',
@@ -1163,18 +1170,17 @@ export default function Home() {
               >
                 全部
               </button>
-              {streams.map(stream => (
+              {availableYears.map(year => (
                 <button
-                  key={stream.id}
-                  data-testid="stream-filter-button"
-                  onClick={() => setSelectedStreamId(stream.id === selectedStreamId ? null : stream.id)}
+                  key={year}
+                  data-testid="year-filter-chip"
+                  onClick={() => toggleYear(year)}
                   className="font-medium transition-all"
-                  title={stream.title}
                   style={{
                     borderRadius: 'var(--radius-pill)',
                     fontSize: 'var(--font-size-sm)',
                     padding: 'var(--space-2) var(--space-4)',
-                    ...(selectedStreamId === stream.id
+                    ...(selectedYears.has(year)
                       ? {
                           background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
                           color: 'var(--text-on-accent)',
@@ -1185,7 +1191,7 @@ export default function Home() {
                         }),
                   }}
                 >
-                  {stream.date}
+                  {year}
                 </button>
               ))}
             </div>
