@@ -280,13 +280,11 @@ export default function MiniPlayer() {
             <div className="flex items-center gap-4">
               {/* Shuffle */}
               <button
-                className="transition-colors"
+                className={`transition-colors ${!shuffleOn ? 'hover-text-primary' : ''}`}
                 aria-label="Shuffle"
                 data-testid="desktop-shuffle-button"
                 onClick={(e) => { e.stopPropagation(); toggleShuffle(); }}
                 style={{ color: shuffleOn ? 'var(--accent-pink)' : 'var(--text-tertiary)' }}
-                onMouseEnter={(e) => { if (!shuffleOn) e.currentTarget.style.color = 'var(--text-primary)'; }}
-                onMouseLeave={(e) => { if (!shuffleOn) e.currentTarget.style.color = 'var(--text-tertiary)'; }}
               >
                 <Shuffle style={{ width: '16px', height: '16px' }} />
               </button>
@@ -297,11 +295,9 @@ export default function MiniPlayer() {
                   e.stopPropagation();
                   previous();
                 }}
-                className="transition-colors"
+                className="transition-colors hover-text-primary"
                 aria-label="Previous"
                 style={{ color: 'var(--text-tertiary)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-tertiary)')}
               >
                 <SkipBack style={{ width: '18px', height: '18px' }} />
               </button>
@@ -337,24 +333,20 @@ export default function MiniPlayer() {
                   e.stopPropagation();
                   next();
                 }}
-                className="transition-colors"
+                className="transition-colors hover-text-primary"
                 aria-label="Next"
                 style={{ color: 'var(--text-tertiary)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-tertiary)')}
               >
                 <SkipForward style={{ width: '18px', height: '18px' }} />
               </button>
 
               {/* Repeat */}
               <button
-                className="transition-colors"
+                className={`transition-colors ${repeatMode === 'off' ? 'hover-text-primary' : ''}`}
                 aria-label="Repeat"
                 data-testid="desktop-repeat-button"
                 onClick={(e) => { e.stopPropagation(); toggleRepeat(); }}
                 style={{ color: repeatMode !== 'off' ? 'var(--accent-pink)' : 'var(--text-tertiary)' }}
-                onMouseEnter={(e) => { if (repeatMode === 'off') e.currentTarget.style.color = 'var(--text-primary)'; }}
-                onMouseLeave={(e) => { if (repeatMode === 'off') e.currentTarget.style.color = 'var(--text-tertiary)'; }}
               >
                 {repeatMode === 'one'
                   ? <Repeat1 style={{ width: '16px', height: '16px' }} />
@@ -391,12 +383,10 @@ export default function MiniPlayer() {
             <Link
               href="/now-playing"
               onClick={(e) => e.stopPropagation()}
-              className="transition-colors"
+              className="transition-colors hover-text-primary"
               aria-label="Expand to full page"
               data-testid="expand-now-playing-button"
               style={{ color: 'var(--text-tertiary)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-tertiary)')}
             >
               <Maximize2 style={{ width: '18px', height: '18px' }} />
             </Link>
@@ -407,12 +397,10 @@ export default function MiniPlayer() {
                 e.stopPropagation();
                 setShowQueue(true);
               }}
-              className="relative transition-colors"
+              className="relative transition-colors hover-text-primary"
               aria-label="Open queue"
               data-testid="queue-button"
               style={{ color: 'var(--text-tertiary)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-tertiary)')}
             >
               <ListMusic style={{ width: '18px', height: '18px' }} />
               {queue.length > 0 && (

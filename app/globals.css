@@ -116,6 +116,16 @@ body {
   background: rgba(0, 0, 0, 0.3);
 }
 
+/* Hover-safe row highlight — only on devices that support hover */
+@media (hover: hover) {
+  .hover-row:hover {
+    background: var(--bg-accent-pink);
+  }
+  .hover-text-primary:hover {
+    color: var(--text-primary) !important;
+  }
+}
+
 /* Touch device: always show scrubber dot */
 @media (pointer: coarse) {
   .coarse-pointer\:opacity-100 {

@@ -1289,23 +1289,13 @@ export default function Home() {
                         <div
                           key={`${song.id}-${song.performanceId}`}
                           data-testid="performance-row"
-                          className="group grid grid-cols-[32px_40px_1fr_60px] lg:grid-cols-[32px_40px_2fr_2fr_100px_60px] gap-0 items-center transition-all cursor-default"
+                          className="group hover-row grid grid-cols-[32px_40px_1fr_60px] lg:grid-cols-[32px_40px_2fr_2fr_100px_60px] gap-0 items-center transition-all cursor-default"
                           style={{
                             borderRadius: 'var(--radius-lg)',
                             padding: 'var(--space-3) var(--space-4)',
                             background: isCurrentlyPlaying
                               ? '#FCE7F320'
                               : undefined,
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!isCurrentlyPlaying) {
-                              (e.currentTarget as HTMLElement).style.background = 'var(--bg-accent-pink)';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!isCurrentlyPlaying) {
-                              (e.currentTarget as HTMLElement).style.background = '';
-                            }
                           }}
                         >
                           {/* # column: row number / play button — visible on mobile and desktop */}
@@ -1580,15 +1570,9 @@ export default function Home() {
                         {/* Song Header - Clickable */}
                         <button
                           onClick={() => toggleSongExpansion(song.id)}
-                          className="w-full flex items-center justify-between transition-all group"
+                          className="w-full flex items-center justify-between transition-all group hover-row"
                           style={{
                             padding: 'var(--space-5) var(--space-6)',
-                          }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLElement).style.background = 'var(--bg-accent-pink)';
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLElement).style.background = '';
                           }}
                         >
                           <div className="flex items-start gap-4 flex-1 text-left">
@@ -1660,16 +1644,10 @@ export default function Home() {
                               <div
                                 key={perf.id}
                                 data-testid="version-row"
-                                className="group/version grid grid-cols-[1fr_60px] lg:grid-cols-[32px_1fr_140px_60px] gap-0 items-center transition-all"
+                                className="group/version hover-row grid grid-cols-[1fr_60px] lg:grid-cols-[32px_1fr_140px_60px] gap-0 items-center transition-all"
                                 style={{
                                   borderRadius: 'var(--radius-lg)',
                                   padding: 'var(--space-3) var(--space-4)',
-                                }}
-                                onMouseEnter={(e) => {
-                                  (e.currentTarget as HTMLElement).style.background = 'var(--bg-accent-pink)';
-                                }}
-                                onMouseLeave={(e) => {
-                                  (e.currentTarget as HTMLElement).style.background = '';
                                 }}
                               >
                                 {/* Play button column — desktop only */}
