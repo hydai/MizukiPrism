@@ -41,6 +41,7 @@ from textual.widgets import (
     ListView,
     ListItem,
     Static,
+    TextArea,
 )
 
 # ---------------------------------------------------------------------------
@@ -491,6 +492,89 @@ class EditSongDialog(ModalScreen[dict[str, Any] | None]):
 
 
 # ---------------------------------------------------------------------------
+# Paste import dialog
+# ---------------------------------------------------------------------------
+
+
+class PasteImportDialog(ModalScreen[list[dict[str, Any]] | None]):
+    """Modal dialog for pasting formatted song text and importing it."""
+
+    DEFAULT_CSS = """
+    PasteImportDialog {
+        align: center middle;
+    }
+    PasteImportDialog > Vertical {
+        background: $surface;
+        border: tall $primary;
+        padding: 1 2;
+        width: 90;
+        height: 30;
+    }
+    PasteImportDialog Label#paste-title {
+        text-align: center;
+        text-style: bold;
+        margin-bottom: 1;
+    }
+    PasteImportDialog TextArea {
+        height: 1fr;
+    }
+    PasteImportDialog .error {
+        color: $error;
+        margin-top: 0;
+    }
+    PasteImportDialog Horizontal {
+        width: 100%;
+        align: center middle;
+        margin-top: 1;
+    }
+    PasteImportDialog Button {
+        margin: 0 1;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Vertical():
+            yield Label("貼り付けインポート / Paste Import", id="paste-title")
+            yield Label(
+                "タイムスタンプ付きの歌リストを貼り付けてください。\n"
+                "形式: 5:30 歌名 - アーティスト",
+                id="paste-hint",
+            )
+            yield TextArea(id="paste-area")
+            yield Label("", id="paste-error", classes="error")
+            with Horizontal():
+                yield Button("解析＆インポート / Parse & Import", id="parse", variant="success")
+                yield Button("キャンセル / Cancel [Esc]", id="cancel", variant="error")
+
+    def on_key(self, event: Any) -> None:
+        if event.key == "escape":
+            self.dismiss(None)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "parse":
+            self._try_parse()
+        else:
+            self.dismiss(None)
+
+    def _try_parse(self) -> None:
+        from mizukilens.extraction import parse_text_to_songs
+
+        text = self.query_one("#paste-area", TextArea).text.strip()
+        if not text:
+            self.query_one("#paste-error", Label).update("テキストが空です")
+            return
+
+        songs = parse_text_to_songs(text)
+        if not songs:
+            self.query_one("#paste-error", Label).update(
+                "タイムスタンプが見つかりません"
+            )
+            return
+
+        self.dismiss(songs)
+
+
+# ---------------------------------------------------------------------------
 # Main TUI App
 # ---------------------------------------------------------------------------
 
@@ -565,6 +649,7 @@ class ReviewApp(App[None]):
         Binding("d", "delete_song", "刪除", show=True),
         Binding("r", "refetch_stream", "再擷取", show=True),
         Binding("c", "show_candidates", "候選留言", show=True),
+        Binding("p", "paste_songs", "貼上匯入", show=True),
         Binding("t", "clear_end_timestamps", "終了時刻クリア", show=True),
         Binding("u", "copy_vod_url", "複製URL", show=True),
         Binding("question_mark", "show_help", "幫助", show=True),
@@ -1184,6 +1269,61 @@ class ReviewApp(App[None]):
         else:
             self.copy_to_clipboard(url)
         self.notify(f"URLをコピーしました: {url}")
+
+    def action_paste_songs(self) -> None:
+        """Open paste import dialog to add songs from pasted text."""
+        if self._current_stream_idx < 0:
+            self.notify("場次が選択されていません")
+            return
+
+        def _paste_callback(songs: list[dict[str, Any]] | None) -> None:
+            if songs is None:
+                return
+            # Check if stream already has songs — confirm overwrite
+            if self._songs:
+                def _confirm_callback(confirmed: bool) -> None:
+                    if confirmed:
+                        self._do_paste_songs(songs)
+
+                self.push_screen(
+                    ConfirmDialog(
+                        f"既存の曲を上書きしますか？({len(self._songs)}曲)"
+                    ),
+                    _confirm_callback,
+                )
+            else:
+                self._do_paste_songs(songs)
+
+        self.push_screen(PasteImportDialog(), _paste_callback)
+
+    def _do_paste_songs(self, songs: list[dict[str, Any]]) -> None:
+        """Persist pasted songs to the database."""
+        from mizukilens.cache import upsert_parsed_songs, update_stream_status, get_stream, is_valid_transition
+        from mizukilens.extraction import _songs_to_cache_format
+
+        if self._current_stream_idx < 0:
+            return
+
+        stream = self._streams[self._current_stream_idx]
+        video_id = stream["video_id"]
+
+        songs_data = _songs_to_cache_format(songs, video_id)
+
+        try:
+            upsert_parsed_songs(self._conn, video_id, songs_data)
+
+            # Transition pending/discovered → extracted
+            current_stream = get_stream(self._conn, video_id)
+            if current_stream:
+                current_status = current_stream["status"]
+                if current_status in ("pending", "discovered") and is_valid_transition(current_status, "extracted"):
+                    update_stream_status(self._conn, video_id, "extracted")
+
+            self._load_streams_preserving_selection()
+            self._load_songs(self._current_stream_idx)
+            self.notify(f"{len(songs)}曲を貼り付けました")
+        except Exception as exc:  # noqa: BLE001
+            self.notify(f"貼り付けエラー: {exc}", severity="error")
 
     def action_show_help(self) -> None:
         """Show the help dialog."""

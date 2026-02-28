@@ -450,3 +450,65 @@ class TestCandidatesCLI:
         runner = CliRunner()
         result = runner.invoke(main, ["--help"])
         assert "candidates" in result.output
+
+
+# ---------------------------------------------------------------------------
+# extract --from-text tests
+# ---------------------------------------------------------------------------
+
+
+class TestExtractFromTextCLI:
+    """Tests for the ``extract --from-text FILE`` CLI option."""
+
+    def test_from_text_requires_stream_flag(self, tmp_path: Path) -> None:
+        """--from-text without --stream should error."""
+        text_file = tmp_path / "songs.txt"
+        text_file.write_text("5:30 Song A - Artist\n")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            main, ["extract", "--from-text", str(text_file)]
+        )
+        assert result.exit_code != 0
+        assert "エラー" in result.output
+
+    def test_from_text_mutually_exclusive_with_all(self, tmp_path: Path) -> None:
+        """--from-text + --all should error."""
+        text_file = tmp_path / "songs.txt"
+        text_file.write_text("5:30 Song A - Artist\n")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            ["extract", "--from-text", str(text_file), "--stream", "vid01", "--all"],
+        )
+        assert result.exit_code != 0
+        assert "エラー" in result.output
+
+    def test_from_text_with_stream_succeeds(self, tmp_path: Path) -> None:
+        """Happy path: --from-text + --stream extracts successfully."""
+        from mizukilens.cache import open_db, upsert_stream
+
+        text_file = tmp_path / "songs.txt"
+        text_file.write_text(
+            "5:30 買你 - 魏如萱\n17:00 ただ君に晴れ - ヨルシカ\n1:01:30 怪物 - YOASOBI\n"
+        )
+
+        db_path = tmp_path / "test.db"
+        conn = open_db(db_path)
+        upsert_stream(conn, video_id="txtvid", status="discovered", title="Test")
+        conn.close()
+
+        def mock_open_db(*args, **kwargs):
+            return open_db(db_path)
+
+        with patch("mizukilens.cache.open_db", side_effect=mock_open_db):
+            runner = CliRunner()
+            result = runner.invoke(
+                main,
+                ["extract", "--stream", "txtvid", "--from-text", str(text_file)],
+            )
+
+        assert result.exit_code == 0
+        assert "3 曲" in result.output
+        assert "完了" in result.output

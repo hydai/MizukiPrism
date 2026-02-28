@@ -28,6 +28,7 @@ from mizukilens.tui import (
     ConfirmDialog,
     EditSongDialog,
     HelpDialog,
+    PasteImportDialog,
     ReviewApp,
     STATUS_ICONS,
     REVIEWABLE_STATUSES,
@@ -1208,3 +1209,136 @@ class TestClearEndTimestamps:
         """Verify help text mentions the [t] keybinding."""
         assert "[t]" in HelpDialog.HELP_TEXT
         assert "終了時刻クリア" in HelpDialog.HELP_TEXT
+
+
+# ---------------------------------------------------------------------------
+# Section: PasteImportDialog tests
+# ---------------------------------------------------------------------------
+
+PASTE_SAMPLE = """\
+5:30 買你 - 魏如萱
+17:00 ただ君に晴れ - ヨルシカ
+1:01:30 怪物 - YOASOBI
+"""
+
+
+class TestPasteImportDialog:
+    """Tests for :class:`PasteImportDialog`."""
+
+    def test_dialog_can_be_instantiated(self) -> None:
+        """Verify PasteImportDialog can be constructed."""
+        dialog = PasteImportDialog()
+        assert dialog is not None
+
+    def test_parse_valid_text_returns_songs(self) -> None:
+        """Verify _try_parse dismisses with parsed songs for valid input."""
+        dialog = PasteImportDialog()
+        # Mock the query_one calls and dismiss
+        mock_textarea = MagicMock()
+        mock_textarea.text = PASTE_SAMPLE
+        mock_error_label = MagicMock()
+
+        with (
+            patch.object(dialog, "query_one", side_effect=lambda sel, cls: {
+                "#paste-area": mock_textarea,
+                "#paste-error": mock_error_label,
+            }[sel]),
+            patch.object(dialog, "dismiss") as mock_dismiss,
+        ):
+            dialog._try_parse()
+            mock_dismiss.assert_called_once()
+            songs = mock_dismiss.call_args[0][0]
+            assert len(songs) == 3
+            assert songs[0]["song_name"] == "買你"
+
+    def test_parse_empty_text_shows_error(self) -> None:
+        """No timestamps → error label updated."""
+        dialog = PasteImportDialog()
+        mock_textarea = MagicMock()
+        mock_textarea.text = "no timestamps here"
+        mock_error_label = MagicMock()
+
+        with (
+            patch.object(dialog, "query_one", side_effect=lambda sel, cls: {
+                "#paste-area": mock_textarea,
+                "#paste-error": mock_error_label,
+            }[sel]),
+            patch.object(dialog, "dismiss") as mock_dismiss,
+        ):
+            dialog._try_parse()
+            mock_dismiss.assert_not_called()
+            mock_error_label.update.assert_called_once()
+            assert "タイムスタンプが見つかりません" in mock_error_label.update.call_args[0][0]
+
+    def test_cancel_returns_none(self) -> None:
+        """Pressing cancel dismisses with None."""
+        dialog = PasteImportDialog()
+        event = MagicMock()
+        event.button = MagicMock()
+        event.button.id = "cancel"
+        with patch.object(dialog, "dismiss") as mock_dismiss:
+            dialog.on_button_pressed(event)
+            mock_dismiss.assert_called_once_with(None)
+
+
+# ---------------------------------------------------------------------------
+# Section: Paste action tests
+# ---------------------------------------------------------------------------
+
+
+class TestPasteAction:
+    """Tests for ReviewApp paste songs action."""
+
+    def test_paste_songs_to_empty_stream(self, db: sqlite3.Connection) -> None:
+        """Paste songs to a stream with no existing songs."""
+        _add_stream(db, "paste01", status="pending")
+        app = ReviewApp(conn=db)
+        app._streams = [get_stream(db, "paste01")]
+        app._current_stream_idx = 0
+        app._songs = []
+
+        from mizukilens.extraction import parse_text_to_songs
+        songs = parse_text_to_songs(PASTE_SAMPLE)
+
+        with patch.object(app, "notify"):
+            app._do_paste_songs(songs)
+
+        saved = get_parsed_songs(db, "paste01")
+        assert len(saved) == 3
+        assert saved[0]["song_name"] == "買你"
+
+    def test_paste_songs_replaces_existing(self, db: sqlite3.Connection) -> None:
+        """Paste overwrites existing songs."""
+        _add_stream(db, "paste02", status="extracted")
+        _add_songs(db, "paste02", count=5)
+
+        app = ReviewApp(conn=db)
+        app._streams = [get_stream(db, "paste02")]
+        app._current_stream_idx = 0
+        app._songs = list(get_parsed_songs(db, "paste02"))
+
+        from mizukilens.extraction import parse_text_to_songs
+        songs = parse_text_to_songs(PASTE_SAMPLE)
+
+        with patch.object(app, "notify"):
+            app._do_paste_songs(songs)
+
+        saved = get_parsed_songs(db, "paste02")
+        assert len(saved) == 3  # replaced 5 with 3
+
+    def test_paste_songs_status_transition(self, db: sqlite3.Connection) -> None:
+        """Pending stream transitions to extracted after paste."""
+        _add_stream(db, "paste03", status="pending")
+        app = ReviewApp(conn=db)
+        app._streams = [get_stream(db, "paste03")]
+        app._current_stream_idx = 0
+        app._songs = []
+
+        from mizukilens.extraction import parse_text_to_songs
+        songs = parse_text_to_songs(PASTE_SAMPLE)
+
+        with patch.object(app, "notify"):
+            app._do_paste_songs(songs)
+
+        stream = get_stream(db, "paste03")
+        assert stream["status"] == "extracted"

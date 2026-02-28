@@ -486,6 +486,42 @@ def get_description_from_ytdlp(video_id: str) -> str | None:
     return None
 
 
+def get_video_info_from_ytdlp(video_id: str) -> dict[str, str | None]:
+    """Fetch video title and upload_date via yt-dlp.
+
+    Returns ``{"title": str|None, "date": str|None}``.
+    The date is formatted as ``YYYY-MM-DD`` (from yt-dlp's ``YYYYMMDD``).
+    """
+    import subprocess
+
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    info: dict[str, str | None] = {"title": None, "date": None}
+    try:
+        result = subprocess.run(
+            [
+                "yt-dlp", "--skip-download",
+                "--print", "title",
+                "--print", "upload_date",
+                url,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if result.returncode == 0:
+            lines = result.stdout.strip().splitlines()
+            if len(lines) >= 1 and lines[0].strip():
+                info["title"] = lines[0].strip()
+            if len(lines) >= 2 and lines[1].strip():
+                raw_date = lines[1].strip()
+                # Convert YYYYMMDD → YYYY-MM-DD
+                if len(raw_date) == 8 and raw_date.isdigit():
+                    info["date"] = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:]}"
+    except (subprocess.SubprocessError, FileNotFoundError, OSError):
+        pass
+    return info
+
+
 # ---------------------------------------------------------------------------
 # Main extraction pipeline
 # ---------------------------------------------------------------------------
@@ -723,6 +759,91 @@ def _songs_to_cache_format(
         }
         for s in songs
     ]
+
+
+# ---------------------------------------------------------------------------
+# Text file extraction
+# ---------------------------------------------------------------------------
+
+
+def extract_from_text(
+    conn: sqlite3.Connection,
+    video_id: str,
+    text: str,
+) -> ExtractionResult:
+    """Extract timestamps from user-supplied text (file or paste).
+
+    Unlike :func:`extract_timestamps`, this skips the comment/description
+    pipeline and parses *text* directly.  If the stream doesn't exist in
+    the cache it is auto-created via :func:`get_video_info_from_ytdlp`.
+
+    Parameters
+    ----------
+    conn:
+        Open SQLite connection.
+    video_id:
+        YouTube video ID.
+    text:
+        Raw text containing ``timestamp song_info`` lines.
+
+    Returns
+    -------
+    ExtractionResult
+        Result with ``source="text_file"`` on success.
+    """
+    from mizukilens.cache import (
+        get_stream,
+        upsert_parsed_songs,
+        upsert_stream,
+    )
+
+    # Auto-create stream if missing
+    stream = get_stream(conn, video_id)
+    if stream is None:
+        info = get_video_info_from_ytdlp(video_id)
+        upsert_stream(
+            conn,
+            video_id=video_id,
+            status="discovered",
+            title=info["title"],
+            date=info["date"],
+            raw_description=text,
+        )
+    else:
+        # Save the raw text for audit
+        upsert_stream(
+            conn,
+            video_id=video_id,
+            status=stream["status"],
+            raw_description=text,
+        )
+
+    songs = parse_text_to_songs(text)
+
+    if songs:
+        _safe_transition(conn, video_id, "extracted")
+        song_rows = _songs_to_cache_format(songs, video_id)
+        upsert_parsed_songs(conn, video_id, song_rows)
+
+        suspicious = [s["start_seconds"] for s in songs if s["suspicious"]]
+        return ExtractionResult(
+            video_id=video_id,
+            status="extracted",
+            source="text_file",
+            songs=songs,
+            raw_description=text,
+            suspicious_timestamps=suspicious,
+        )
+
+    # No parseable songs
+    _safe_transition(conn, video_id, "pending")
+    return ExtractionResult(
+        video_id=video_id,
+        status="pending",
+        source=None,
+        songs=[],
+        raw_description=text,
+    )
 
 
 # ---------------------------------------------------------------------------

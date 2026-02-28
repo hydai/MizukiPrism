@@ -237,12 +237,29 @@ def fix_dates_cmd(stream_id: str | None) -> None:
               help="Extract timestamps for a specific stream only.")
 @click.option("--all", "extract_all", is_flag=True, default=False,
               help="Extract timestamps for all discovered streams.")
-def extract_cmd(stream_id: str | None, extract_all: bool) -> None:
+@click.option("--from-text", "from_text", type=click.Path(exists=True, dir_okay=False),
+              default=None, metavar="FILE",
+              help="Import timestamps from a local text file (requires --stream).")
+def extract_cmd(stream_id: str | None, extract_all: bool, from_text: str | None) -> None:
     """Extract song timestamps from comments or description for discovered streams."""
     import sys
     from rich.progress import Progress, SpinnerColumn, TextColumn
     from mizukilens.cache import open_db, get_stream, list_streams
     from mizukilens.extraction import extract_timestamps, extract_all_discovered
+
+    # Validate: --from-text requires --stream
+    if from_text is not None and stream_id is None:
+        console.print(
+            "[red]エラー:[/red] [bold]--from-text[/bold] は [bold]--stream VIDEO_ID[/bold] と一緒に指定してください。"
+        )
+        sys.exit(1)
+
+    # Validate: --from-text is mutually exclusive with --all
+    if from_text is not None and extract_all:
+        console.print(
+            "[red]エラー:[/red] [bold]--from-text[/bold] と [bold]--all[/bold] は同時に指定できません。"
+        )
+        sys.exit(1)
 
     # Validate: must specify one mode
     if stream_id is None and not extract_all:
@@ -254,7 +271,29 @@ def extract_cmd(stream_id: str | None, extract_all: bool) -> None:
 
     conn = open_db()
     try:
-        if stream_id:
+        if from_text and stream_id:
+            # Text file extraction
+            from mizukilens.extraction import extract_from_text
+            from pathlib import Path
+
+            text = Path(from_text).read_text(encoding="utf-8")
+            console.print(f"[cyan]テキストファイルから抽出中:[/cyan] {stream_id}")
+            result = extract_from_text(conn, stream_id, text)
+
+            if result.status == "extracted":
+                console.print(
+                    f"[green]完了![/green]  テキストファイルから {len(result.songs)} 曲を抽出しました。"
+                )
+                if result.suspicious_timestamps:
+                    console.print(
+                        f"[yellow]警告:[/yellow] 疑わしいタイムスタンプが {len(result.suspicious_timestamps)} 件あります（12時間超）。"
+                    )
+            else:
+                console.print(
+                    f"[yellow]待機中:[/yellow] テキストファイルからタイムスタンプを抽出できませんでした。"
+                )
+
+        elif stream_id:
             # Single stream extraction
             stream = get_stream(conn, stream_id)
             if stream is None:

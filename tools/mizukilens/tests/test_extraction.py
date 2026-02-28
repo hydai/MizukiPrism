@@ -22,9 +22,11 @@ from mizukilens.extraction import (
     ExtractionError,
     count_timestamps,
     extract_from_candidate,
+    extract_from_text,
     extract_timestamps,
     find_candidate_comment,
     find_keyword_comments,
+    get_video_info_from_ytdlp,
     is_suspicious_timestamp,
     parse_song_line,
     parse_text_to_songs,
@@ -1625,3 +1627,117 @@ class TestRangeTimestampIntegration:
 
         # Last song: explicit range (not None)
         assert result.songs[2]["end_seconds"] == 16 * 60
+
+
+# ---------------------------------------------------------------------------
+# §  extract_from_text
+# ---------------------------------------------------------------------------
+
+SAMPLE_TEXT = """\
+5:30 買你 - 魏如萱
+17:00 ただ君に晴れ - ヨルシカ
+1:01:30 怪物 - YOASOBI
+"""
+
+
+class TestExtractFromText:
+    """Tests for :func:`extract_from_text`."""
+
+    def test_basic_text_extraction(self, db):
+        _add_stream(db, "txt001", status="discovered")
+        result = extract_from_text(db, "txt001", SAMPLE_TEXT)
+        assert result.status == "extracted"
+        assert len(result.songs) == 3
+        assert result.songs[0]["song_name"] == "買你"
+        assert result.songs[1]["song_name"] == "ただ君に晴れ"
+        assert result.songs[2]["song_name"] == "怪物"
+
+    @patch("mizukilens.extraction.get_video_info_from_ytdlp")
+    def test_auto_create_stream_when_missing(self, mock_info, db):
+        mock_info.return_value = {"title": "歌回 Vol.99", "date": "2021-09-25"}
+        result = extract_from_text(db, "newvid01", SAMPLE_TEXT)
+        assert result.status == "extracted"
+        mock_info.assert_called_once_with("newvid01")
+        # Stream should now exist
+        stream = get_stream(db, "newvid01")
+        assert stream is not None
+
+    @patch("mizukilens.extraction.get_video_info_from_ytdlp")
+    def test_auto_create_stores_title_and_date(self, mock_info, db):
+        mock_info.return_value = {"title": "歌回 Vol.99", "date": "2021-09-25"}
+        extract_from_text(db, "newvid02", SAMPLE_TEXT)
+        stream = get_stream(db, "newvid02")
+        assert stream["title"] == "歌回 Vol.99"
+        assert stream["date"] == "2021-09-25"
+
+    @patch("mizukilens.extraction.get_video_info_from_ytdlp")
+    def test_auto_create_ytdlp_fails(self, mock_info, db):
+        mock_info.return_value = {"title": None, "date": None}
+        result = extract_from_text(db, "newvid03", SAMPLE_TEXT)
+        assert result.status == "extracted"
+        stream = get_stream(db, "newvid03")
+        assert stream is not None
+        assert stream["title"] is None
+
+    def test_existing_stream_not_recreated(self, db):
+        _add_stream(db, "txt002", status="pending")
+        with patch("mizukilens.extraction.get_video_info_from_ytdlp") as mock_info:
+            extract_from_text(db, "txt002", SAMPLE_TEXT)
+            mock_info.assert_not_called()
+
+    def test_source_is_text_file(self, db):
+        _add_stream(db, "txt003", status="discovered")
+        result = extract_from_text(db, "txt003", SAMPLE_TEXT)
+        assert result.source == "text_file"
+
+    def test_parsed_songs_saved_to_db(self, db):
+        _add_stream(db, "txt004", status="discovered")
+        extract_from_text(db, "txt004", SAMPLE_TEXT)
+        songs = get_parsed_songs(db, "txt004")
+        assert len(songs) == 3
+        assert songs[0]["song_name"] == "買你"
+
+    def test_empty_text_returns_pending(self, db):
+        _add_stream(db, "txt005", status="discovered")
+        result = extract_from_text(db, "txt005", "no timestamps here\njust text")
+        assert result.status == "pending"
+        assert result.songs == []
+
+    def test_raw_text_saved_as_description(self, db):
+        _add_stream(db, "txt006", status="discovered")
+        extract_from_text(db, "txt006", SAMPLE_TEXT)
+        stream = get_stream(db, "txt006")
+        assert SAMPLE_TEXT.strip() in (stream["raw_description"] or "")
+
+
+# ---------------------------------------------------------------------------
+# §  get_video_info_from_ytdlp
+# ---------------------------------------------------------------------------
+
+
+class TestGetVideoInfoFromYtdlp:
+    """Tests for :func:`get_video_info_from_ytdlp`."""
+
+    @patch("subprocess.run")
+    def test_success(self, mock_run):
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout="歌回 Vol.99\n20210925\n",
+        )
+        info = get_video_info_from_ytdlp("abc123")
+        assert info["title"] == "歌回 Vol.99"
+        assert info["date"] == "2021-09-25"
+
+    @patch("subprocess.run")
+    def test_failure_returns_none_fields(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=1, stdout="")
+        info = get_video_info_from_ytdlp("abc123")
+        assert info["title"] is None
+        assert info["date"] is None
+
+    @patch("subprocess.run")
+    def test_exception_returns_none_fields(self, mock_run):
+        mock_run.side_effect = FileNotFoundError("yt-dlp not found")
+        info = get_video_info_from_ytdlp("abc123")
+        assert info["title"] is None
+        assert info["date"] is None
