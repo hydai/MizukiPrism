@@ -68,7 +68,9 @@ for i in "${!rows[@]}"; do
   n=$((i + 1))
   echo "--- [$n/$total] $date  $vid  $title ---"
 
-  if "$MIZUKILENS" eximport --stream "$vid"; then
+  if "$MIZUKILENS" eximport --stream "$vid" \
+       --songs-file "$REPO_ROOT/data/songs.json" \
+       --streams-file "$REPO_ROOT/data/streams.json"; then
     ((succeeded++))
   else
     rc=$?
