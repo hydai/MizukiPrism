@@ -116,6 +116,13 @@ body {
   background: rgba(0, 0, 0, 0.3);
 }
 
+/* Touch device: always show scrubber dot */
+@media (pointer: coarse) {
+  .coarse-pointer\:opacity-100 {
+    opacity: 1 !important;
+  }
+}
+
 /* YouTube Player is always hidden - we show a placeholder in the modal */
 #youtube-player {
   position: fixed !important;

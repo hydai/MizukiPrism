@@ -6,6 +6,7 @@ import { X, Play, Pause, SkipBack, SkipForward, ChevronDown, Shuffle, Repeat, Re
 import { usePlayer } from '../contexts/PlayerContext';
 import AlbumArt from './AlbumArt';
 import VolumeControl from './VolumeControl';
+import ProgressBar from './ProgressBar';
 
 export default function NowPlayingModal() {
   const [mounted, setMounted] = useState(false);
@@ -50,13 +51,9 @@ export default function NowPlayingModal() {
     ? (trackCurrentTime / trackDuration) * 100
     : 0;
 
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleSeek = (percentage: number) => {
     if (!hasKnownDuration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percentage = clickX / rect.width;
-    const newTime = currentTrack.timestamp + trackDuration * percentage;
-    seekTo(newTime);
+    seekTo(currentTrack.timestamp + trackDuration * percentage);
   };
 
   const formatTime = (seconds: number): string => {
@@ -121,15 +118,11 @@ export default function NowPlayingModal() {
 
           {/* Progress Bar */}
           <div className="mb-4">
-            <div
-              className="h-2 bg-slate-200 rounded-full cursor-pointer group relative"
-              onClick={handleProgressClick}
-            >
-              <div
-                className="h-full bg-gradient-to-r from-pink-500 to-blue-500 rounded-full transition-all"
-                style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-              />
-            </div>
+            <ProgressBar
+              progress={Math.min(100, Math.max(0, progress))}
+              onSeek={handleSeek}
+              height={8}
+            />
             <div className="flex justify-between text-xs text-slate-500 mt-2 font-mono">
               <span>{formatTime(trackCurrentTime)}</span>
               <span>{hasKnownDuration ? formatTime(trackDuration) : '--:--'}</span>

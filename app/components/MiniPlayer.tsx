@@ -8,6 +8,7 @@ import { usePlayer } from '../contexts/PlayerContext';
 import { useLikedSongs } from '../contexts/LikedSongsContext';
 import AlbumArt from './AlbumArt';
 import VolumeControl from './VolumeControl';
+import ProgressBar from './ProgressBar';
 
 export default function MiniPlayer() {
   const {
@@ -64,13 +65,9 @@ export default function MiniPlayer() {
 
   const clampedProgress = Math.min(100, Math.max(0, progress));
 
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleSeek = (percentage: number) => {
     if (!hasKnownDuration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percentage = clickX / rect.width;
-    const newTime = currentTrack.timestamp + trackDuration * percentage;
-    seekTo(newTime);
+    seekTo(currentTrack.timestamp + trackDuration * percentage);
   };
 
   const formatTime = (seconds: number): string => {
@@ -99,25 +96,7 @@ export default function MiniPlayer() {
         }}
       >
         {/* Progress bar at top — 3px height, gradient fill */}
-        <div
-          style={{
-            height: '3px',
-            background: '#E2E8F0',
-            borderRadius: '16px 16px 0 0',
-            overflow: 'hidden',
-          }}
-          onClick={handleProgressClick}
-        >
-          <div
-            style={{
-              height: '100%',
-              width: `${clampedProgress}%`,
-              background: 'linear-gradient(90deg, var(--accent-pink-light), var(--accent-blue-light))',
-              borderRadius: '16px 16px 0 0',
-              transition: 'width 0.2s',
-            }}
-          />
-        </div>
+        <ProgressBar progress={clampedProgress} onSeek={handleSeek} height={3} variant="mini" />
 
         {/* Content row: cover + song info + heart + play/pause */}
         <div
@@ -386,49 +365,13 @@ export default function MiniPlayer() {
 
             {/* Progress bar row */}
             <div className="flex items-center gap-2 w-full" style={{ maxWidth: '480px' }}>
-              {/* Current time */}
               <span
                 className="flex-shrink-0 font-mono"
                 style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-tertiary)', minWidth: '32px', textAlign: 'right' }}
               >
                 {formatTime(trackCurrentTime)}
               </span>
-
-              {/* Progress bar track — keep .h-1.bg-slate-200 for test compatibility */}
-              <div
-                className="h-1 bg-slate-200 flex-1 cursor-pointer relative group"
-                style={{
-                  borderRadius: 'var(--radius-pill)',
-                  background: 'var(--bg-surface-muted)',
-                }}
-                onClick={handleProgressClick}
-              >
-                {/* Filled portion */}
-                <div
-                  className="h-full transition-all"
-                  style={{
-                    width: `${clampedProgress}%`,
-                    borderRadius: 'var(--radius-pill)',
-                    background: 'linear-gradient(90deg, var(--accent-pink-light), var(--accent-blue-light))',
-                  }}
-                />
-                {/* Scrubber circle */}
-                <div
-                  className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{
-                    left: `${clampedProgress}%`,
-                    transform: 'translate(-50%, -50%)',
-                    width: '12px',
-                    height: '12px',
-                    borderRadius: '50%',
-                    background: 'white',
-                    border: '2px solid var(--accent-pink-light)',
-                    flexShrink: 0,
-                  }}
-                />
-              </div>
-
-              {/* Total time */}
+              <ProgressBar progress={clampedProgress} onSeek={handleSeek} height={4} />
               <span
                 className="flex-shrink-0 font-mono"
                 style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-tertiary)', minWidth: '32px' }}

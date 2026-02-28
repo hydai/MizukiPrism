@@ -8,6 +8,7 @@ import { useLikedSongs } from '../contexts/LikedSongsContext';
 import { useRecentlyPlayed } from '../contexts/RecentlyPlayedContext';
 import AlbumArt from '../components/AlbumArt';
 import NowPlayingControls from '../components/NowPlayingControls';
+import ProgressBar from '../components/ProgressBar';
 import UpNextSection from '../components/UpNextSection';
 import SidebarNav from '../components/SidebarNav';
 import LikedSongsPanel from '../components/LikedSongsPanel';
@@ -44,13 +45,9 @@ export default function NowPlayingPage() {
     : 0;
   const clampedProgress = Math.min(100, Math.max(0, progress));
 
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleSeek = (percentage: number) => {
     if (!hasKnownDuration || !currentTrack) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percentage = clickX / rect.width;
-    const newTime = currentTrack.timestamp + trackDuration * percentage;
-    seekTo(newTime);
+    seekTo(currentTrack.timestamp + trackDuration * percentage);
   };
 
   const handleShare = async () => {
@@ -192,41 +189,14 @@ export default function NowPlayingPage() {
 
           {/* Progress bar */}
           <div className="w-full" style={{ marginTop: '8px' }}>
-            <div className="flex items-center" style={{ gap: '12px' }}>
-              <span className="font-mono" style={{ fontSize: '13px', color: 'var(--text-tertiary)', minWidth: '36px', textAlign: 'right' }}>
-                {formatTime(trackCurrentTime)}
-              </span>
-              <div
-                className="flex-1 cursor-pointer relative group"
-                style={{ height: '6px', borderRadius: '3px', background: 'var(--bg-surface-muted)' }}
-                onClick={handleProgressClick}
-              >
-                <div
-                  style={{
-                    height: '100%',
-                    width: `${clampedProgress}%`,
-                    borderRadius: '3px',
-                    background: 'linear-gradient(90deg, var(--accent-pink-light), var(--accent-blue-light))',
-                    transition: 'width 0.2s',
-                  }}
-                />
-                <div
-                  className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{
-                    left: `${clampedProgress}%`,
-                    transform: 'translate(-50%, -50%)',
-                    width: '14px',
-                    height: '14px',
-                    borderRadius: '50%',
-                    background: 'white',
-                    border: '2px solid var(--accent-pink-light)',
-                  }}
-                />
-              </div>
-              <span className="font-mono" style={{ fontSize: '13px', color: 'var(--text-tertiary)', minWidth: '36px' }}>
-                {hasKnownDuration ? formatTime(trackDuration) : '--:--'}
-              </span>
-            </div>
+            <ProgressBar
+              progress={clampedProgress}
+              onSeek={handleSeek}
+              height={6}
+              showTimestamps
+              currentTime={formatTime(trackCurrentTime)}
+              totalTime={hasKnownDuration ? formatTime(trackDuration) : '--:--'}
+            />
           </div>
 
           {/* Controls */}
@@ -282,41 +252,14 @@ export default function NowPlayingPage() {
 
         {/* Progress bar */}
         <div style={{ width: '400px' }}>
-          <div className="flex items-center" style={{ gap: '12px' }}>
-            <span className="font-mono" style={{ fontSize: '13px', color: 'var(--text-tertiary)', minWidth: '36px', textAlign: 'right' }}>
-              {formatTime(trackCurrentTime)}
-            </span>
-            <div
-              className="flex-1 cursor-pointer relative group"
-              style={{ height: '4px', borderRadius: '2px', background: 'var(--bg-surface-muted)' }}
-              onClick={handleProgressClick}
-            >
-              <div
-                style={{
-                  height: '100%',
-                  width: `${clampedProgress}%`,
-                  borderRadius: '2px',
-                  background: 'linear-gradient(90deg, var(--accent-pink-light), var(--accent-blue-light))',
-                  transition: 'width 0.2s',
-                }}
-              />
-              <div
-                className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                style={{
-                  left: `${clampedProgress}%`,
-                  transform: 'translate(-50%, -50%)',
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '50%',
-                  background: 'white',
-                  border: '2px solid var(--accent-pink-light)',
-                }}
-              />
-            </div>
-            <span className="font-mono" style={{ fontSize: '13px', color: 'var(--text-tertiary)', minWidth: '36px' }}>
-              {hasKnownDuration ? formatTime(trackDuration) : '--:--'}
-            </span>
-          </div>
+          <ProgressBar
+            progress={clampedProgress}
+            onSeek={handleSeek}
+            height={4}
+            showTimestamps
+            currentTime={formatTime(trackCurrentTime)}
+            totalTime={hasKnownDuration ? formatTime(trackDuration) : '--:--'}
+          />
         </div>
 
         {/* Controls */}
