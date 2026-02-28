@@ -289,7 +289,7 @@ export default function PlaylistPanel({ show, onClose, songsData, onToast }: Pla
                             >
                               {playlist.name}
                             </h3>
-                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();

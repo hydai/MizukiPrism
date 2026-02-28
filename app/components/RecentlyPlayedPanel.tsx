@@ -168,7 +168,7 @@ export default function RecentlyPlayedPanel({ show, onClose, onToast }: Recently
                       {formatRelativeTime(entry.playedAt)}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => handlePlay(entry)}
                       className="text-pink-400 hover:text-pink-300 p-1.5"

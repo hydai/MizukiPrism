@@ -1461,7 +1461,7 @@ export default function Home() {
                                 endTimestamp: song.endTimestamp,
                                 albumArtUrl: song.albumArtUrl,
                               })}
-                              className="opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
+                              className="lg:opacity-0 lg:group-hover:opacity-100 transition-all transform hover:scale-110"
                               style={{
                                 background: 'var(--bg-surface)',
                                 padding: 'var(--space-2)',
@@ -1477,7 +1477,7 @@ export default function Home() {
                               <Plus className="w-4 h-4" />
                             </button>
                             <div
-                              className="opacity-0 group-hover:opacity-100 transition-all"
+                              className="lg:opacity-0 lg:group-hover:opacity-100 transition-all"
                               style={{
                                 background: 'var(--bg-surface)',
                                 padding: 'var(--space-2)',
@@ -1501,7 +1501,7 @@ export default function Home() {
                               href={`https://www.youtube.com/watch?v=${song.videoId}&t=${song.timestamp}s`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
+                              className="lg:opacity-0 lg:group-hover:opacity-100 transition-all transform hover:scale-110"
                               style={{
                                 background: 'var(--bg-surface)',
                                 padding: 'var(--space-2)',

@@ -141,7 +141,7 @@ export default function QueuePanel() {
                   {/* Remove Button */}
                   <button
                     onClick={() => removeFromQueue(index)}
-                    className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all p-1 rounded-full hover:bg-red-50 flex-shrink-0"
+                    className="lg:opacity-0 lg:group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all p-1 rounded-full hover:bg-red-50 flex-shrink-0"
                     aria-label="Remove from queue"
                   >
                     <X className="w-4 h-4" />
