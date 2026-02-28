@@ -962,6 +962,18 @@ class TestCandidatesTUI:
         assert "[c]" in HelpDialog.HELP_TEXT
         assert "候選留言" in HelpDialog.HELP_TEXT
 
+    def test_candidate_dialog_has_row_selected_handler(self) -> None:
+        """CandidateListDialog has on_data_table_row_selected for click/Enter."""
+        dialog = CandidateListDialog([])
+        assert hasattr(dialog, "on_data_table_row_selected")
+        assert callable(dialog.on_data_table_row_selected)
+
+    def test_candidate_dialog_has_button_pressed_handler(self) -> None:
+        """CandidateListDialog has on_button_pressed for approve/reject buttons."""
+        dialog = CandidateListDialog([])
+        assert hasattr(dialog, "on_button_pressed")
+        assert callable(dialog.on_button_pressed)
+
 
 # ===========================================================================
 # SECTION: Copy VOD URL keybinding (u)

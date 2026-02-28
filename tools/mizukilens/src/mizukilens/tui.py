@@ -174,8 +174,13 @@ class CandidateListDialog(ModalScreen[int | None]):
     CandidateListDialog DataTable {
         height: 1fr;
     }
-    CandidateListDialog #cand-hint {
+    CandidateListDialog Horizontal {
+        width: 100%;
+        align: center middle;
         margin-top: 1;
+    }
+    CandidateListDialog Button {
+        margin: 0 1;
     }
     """
 
@@ -187,10 +192,9 @@ class CandidateListDialog(ModalScreen[int | None]):
         with Vertical():
             yield Label("候選留言 (Candidate Comments)", id="cand-title")
             yield DataTable(id="cand-table", cursor_type="row")
-            yield Label(
-                "[a] 承認 (Approve)  [x] 却下 (Reject)  [Esc] 閉じる",
-                id="cand-hint",
-            )
+            with Horizontal(id="cand-buttons"):
+                yield Button("承認 / Approve", id="cand-approve", variant="success")
+                yield Button("却下 / Reject", id="cand-reject", variant="error")
 
     def on_mount(self) -> None:
         table = self.query_one("#cand-table", DataTable)
@@ -210,9 +214,14 @@ class CandidateListDialog(ModalScreen[int | None]):
     def on_key(self, event: Any) -> None:
         if event.key == "escape":
             self.dismiss(None)
-        elif event.key == "a":
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        self._approve_selected()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "cand-approve":
             self._approve_selected()
-        elif event.key == "x":
+        elif event.button.id == "cand-reject":
             self._reject_selected()
 
     def _get_selected_candidate_id(self) -> int | None:
