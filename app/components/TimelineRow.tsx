@@ -21,6 +21,7 @@ interface FlattenedSong {
   performances: unknown[];
   streamId?: string;
   searchString: string;
+  year?: number;
 }
 
 interface TimelineRowProps {

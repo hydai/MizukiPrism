@@ -49,12 +49,14 @@ interface FlattenedSong extends Song {
   note: string;
   searchString: string;
   albumArtUrl?: string;
+  year?: number;
 }
 
 type ViewMode = 'timeline' | 'grouped';
 
 export default function Home() {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [streams, setStreams] = useState<{id:string;title:string;date:string;videoId:string}[]>([]);
   const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
@@ -209,6 +211,16 @@ export default function Home() {
     sessionStorage.setItem('mizukiprism-view-mode', viewMode);
   }, [viewMode]);
 
+  // Debounce search input — 150ms delay before triggering filter
+  useEffect(() => {
+    if (searchInput === '') {
+      setDebouncedSearch('');
+      return;
+    }
+    const timer = setTimeout(() => setDebouncedSearch(searchInput), 150);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   const toggleSongExpansion = useCallback((songId: string) => {
     setExpandedSongs(prev => {
       const newSet = new Set(prev);
@@ -252,17 +264,19 @@ export default function Home() {
     setSelectedStreamId(null);
   };
 
-  const hasActiveFilters = searchTerm !== '' || selectedStreamId !== null || selectedArtist !== null || selectedYears.size > 0;
+  const hasActiveFilters = searchInput !== '' || selectedStreamId !== null || selectedArtist !== null || selectedYears.size > 0;
 
   const clearAllFilters = () => {
-    setSearchTerm('');
+    setSearchInput('');
+    setDebouncedSearch('');
     setSelectedStreamId(null);
     setSelectedArtist(null);
     setSelectedYears(new Set());
   };
 
-  const flattenedSongs: FlattenedSong[] = useMemo(() => {
-    let result: FlattenedSong[] = [];
+  // Flatten + sort: expensive, only recomputes when song data changes
+  const allFlattenedSongs: FlattenedSong[] = useMemo(() => {
+    const result: FlattenedSong[] = [];
     songs.forEach(song => {
       song.performances.forEach(perf => {
         result.push({
@@ -275,38 +289,46 @@ export default function Home() {
           timestamp: perf.timestamp,
           endTimestamp: perf.endTimestamp ?? undefined,
           note: perf.note,
-          searchString: `${song.title} ${song.originalArtist} ${perf.streamTitle}`.toLowerCase()
+          searchString: `${song.title} ${song.originalArtist} ${perf.streamTitle}`.toLowerCase(),
+          year: new Date(perf.date).getFullYear(),
         });
       });
     });
     result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    return result.filter(song => {
-      const lowerTerm = searchTerm.toLowerCase();
-      const matchesSearch = song.searchString.includes(lowerTerm);
+    return result;
+  }, [songs]);
+
+  // Filter: cheap, runs against pre-flattened array
+  const flattenedSongs: FlattenedSong[] = useMemo(() => {
+    const lowerTerm = debouncedSearch.toLowerCase();
+    return allFlattenedSongs.filter(song => {
+      const matchesSearch = !lowerTerm || song.searchString.includes(lowerTerm);
       const matchesStream = selectedStreamId ? song.streamId === selectedStreamId : true;
       const matchesArtist = selectedArtist ? song.originalArtist === selectedArtist : true;
-      const matchesYear = selectedYears.size > 0 ? selectedYears.has(new Date(song.date).getFullYear()) : true;
+      const matchesYear = selectedYears.size > 0 ? selectedYears.has(song.year!) : true;
       return matchesSearch && matchesStream && matchesArtist && matchesYear;
     });
-  }, [songs, searchTerm, selectedStreamId, selectedArtist, selectedYears]);
+  }, [allFlattenedSongs, debouncedSearch, selectedStreamId, selectedArtist, selectedYears]);
 
-  // Grouped songs for song-grouped view
+  // Grouped songs: separate sort (expensive) from filter (cheap)
+  const allGroupedSongs: Song[] = useMemo(() => {
+    return [...songs].sort((a, b) => a.title.localeCompare(b.title, 'zh-TW'));
+  }, [songs]);
+
   const groupedSongs: Song[] = useMemo(() => {
-    return songs
-      .filter(song => {
-        const lowerTerm = searchTerm.toLowerCase();
-        const matchesSearch = `${song.title} ${song.originalArtist}`.toLowerCase().includes(lowerTerm);
-        const matchesStream = selectedStreamId
-          ? song.performances.some(p => p.streamId === selectedStreamId)
-          : true;
-        const matchesArtist = selectedArtist ? song.originalArtist === selectedArtist : true;
-        const matchesYear = selectedYears.size > 0
-          ? song.performances.some(perf => selectedYears.has(new Date(perf.date).getFullYear()))
-          : true;
-        return matchesSearch && matchesStream && matchesArtist && matchesYear;
-      })
-      .sort((a, b) => a.title.localeCompare(b.title, 'zh-TW'));
-  }, [songs, searchTerm, selectedStreamId, selectedArtist, selectedYears]);
+    const lowerTerm = debouncedSearch.toLowerCase();
+    return allGroupedSongs.filter(song => {
+      const matchesSearch = !lowerTerm || `${song.title} ${song.originalArtist}`.toLowerCase().includes(lowerTerm);
+      const matchesStream = selectedStreamId
+        ? song.performances.some(p => p.streamId === selectedStreamId)
+        : true;
+      const matchesArtist = selectedArtist ? song.originalArtist === selectedArtist : true;
+      const matchesYear = selectedYears.size > 0
+        ? song.performances.some(perf => selectedYears.has(new Date(perf.date).getFullYear()))
+        : true;
+      return matchesSearch && matchesStream && matchesArtist && matchesYear;
+    });
+  }, [allGroupedSongs, debouncedSearch, selectedStreamId, selectedArtist, selectedYears]);
 
   const gradientText = "bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500";
 
@@ -348,8 +370,8 @@ export default function Home() {
               <input
                 type="text"
                 placeholder="搜尋歌曲..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="w-full font-medium py-2.5 pl-9 pr-4 outline-none transition-all text-sm"
                 style={{
                   background: 'var(--bg-surface-glass)',
@@ -1353,8 +1375,8 @@ export default function Home() {
                 <input
                   type="text"
                   placeholder="搜尋..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   className="w-full py-3 pl-10 pr-4 text-sm outline-none"
                   style={{
                     background: 'var(--bg-surface-glass)',
