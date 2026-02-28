@@ -24,7 +24,11 @@ if ! command -v "$MIZUKILENS" &>/dev/null && [[ ! -x "$MIZUKILENS" ]]; then
 fi
 
 # Query approved streams (tab-separated: video_id, title, date)
-mapfile -t rows < <(
+# Read into array without mapfile (Bash 3.2 compat for macOS).
+rows=()
+while IFS= read -r line; do
+  rows+=("$line")
+done < <(
   sqlite3 -separator $'\t' "$CACHE_DB" \
     "SELECT video_id, title, date FROM streams WHERE status = 'approved' ORDER BY date"
 )
@@ -54,8 +58,8 @@ for i in "${!rows[@]}"; do
   if "$MIZUKILENS" eximport --stream "$vid"; then
     ((succeeded++))
   else
-    status=$?
-    echo "Warning: eximport exited with status $status for $vid"
+    rc=$?
+    echo "Warning: eximport exited with status $rc for $vid"
     ((failed++))
     skipped_ids+=("$vid")
   fi
