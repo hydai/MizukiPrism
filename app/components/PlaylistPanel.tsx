@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ListMusic, GripVertical, Trash2, Play, Edit2, Download, Upload } from 'lucide-react';
+import { X, ListMusic, GripVertical, Trash2, Play, Edit2, Download, Upload, ChevronUp, ChevronDown } from 'lucide-react';
 import { usePlaylist, type Playlist } from '../contexts/PlaylistContext';
 import { usePlayer, type Track } from '../contexts/PlayerContext';
 
@@ -410,8 +410,29 @@ export default function PlaylistPanel({ show, onClose, songsData, onToast }: Pla
                         `}
                         data-testid="playlist-version-item"
                       >
-                        <div className="cursor-move text-white/40 group-hover:text-white/60">
+                        {/* Desktop Drag Handle */}
+                        <div className="hidden lg:block cursor-move text-white/40 group-hover:text-white/60">
                           <GripVertical className="w-4 h-4" />
+                        </div>
+
+                        {/* Mobile Reorder Buttons */}
+                        <div className="flex flex-col lg:hidden flex-shrink-0">
+                          <button
+                            onClick={() => reorderVersionsInPlaylist(selectedPlaylist.id, index, index - 1)}
+                            disabled={index === 0}
+                            className="text-white/40 hover:text-white/80 disabled:opacity-30 p-0.5"
+                            aria-label="Move up"
+                          >
+                            <ChevronUp className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => reorderVersionsInPlaylist(selectedPlaylist.id, index, index + 1)}
+                            disabled={index === selectedPlaylist.versions.length - 1}
+                            className="text-white/40 hover:text-white/80 disabled:opacity-30 p-0.5"
+                            aria-label="Move down"
+                          >
+                            <ChevronDown className="w-4 h-4" />
+                          </button>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-white font-medium truncate">

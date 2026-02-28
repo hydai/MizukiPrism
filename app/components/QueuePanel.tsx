@@ -1,6 +1,6 @@
 'use client';
 
-import { X, GripVertical, Music } from 'lucide-react';
+import { X, GripVertical, Music, ChevronUp, ChevronDown } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import AlbumArt from './AlbumArt';
 import { useState, useEffect } from 'react';
@@ -116,9 +116,29 @@ export default function QueuePanel() {
                     draggedOverIndex === index ? 'border-pink-400 bg-pink-50' : ''
                   }`}
                 >
-                  {/* Drag Handle */}
-                  <div className="text-slate-400 group-hover:text-slate-600 transition-colors flex-shrink-0">
+                  {/* Desktop Drag Handle */}
+                  <div className="hidden lg:block text-slate-400 group-hover:text-slate-600 transition-colors flex-shrink-0">
                     <GripVertical className="w-5 h-5" />
+                  </div>
+
+                  {/* Mobile Reorder Buttons */}
+                  <div className="flex flex-col lg:hidden flex-shrink-0">
+                    <button
+                      onClick={() => reorderQueue(index, index - 1)}
+                      disabled={index === 0}
+                      className="text-slate-400 hover:text-slate-600 disabled:opacity-30 p-0.5"
+                      aria-label="Move up"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => reorderQueue(index, index + 1)}
+                      disabled={index === queue.length - 1}
+                      className="text-slate-400 hover:text-slate-600 disabled:opacity-30 p-0.5"
+                      aria-label="Move down"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
                   </div>
 
                   {/* Album Art — 40×40 */}
