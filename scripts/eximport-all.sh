@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# eximport-all.sh — Run mizukilens eximport per-stream for all approved streams.
+# Keeps interactive prompts intact so you can confirm/skip each stream.
+set -euo pipefail
+
+CACHE_DB="${MIZUKILENS_CACHE:-$HOME/.local/share/mizukilens/cache.db}"
+
+if [[ ! -f "$CACHE_DB" ]]; then
+  echo "Error: cache DB not found at $CACHE_DB"
+  echo "Set MIZUKILENS_CACHE to override the path."
+  exit 1
+fi
+
+if ! command -v sqlite3 &>/dev/null; then
+  echo "Error: sqlite3 is required but not found."
+  exit 1
+fi
+
+if ! command -v mizukilens &>/dev/null; then
+  echo "Error: mizukilens CLI not found. Install it or activate its venv."
+  exit 1
+fi
+
+# Query approved streams (tab-separated: video_id, title, date)
+mapfile -t rows < <(
+  sqlite3 -separator $'\t' "$CACHE_DB" \
+    "SELECT video_id, title, date FROM streams WHERE status = 'approved' ORDER BY date"
+)
+
+total=${#rows[@]}
+if [[ $total -eq 0 ]]; then
+  echo "No approved streams found. Nothing to do."
+  exit 0
+fi
+
+echo "=== Approved streams: $total ==="
+for row in "${rows[@]}"; do
+  IFS=$'\t' read -r vid title date <<< "$row"
+  echo "  $date  $vid  $title"
+done
+echo ""
+
+succeeded=0
+failed=0
+skipped_ids=()
+
+for i in "${!rows[@]}"; do
+  IFS=$'\t' read -r vid title date <<< "${rows[$i]}"
+  n=$((i + 1))
+  echo "--- [$n/$total] $date  $vid  $title ---"
+
+  if mizukilens eximport --stream "$vid"; then
+    ((succeeded++))
+  else
+    status=$?
+    echo "Warning: eximport exited with status $status for $vid"
+    ((failed++))
+    skipped_ids+=("$vid")
+  fi
+  echo ""
+done
+
+echo "=== Done ==="
+echo "  Succeeded: $succeeded / $total"
+if [[ $failed -gt 0 ]]; then
+  echo "  Failed:    $failed"
+  echo "  Failed IDs:"
+  for sid in "${skipped_ids[@]}"; do
+    echo "    $sid"
+  done
+fi
