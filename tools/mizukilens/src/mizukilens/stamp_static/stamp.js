@@ -17,6 +17,7 @@
   const $songCount = document.getElementById("song-count");
   const $stats = document.getElementById("stats");
   const $btnMark = document.getElementById("btn-mark");
+  const $btnMarkStart = document.getElementById("btn-mark-start");
   const $btnSeek = document.getElementById("btn-seek");
   const $btnSeekEnd = document.getElementById("btn-seek-end");
   const $btnFetch = document.getElementById("btn-fetch");
@@ -332,6 +333,7 @@
   function updateControls() {
     const hasSong = selectedIndex >= 0 && selectedIndex < songs.length;
     $btnMark.disabled = !hasSong;
+    $btnMarkStart.disabled = !hasSong;
     $btnSeek.disabled = !hasSong;
     $btnSeekEnd.disabled = !(hasSong && songs[selectedIndex].endTimestamp);
     $btnFetch.disabled = !hasSong;
@@ -371,6 +373,26 @@
         renderSongs();
         updateControls();
       }
+    } catch (e) {
+      showToast("Error: " + e.message, true);
+    }
+  }
+
+  async function markStartTimestamp() {
+    if (selectedIndex < 0 || !player || !playerReady) return;
+    const song = songs[selectedIndex];
+    const currentTime = player.getCurrentTime();
+    const ts = secondsToTimestamp(currentTime);
+
+    try {
+      await fetchJSON("/api/songs/" + song.id + "/start-timestamp", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ startTimestamp: ts }),
+      });
+      song.startTimestamp = ts;
+      renderSongs();
+      showToast("Start " + song.songName + " \u2192 " + ts);
     } catch (e) {
       showToast("Error: " + e.message, true);
     }
@@ -566,6 +588,9 @@
       case "m":
         markEndTimestamp();
         break;
+      case "t":
+        markStartTimestamp();
+        break;
       case "s":
         seekToStart();
         break;
@@ -612,6 +637,7 @@
 
   // --- Button handlers ---
   $btnMark.addEventListener("click", markEndTimestamp);
+  $btnMarkStart.addEventListener("click", markStartTimestamp);
   $btnSeek.addEventListener("click", seekToStart);
   $btnSeekEnd.addEventListener("click", seekToEnd);
   $btnFetch.addEventListener("click", fetchDuration);
