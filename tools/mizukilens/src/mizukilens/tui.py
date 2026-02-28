@@ -324,6 +324,8 @@ class HelpDialog(ModalScreen[None]):
 [bold cyan]移動 / Navigation:[/bold cyan]
   [↑/↓]   場次・曲の選択
   [Tab]   場次リストと曲一覧の切り替え
+  [[]      前の年 (Previous year)
+  []]      次の年 (Next year)
 
 [bold cyan]其他 / Other:[/bold cyan]
   [?]  このヘルプを表示
@@ -662,6 +664,8 @@ class ReviewApp(App[None]):
         Binding("p", "paste_songs", "貼上匯入", show=True),
         Binding("t", "clear_end_timestamps", "終了時刻クリア", show=True),
         Binding("u", "copy_vod_url", "複製URL", show=True),
+        Binding("left_square_bracket", "prev_year", "前の年", show=False),
+        Binding("right_square_bracket", "next_year", "次の年", show=False),
         Binding("question_mark", "show_help", "幫助", show=True),
         Binding("q", "quit", "終了", show=True),
     ]
@@ -675,11 +679,14 @@ class ReviewApp(App[None]):
         super().__init__(**kwargs)
         self._conn = conn
         self._show_all = show_all
-        self._streams: list[sqlite3.Row] = []
+        self._all_streams: list[sqlite3.Row] = []  # Status-filtered master list
+        self._streams: list[sqlite3.Row] = []  # Year-filtered display list
         self._current_stream_idx: int = -1
         self._songs: list[sqlite3.Row] = []
         self._selected_song_idx: int = -1
         self._focus_on_songs: bool = False  # Track which panel has logical focus
+        self._year_filter: str | None = None  # None = all years, else "2024" etc.
+        self._available_years: list[str] = []  # Unique years sorted DESC
 
     # -----------------------------------------------------------------------
     # Compose
@@ -721,16 +728,35 @@ class ReviewApp(App[None]):
     # -----------------------------------------------------------------------
 
     def _load_streams(self) -> None:
-        """Load streams from the database and populate the stream list."""
+        """Load streams from the database, apply status + year filters."""
         from mizukilens.cache import list_streams
 
         if self._show_all:
-            self._streams = list(list_streams(self._conn))
+            self._all_streams = list(list_streams(self._conn))
         else:
-            # Show only reviewable statuses (extracted, pending, approved)
             all_streams = list(list_streams(self._conn))
-            self._streams = [
+            self._all_streams = [
                 s for s in all_streams if s["status"] in REVIEWABLE_STATUSES
+            ]
+
+        # Extract unique years sorted DESC
+        years: set[str] = set()
+        for s in self._all_streams:
+            d = s["date"]
+            if d and len(d) >= 4 and d[:4].isdigit():
+                years.add(d[:4])
+        self._available_years = sorted(years, reverse=True)
+
+        self._apply_year_filter()
+
+    def _apply_year_filter(self) -> None:
+        """Filter ``_all_streams`` by ``_year_filter`` and rebuild the list."""
+        if self._year_filter is None:
+            self._streams = list(self._all_streams)
+        else:
+            self._streams = [
+                s for s in self._all_streams
+                if s["date"] and s["date"][:4] == self._year_filter
             ]
 
         lv = self.query_one("#stream-list", ListView)
@@ -743,13 +769,13 @@ class ReviewApp(App[None]):
             if stream["date"] and stream["date_source"] != "precise":
                 date = f"{date}~"
             title = stream["title"] or stream["video_id"] or "タイトル不明"
-            # Truncate title for display
             if len(title) > 28:
                 title = title[:25] + "..."
             label = f"{icon} {date}\n  {escape(title)}"
             lv.append(ListItem(Label(label)))
 
-        # Select first item if available
+        self._update_stream_header()
+
         if self._streams:
             self._current_stream_idx = 0
             lv.index = 0
@@ -757,6 +783,26 @@ class ReviewApp(App[None]):
         else:
             self._current_stream_idx = -1
             self._update_status_bar()
+
+    def _update_stream_header(self) -> None:
+        """Update the stream panel header with year filter and count."""
+        header = self.query_one("#stream-header", Static)
+        year_label = "全年" if self._year_filter is None else self._year_filter
+        header.update(f"場次列表 [{year_label}] ({len(self._streams)})")
+
+    def _cycle_year(self, direction: int) -> None:
+        """Cycle the year filter.  *direction*: +1 = older / next, -1 = newer / prev."""
+        # Sequence: None → newest → … → oldest → None (wrapping)
+        options: list[str | None] = [None, *self._available_years]
+        if not self._available_years:
+            return
+        try:
+            idx = options.index(self._year_filter)
+        except ValueError:
+            idx = 0
+        idx = (idx + direction) % len(options)
+        self._year_filter = options[idx]
+        self._apply_year_filter()
 
     def _load_songs(self, stream_idx: int) -> None:
         """Load songs for the stream at *stream_idx*."""
@@ -1346,6 +1392,14 @@ class ReviewApp(App[None]):
             self.notify(f"{len(songs)}曲を貼り付けました")
         except Exception as exc:  # noqa: BLE001
             self.notify(f"貼り付けエラー: {exc}", severity="error")
+
+    def action_prev_year(self) -> None:
+        """Cycle to newer year / All."""
+        self._cycle_year(-1)
+
+    def action_next_year(self) -> None:
+        """Cycle to older year / All."""
+        self._cycle_year(1)
 
     def action_show_help(self) -> None:
         """Show the help dialog."""

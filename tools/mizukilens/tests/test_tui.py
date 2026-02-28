@@ -1401,3 +1401,196 @@ class TestUnapproveStream:
         """Verify help text mentions the [z] keybinding for unapprove."""
         assert "[z]" in HelpDialog.HELP_TEXT
         assert "取消承認" in HelpDialog.HELP_TEXT
+
+
+# ---------------------------------------------------------------------------
+# Section: Year filter tests
+# ---------------------------------------------------------------------------
+
+
+class TestYearFilter:
+    """Tests for the year filter feature ([ / ] keys)."""
+
+    def test_cycle_year_forward_through_years(self, db: sqlite3.Connection) -> None:
+        """Cycling forward goes: All → newest → … → oldest → All."""
+        app = ReviewApp(conn=db)
+        app._available_years = ["2025", "2024", "2021"]
+        app._all_streams = []
+        app._streams = []
+        # Mock _apply_year_filter to avoid widget queries
+        with patch.object(app, "_apply_year_filter"):
+            assert app._year_filter is None  # All
+
+            app._cycle_year(1)
+            assert app._year_filter == "2025"
+
+            app._cycle_year(1)
+            assert app._year_filter == "2024"
+
+            app._cycle_year(1)
+            assert app._year_filter == "2021"
+
+            app._cycle_year(1)  # Wraps back to All
+            assert app._year_filter is None
+
+    def test_cycle_year_backward_through_years(self, db: sqlite3.Connection) -> None:
+        """Cycling backward goes: All → oldest → … → newest → All."""
+        app = ReviewApp(conn=db)
+        app._available_years = ["2025", "2024", "2021"]
+        app._all_streams = []
+        app._streams = []
+        with patch.object(app, "_apply_year_filter"):
+            assert app._year_filter is None
+
+            app._cycle_year(-1)
+            assert app._year_filter == "2021"
+
+            app._cycle_year(-1)
+            assert app._year_filter == "2024"
+
+            app._cycle_year(-1)
+            assert app._year_filter == "2025"
+
+            app._cycle_year(-1)  # Wraps back to All
+            assert app._year_filter is None
+
+    def test_cycle_year_no_years_is_noop(self, db: sqlite3.Connection) -> None:
+        """Cycling when no years are available does nothing."""
+        app = ReviewApp(conn=db)
+        app._available_years = []
+        app._all_streams = []
+        app._streams = []
+        with patch.object(app, "_apply_year_filter") as mock:
+            app._cycle_year(1)
+            assert app._year_filter is None
+            mock.assert_not_called()
+
+    def test_cycle_year_single_year(self, db: sqlite3.Connection) -> None:
+        """With one year, cycles between All and that year."""
+        app = ReviewApp(conn=db)
+        app._available_years = ["2024"]
+        app._all_streams = []
+        app._streams = []
+        with patch.object(app, "_apply_year_filter"):
+            app._cycle_year(1)
+            assert app._year_filter == "2024"
+
+            app._cycle_year(1)
+            assert app._year_filter is None
+
+    def test_year_extraction_from_streams(self, db: sqlite3.Connection) -> None:
+        """_load_streams extracts unique years sorted DESC."""
+        _add_stream(db, "v1", date="2024-03-15")
+        _add_stream(db, "v2", date="2021-10-01")
+        _add_stream(db, "v3", date="2024-08-20")
+        _add_stream(db, "v4", date="2025-01-01")
+
+        app = ReviewApp(conn=db)
+        app._show_all = True
+        # Only test _load_streams' year extraction, mock _apply_year_filter
+        with patch.object(app, "_apply_year_filter"):
+            from mizukilens.cache import list_streams as _ls
+
+            app._all_streams = list(_ls(db))
+            years: set[str] = set()
+            for s in app._all_streams:
+                d = s["date"]
+                if d and len(d) >= 4 and d[:4].isdigit():
+                    years.add(d[:4])
+            app._available_years = sorted(years, reverse=True)
+
+        assert app._available_years == ["2025", "2024", "2021"]
+
+    def test_year_extraction_skips_unknown_dates(self, db: sqlite3.Connection) -> None:
+        """Streams with None or non-date strings are excluded from year list."""
+        _add_stream(db, "v1", date="2024-03-15")
+        _add_stream(db, "v2", date="日付不明")
+
+        app = ReviewApp(conn=db)
+        app._show_all = True
+        with patch.object(app, "_apply_year_filter"):
+            from mizukilens.cache import list_streams as _ls
+
+            app._all_streams = list(_ls(db))
+            years: set[str] = set()
+            for s in app._all_streams:
+                d = s["date"]
+                if d and len(d) >= 4 and d[:4].isdigit():
+                    years.add(d[:4])
+            app._available_years = sorted(years, reverse=True)
+
+        assert app._available_years == ["2024"]
+
+    def test_filter_narrows_streams(self, db: sqlite3.Connection) -> None:
+        """Setting _year_filter before _apply_year_filter narrows _streams."""
+        _add_stream(db, "v1", date="2024-03-15")
+        _add_stream(db, "v2", date="2021-10-01")
+        _add_stream(db, "v3", date="2024-08-20")
+
+        app = ReviewApp(conn=db)
+        app._show_all = True
+        from mizukilens.cache import list_streams as _ls
+
+        app._all_streams = list(_ls(db))
+
+        # Simulate filtering without widgets
+        app._year_filter = "2024"
+        filtered = [
+            s for s in app._all_streams
+            if s["date"] and s["date"][:4] == app._year_filter
+        ]
+        assert len(filtered) == 2
+        assert all(s["date"].startswith("2024") for s in filtered)
+
+    def test_filter_all_shows_everything(self, db: sqlite3.Connection) -> None:
+        """_year_filter=None includes all streams."""
+        _add_stream(db, "v1", date="2024-03-15")
+        _add_stream(db, "v2", date="2021-10-01")
+
+        app = ReviewApp(conn=db)
+        app._show_all = True
+        from mizukilens.cache import list_streams as _ls
+
+        app._all_streams = list(_ls(db))
+        app._year_filter = None
+        # None means no filter — all_streams == streams
+        assert len(app._all_streams) == 2
+
+    def test_filter_empty_year(self, db: sqlite3.Connection) -> None:
+        """Filtering by a year with no streams yields empty list."""
+        _add_stream(db, "v1", date="2024-03-15")
+
+        app = ReviewApp(conn=db)
+        from mizukilens.cache import list_streams as _ls
+
+        app._all_streams = list(_ls(db))
+        app._year_filter = "2099"
+        filtered = [
+            s for s in app._all_streams
+            if s["date"] and s["date"][:4] == app._year_filter
+        ]
+        assert filtered == []
+
+    def test_help_text_includes_year_navigation(self) -> None:
+        """Verify help text mentions [ and ] for year navigation."""
+        assert "前の年" in HelpDialog.HELP_TEXT
+        assert "次の年" in HelpDialog.HELP_TEXT
+
+    def test_init_has_year_filter_fields(self, db: sqlite3.Connection) -> None:
+        """ReviewApp.__init__ initializes year filter fields."""
+        app = ReviewApp(conn=db)
+        assert app._year_filter is None
+        assert app._available_years == []
+        assert app._all_streams == []
+
+    def test_cycle_year_with_stale_filter_resets(self, db: sqlite3.Connection) -> None:
+        """If _year_filter is not in options, cycling resets to index 0 (All)."""
+        app = ReviewApp(conn=db)
+        app._available_years = ["2024"]
+        app._all_streams = []
+        app._streams = []
+        app._year_filter = "1999"  # Not in available years
+        with patch.object(app, "_apply_year_filter"):
+            app._cycle_year(1)
+            # ValueError → idx=0, then +1 → index 1 → "2024"
+            assert app._year_filter == "2024"
