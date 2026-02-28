@@ -10,7 +10,6 @@ import AlbumArt from '../components/AlbumArt';
 import NowPlayingControls from '../components/NowPlayingControls';
 import UpNextSection from '../components/UpNextSection';
 import SidebarNav from '../components/SidebarNav';
-import SyncedLyrics from '../components/SyncedLyrics';
 import LikedSongsPanel from '../components/LikedSongsPanel';
 import RecentlyPlayedPanel from '../components/RecentlyPlayedPanel';
 import Toast from '../components/Toast';
@@ -32,7 +31,6 @@ export default function NowPlayingPage() {
     seekTo,
   } = usePlayer();
 
-  const [showLyrics, setShowLyrics] = useState(false);
   const [showLikedSongsPanel, setShowLikedSongsPanel] = useState(false);
   const [showRecentlyPlayedPanel, setShowRecentlyPlayedPanel] = useState(false);
   const [showToast, setShowToast] = useState(false);
@@ -234,25 +232,8 @@ export default function NowPlayingPage() {
           {/* Controls */}
           <NowPlayingControls size="mobile" />
 
-          {/* Bottom actions: Lyrics + Share */}
-          <div className="flex items-center justify-between w-full" style={{ marginTop: '16px', padding: '0 16px' }}>
-            <button
-              onClick={() => setShowLyrics(!showLyrics)}
-              className="flex items-center transition-colors"
-              style={{
-                gap: '6px',
-                fontSize: '14px',
-                fontWeight: 500,
-                color: showLyrics ? 'var(--accent-pink)' : 'var(--text-secondary)',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                background: showLyrics ? 'var(--bg-accent-pink)' : 'transparent',
-              }}
-              aria-label="Toggle lyrics"
-            >
-              <Music2 style={{ width: '18px', height: '18px' }} />
-              Lyrics
-            </button>
+          {/* Bottom actions */}
+          <div className="flex items-center justify-end w-full" style={{ marginTop: '16px', padding: '0 16px' }}>
             <button
               onClick={handleShare}
               className="flex items-center transition-colors"
@@ -272,34 +253,6 @@ export default function NowPlayingPage() {
           </div>
         </div>
 
-        {/* Lyrics overlay (mobile) */}
-        {showLyrics && (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 50,
-              background: 'rgba(0,0,0,0.6)',
-              backdropFilter: 'blur(12px)',
-              display: 'flex',
-              flexDirection: 'column',
-              padding: '60px 16px 16px',
-            }}
-          >
-            <div className="flex items-center justify-between" style={{ marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'white' }}>Lyrics</h3>
-              <button
-                onClick={() => setShowLyrics(false)}
-                style={{ fontSize: '14px', color: 'white', padding: '8px' }}
-              >
-                Close
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <SyncedLyrics songId={currentTrack.songId} currentTime={trackCurrentTime} />
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ─── DESKTOP LAYOUT (lg+) ─── */}

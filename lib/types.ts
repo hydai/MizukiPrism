@@ -46,15 +46,6 @@ export interface SongMetadata {
   lastError?: string;
 }
 
-export interface SongLyrics {
-  songId: string;
-  fetchStatus: 'matched' | 'no_match' | 'error' | 'manual';
-  syncedLyrics?: string;
-  plainLyrics?: string;
-  fetchedAt: string;
-  lastError?: string;
-}
-
 export interface ArtistInfo {
   normalizedArtist: string;
   originalName: string;
@@ -66,9 +57,4 @@ export interface ArtistInfo {
     xl: string;
   };
   fetchedAt: string;
-}
-
-export interface LyricLine {
-  time: number;
-  text: string;
 }
