@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, User, WifiOff, House } from 'lucide-react';
+import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff, House } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
@@ -71,7 +71,7 @@ export default function Home() {
   const [showLikedSongsPanel, setShowLikedSongsPanel] = useState(false);
   const [showRecentlyPlayedPanel, setShowRecentlyPlayedPanel] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [mobileTab, setMobileTab] = useState<'home' | 'search' | 'library' | 'profile'>('home');
+  const [mobileTab, setMobileTab] = useState<'home' | 'search' | 'library'>('home');
   const [songs, setSongs] = useState<Song[]>([]);
   const [loadError, setLoadError] = useState(false);
   // Map from songId to albumArtUrl — populated from /api/metadata
@@ -2103,26 +2103,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Mobile Profile Tab content — only visible on mobile when Profile tab is active */}
-          {mobileTab === 'profile' && (
-            <div
-              className="lg:hidden flex-1 px-4 pt-4 pb-32"
-              data-testid="mobile-profile-tab"
-            >
-              <div className="text-center py-8">
-                <div
-                  className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center p-1"
-                  style={{ background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))' }}
-                >
-                  <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: 'var(--bg-surface-frosted)' }}>
-                    <Sparkles className="w-9 h-9" style={{ color: 'var(--text-tertiary)' }} />
-                  </div>
-                </div>
-                <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>帳號功能即將推出</p>
-                <p className="text-sm mt-2" style={{ color: 'var(--text-tertiary)' }}>目前可使用播放清單的匯出/匯入功能</p>
-              </div>
-            </div>
-          )}
         </div>
       </main>
       </div>
@@ -2215,46 +2195,6 @@ export default function Home() {
           </span>
         </button>
 
-        {/* Profile */}
-        <button
-          data-testid="bottom-nav-profile"
-          onClick={() => setMobileTab('profile')}
-          className="flex flex-col items-center justify-start"
-          style={{ gap: '4px', flex: 1 }}
-        >
-          {/* Gradient ellipse avatar icon */}
-          <div
-            style={{
-              width: '22px',
-              height: '22px',
-              borderRadius: '50%',
-              background: mobileTab === 'profile'
-                ? 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))'
-                : 'var(--bg-surface-muted)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: mobileTab === 'profile' ? 'none' : '1px solid var(--border-glass)',
-            }}
-          >
-            <User
-              style={{
-                width: '12px',
-                height: '12px',
-                color: mobileTab === 'profile' ? 'white' : 'var(--text-tertiary)',
-              }}
-            />
-          </div>
-          <span
-            style={{
-              fontSize: '10px',
-              fontWeight: mobileTab === 'profile' ? 700 : 500,
-              color: mobileTab === 'profile' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
-            }}
-          >
-            Profile
-          </span>
-        </button>
       </nav>
 
       {/* Playlist UI */}
