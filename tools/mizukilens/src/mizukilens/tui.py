@@ -17,7 +17,7 @@ Layout:
   │   歌回 Vol.10    │                          │
   │                  │                          │
   ├──────────────────┴──────────────────────────┤
-  │ [a]確認 [z]取消 [s]跳過 [x]排除 [e]編輯 [r]再擷取  │
+  │ [a]確認 [z]取消 [x]排除 [e]編輯 [r]再擷取         │
   └─────────────────────────────────────────────┘
 """
 
@@ -310,7 +310,6 @@ class HelpDialog(ModalScreen[None]):
 [bold cyan]場次操作 / Stream actions:[/bold cyan]
   [a]  確認 (Approve) — ストリームを承認
   [z]  取消承認 (Unapprove) — 承認を取り消して再審核
-  [s]  スキップ (Skip) — 現在のステータスを維持
   [x]  排除 (Exclude) — ストリームを対象外にする
   [r]  再擷取 (Re-fetch) — コメント/説明を再取得して再解析
   [c]  候選留言 (Candidates) — キーワード一致コメントを表示
@@ -654,7 +653,6 @@ class ReviewApp(App[None]):
     BINDINGS = [
         Binding("a", "approve_stream", "確認", show=True),
         Binding("z", "unapprove_stream", "取消承認 (Unapprove)", show=True),
-        Binding("s", "skip_stream", "スキップ", show=True),
         Binding("x", "exclude_stream", "排除", show=True),
         Binding("e", "edit_song", "編輯", show=True),
         Binding("n", "new_song", "新增", show=True),
@@ -825,7 +823,7 @@ class ReviewApp(App[None]):
             title = title[:37] + "..."
         bar.update(
             f"{icon} {escape(title)}  |  状態: {status_label}  |  "
-            f"[dim]a:確認 s:スキップ x:排除 e:編輯 n:新増 d:刪除 r:再擷取 c:候選 ?:幫助[/dim]"
+            f"[dim]a:確認 z:取消 x:排除 e:編輯 n:新増 d:刪除 r:再擷取 c:候選 ?:幫助[/dim]"
         )
 
     # -----------------------------------------------------------------------
@@ -912,19 +910,6 @@ class ReviewApp(App[None]):
             self._load_streams_preserving_selection()
         except (ValueError, KeyError) as exc:
             self.notify(f"エラー: {exc}", severity="error")
-
-    def action_skip_stream(self) -> None:
-        """Skip: leave the stream in its current status."""
-        if self._current_stream_idx < 0:
-            return
-        self.notify("スキップしました（ステータス変更なし）")
-        # Move to next stream
-        next_idx = self._current_stream_idx + 1
-        if next_idx < len(self._streams):
-            self._current_stream_idx = next_idx
-            lv = self.query_one("#stream-list", ListView)
-            lv.index = next_idx
-            self._load_songs(next_idx)
 
     def action_exclude_stream(self) -> None:
         """Exclude the current stream."""

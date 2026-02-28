@@ -290,38 +290,7 @@ class TestApproveAction:
 
 
 # ---------------------------------------------------------------------------
-# Section 5: Skip action (synchronous)
-# ---------------------------------------------------------------------------
-
-
-class TestSkipAction:
-    """Test skip action logic."""
-
-    def test_skip_keeps_status_unchanged(self, db: sqlite3.Connection) -> None:
-        _add_stream(db, "vid001", status="extracted")
-
-        # Skip means: don't change status, just advance the cursor
-        stream = get_stream(db, "vid001")
-        assert stream["status"] == "extracted"
-
-    def test_skip_advances_cursor_index(self, db: sqlite3.Connection) -> None:
-        _add_stream(db, "vid001", status="extracted", date="2024-03-15")
-        _add_stream(db, "vid002", status="extracted", date="2024-03-08")
-
-        app = ReviewApp(conn=db)
-        app._streams = list(list_streams(db))
-        app._current_stream_idx = 0
-
-        # Simulate skip: advance to next
-        next_idx = app._current_stream_idx + 1
-        if next_idx < len(app._streams):
-            app._current_stream_idx = next_idx
-
-        assert app._current_stream_idx == 1
-
-
-# ---------------------------------------------------------------------------
-# Section 6: Exclude action (synchronous via cache)
+# Section 5: Exclude action (synchronous via cache)
 # ---------------------------------------------------------------------------
 
 
