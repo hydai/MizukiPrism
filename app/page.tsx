@@ -1303,16 +1303,28 @@ export default function Home() {
                             className="flex items-center justify-center relative"
                             style={{ width: '32px', height: '32px' }}
                           >
-                            {/* Mobile: show number or accent music note when playing */}
-                            <span
-                              className="lg:hidden font-mono select-none"
-                              style={{
-                                fontSize: '14px',
-                                color: isCurrentlyPlaying ? 'var(--accent-pink)' : 'var(--text-tertiary)',
-                              }}
-                            >
-                              {index + 1}
-                            </span>
+                            {/* Mobile: play icon or spinning disc when playing */}
+                            {isCurrentlyPlaying ? (
+                              <Disc3
+                                className="lg:hidden animate-spin"
+                                style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  color: 'var(--accent-pink)',
+                                  animationDuration: '3s',
+                                }}
+                              />
+                            ) : (
+                              <Play
+                                className="lg:hidden"
+                                style={{
+                                  width: '14px',
+                                  height: '14px',
+                                  color: 'var(--text-tertiary)',
+                                  fill: 'currentColor',
+                                }}
+                              />
+                            )}
                             {/* Desktop: number that fades on hover, replaced by play button */}
                             <span
                               className="hidden lg:block group-hover:opacity-0 transition-opacity font-mono text-sm select-none"
