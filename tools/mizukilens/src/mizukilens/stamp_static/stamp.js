@@ -23,6 +23,7 @@
   const $btnClearAll = document.getElementById("btn-clear-all");
   const $btnFetchAll = document.getElementById("btn-fetch-all");
   const $btnRefetch = document.getElementById("btn-refetch");
+  const $btnCopyId = document.getElementById("btn-copy-id");
   const $placeholder = document.getElementById("player-placeholder");
 
   // --- Helpers ---
@@ -337,6 +338,7 @@
     $btnFetchAll.disabled = !currentVideoId;
     $btnClearAll.disabled = !currentVideoId;
     $btnRefetch.disabled = !currentVideoId;
+    $btnCopyId.disabled = !currentVideoId;
   }
 
   // --- API actions ---
@@ -452,6 +454,15 @@
     } finally {
       $btnRefetch.disabled = !currentVideoId;
     }
+  }
+
+  function copyVideoId() {
+    if (!currentVideoId) return;
+    navigator.clipboard.writeText(currentVideoId).then(function () {
+      showToast("Copied: " + currentVideoId);
+    }, function () {
+      showToast("Failed to copy", true);
+    });
   }
 
   function seekToStart() {
@@ -575,6 +586,9 @@
       case "r":
         refetchStream();
         break;
+      case "c":
+        copyVideoId();
+        break;
       case "n":
         selectNext();
         break;
@@ -604,6 +618,7 @@
   $btnFetchAll.addEventListener("click", fetchAllDurations);
   $btnClearAll.addEventListener("click", clearAllEndTimestamps);
   $btnRefetch.addEventListener("click", refetchStream);
+  $btnCopyId.addEventListener("click", copyVideoId);
 
   // --- Status filter ---
   document.querySelectorAll(".status-btn").forEach(function (btn) {

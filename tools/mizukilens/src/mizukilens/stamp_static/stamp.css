@@ -393,6 +393,18 @@ main {
   border-color: var(--accent);
 }
 
+.btn-copy-id {
+  background: var(--bg-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-copy-id:hover:not(:disabled) {
+  background: var(--bg-active);
+  border-color: #60a0f0;
+  color: #60a0f0;
+}
+
 .nav-hint {
   margin-left: auto;
   font-size: 11px;
