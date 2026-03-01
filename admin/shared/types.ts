@@ -148,6 +148,37 @@ export interface ListResponse<T> {
   total: number;
 }
 
+// --- Stamp editor types ---
+
+export interface StampPerformance {
+  id: string;
+  songId: string;
+  title: string;
+  originalArtist: string;
+  timestamp: number;
+  endTimestamp: number | null;
+  note: string;
+  status: Status;
+}
+
+export interface CreateStampPerformanceBody {
+  title: string;
+  originalArtist: string;
+  timestamp: number;
+  endTimestamp?: number | null;
+  note?: string;
+}
+
+export interface UpdateTimestampsBody {
+  timestamp?: number;
+  endTimestamp?: number | null;
+}
+
+export interface UpdateSongDetailsBody {
+  title?: string;
+  originalArtist?: string;
+}
+
 // --- Dashboard stats ---
 
 export interface DashboardStats {

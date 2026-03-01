@@ -8,6 +8,10 @@ import type {
   UpdateSongBody,
   CreateStreamBody,
   StatusUpdateBody,
+  StampPerformance,
+  CreateStampPerformanceBody,
+  UpdateTimestampsBody,
+  UpdateSongDetailsBody,
 } from '../../../shared/types';
 
 class ApiError extends Error {
@@ -93,6 +97,33 @@ export const api = {
     request<Stream>(`/api/streams/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify(body),
+    }),
+
+  // Stamp editor
+  listStreamPerformances: (streamId: string) =>
+    request<ListResponse<StampPerformance>>(`/api/streams/${streamId}/performances`),
+
+  createStampPerformance: (streamId: string, body: CreateStampPerformanceBody) =>
+    request<{ songId: string; performanceId: string }>(`/api/streams/${streamId}/performances`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  updatePerformanceTimestamps: (id: string, body: UpdateTimestampsBody) =>
+    request<{ ok: boolean }>(`/api/performances/${id}/timestamps`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+
+  updatePerformanceDetails: (id: string, body: UpdateSongDetailsBody) =>
+    request<{ ok: boolean }>(`/api/performances/${id}/details`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+
+  deletePerformance: (id: string) =>
+    request<{ ok: boolean }>(`/api/performances/${id}`, {
+      method: 'DELETE',
     }),
 };
 

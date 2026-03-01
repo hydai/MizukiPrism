@@ -6,6 +6,8 @@ import type {
   Stream,
   StreamRow,
   StreamCredit,
+  StampPerformance,
+  Status,
 } from '../shared/types';
 
 // --- Row → API type mappers ---
@@ -294,6 +296,155 @@ export async function updateStreamStatus(
     .bind(status, reviewedBy, id)
     .run();
   return result.meta.changes > 0;
+}
+
+// --- Stamp editor helpers ---
+
+interface StampPerformanceRow {
+  id: string;
+  song_id: string;
+  title: string;
+  original_artist: string;
+  timestamp: number;
+  end_timestamp: number | null;
+  note: string;
+  status: Status;
+}
+
+function stampPerformanceFromRow(row: StampPerformanceRow): StampPerformance {
+  return {
+    id: row.id,
+    songId: row.song_id,
+    title: row.title,
+    originalArtist: row.original_artist,
+    timestamp: row.timestamp,
+    endTimestamp: row.end_timestamp,
+    note: row.note,
+    status: row.status,
+  };
+}
+
+export async function listPerformancesForStream(
+  db: D1Database,
+  streamId: string,
+): Promise<StampPerformance[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT p.id, p.song_id, s.title, s.original_artist, p.timestamp, p.end_timestamp, p.note, p.status
+       FROM performances p
+       JOIN songs s ON s.id = p.song_id
+       WHERE p.stream_id = ?
+       ORDER BY p.timestamp ASC`,
+    )
+    .bind(streamId)
+    .all<StampPerformanceRow>();
+  return results.map(stampPerformanceFromRow);
+}
+
+export async function createSongAndPerformance(
+  db: D1Database,
+  streamId: string,
+  date: string,
+  streamTitle: string,
+  videoId: string,
+  title: string,
+  originalArtist: string,
+  timestamp: number,
+  endTimestamp: number | null,
+  note: string,
+  submittedBy: string,
+): Promise<{ songId: string; performanceId: string }> {
+  const songId = generateSongId();
+  const perfId = generatePerformanceId();
+
+  await db.batch([
+    db
+      .prepare(
+        'INSERT INTO songs (id, title, original_artist, tags, status, submitted_by) VALUES (?, ?, ?, ?, ?, ?)',
+      )
+      .bind(songId, title, originalArtist, '[]', 'pending', submittedBy),
+    db
+      .prepare(
+        `INSERT INTO performances (id, song_id, stream_id, date, stream_title, video_id, timestamp, end_timestamp, note, status, submitted_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(perfId, songId, streamId, date, streamTitle, videoId, timestamp, endTimestamp, note, 'pending', submittedBy),
+  ]);
+
+  return { songId, performanceId: perfId };
+}
+
+export async function updatePerformanceTimestamps(
+  db: D1Database,
+  id: string,
+  fields: { timestamp?: number; endTimestamp?: number | null },
+): Promise<boolean> {
+  const sets: string[] = [];
+  const values: (string | number | null)[] = [];
+
+  if (fields.timestamp !== undefined) {
+    sets.push('timestamp = ?');
+    values.push(fields.timestamp);
+  }
+  if (fields.endTimestamp !== undefined) {
+    sets.push('end_timestamp = ?');
+    values.push(fields.endTimestamp);
+  }
+
+  if (sets.length === 0) return false;
+  values.push(id);
+
+  const result = await db
+    .prepare(`UPDATE performances SET ${sets.join(', ')} WHERE id = ?`)
+    .bind(...values)
+    .run();
+  return result.meta.changes > 0;
+}
+
+export async function updatePerformanceSongDetails(
+  db: D1Database,
+  perfId: string,
+  fields: { title?: string; originalArtist?: string },
+): Promise<boolean> {
+  // Look up the song_id from the performance
+  const row = await db
+    .prepare('SELECT song_id FROM performances WHERE id = ?')
+    .bind(perfId)
+    .first<{ song_id: string }>();
+  if (!row) return false;
+
+  await updateSong(db, row.song_id, {
+    title: fields.title,
+    originalArtist: fields.originalArtist,
+  });
+  return true;
+}
+
+export async function deletePerformanceAndOrphanSong(
+  db: D1Database,
+  id: string,
+): Promise<boolean> {
+  // Get the song_id before deleting
+  const row = await db
+    .prepare('SELECT song_id FROM performances WHERE id = ?')
+    .bind(id)
+    .first<{ song_id: string }>();
+  if (!row) return false;
+
+  // Delete the performance
+  await db.prepare('DELETE FROM performances WHERE id = ?').bind(id).run();
+
+  // Check if the song has any remaining performances
+  const countRow = await db
+    .prepare('SELECT COUNT(*) as cnt FROM performances WHERE song_id = ?')
+    .bind(row.song_id)
+    .first<{ cnt: number }>();
+
+  if (countRow && countRow.cnt === 0) {
+    await db.prepare('DELETE FROM songs WHERE id = ?').bind(row.song_id).run();
+  }
+
+  return true;
 }
 
 // --- Stats ---

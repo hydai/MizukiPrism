@@ -12,6 +12,7 @@ import {
   updatePerformanceStatus,
   generatePerformanceId,
   listStreams,
+  getStreamById,
   insertStream,
   updateStreamStatus,
   generateStreamId,
@@ -20,6 +21,11 @@ import {
   getDashboardStats,
   exportSongs,
   exportStreams,
+  listPerformancesForStream,
+  createSongAndPerformance,
+  updatePerformanceTimestamps,
+  updatePerformanceSongDetails,
+  deletePerformanceAndOrphanSong,
 } from './db';
 import type {
   AuthUser,
@@ -28,6 +34,9 @@ import type {
   CreatePerformanceBody,
   CreateStreamBody,
   StatusUpdateBody,
+  CreateStampPerformanceBody,
+  UpdateTimestampsBody,
+  UpdateSongDetailsBody,
 } from '../shared/types';
 
 type Bindings = {
@@ -239,6 +248,71 @@ app.patch('/api/streams/:id/status', requireCurator, async (c) => {
   if (!updated) return c.json({ error: 'Stream not found' }, 404);
 
   return c.json({ id, status: body.status });
+});
+
+// --- Stamp editor ---
+
+app.get('/api/streams/:streamId/performances', async (c) => {
+  const streamId = c.req.param('streamId');
+  const performances = await listPerformancesForStream(c.env.DB, streamId);
+  return c.json({ data: performances, total: performances.length });
+});
+
+app.post('/api/streams/:streamId/performances', async (c) => {
+  const streamId = c.req.param('streamId');
+  const body = await c.req.json<CreateStampPerformanceBody>();
+  if (!body.title || !body.originalArtist || body.timestamp === undefined) {
+    return c.json({ error: 'title, originalArtist, and timestamp are required' }, 400);
+  }
+
+  const stream = await getStreamById(c.env.DB, streamId);
+  if (!stream) return c.json({ error: 'Stream not found' }, 404);
+
+  const user = c.get('user');
+  const result = await createSongAndPerformance(
+    c.env.DB,
+    streamId,
+    stream.date,
+    stream.title,
+    stream.videoId,
+    body.title,
+    body.originalArtist,
+    body.timestamp,
+    body.endTimestamp ?? null,
+    body.note ?? '',
+    user.email,
+  );
+
+  return c.json(result, 201);
+});
+
+app.patch('/api/performances/:id/timestamps', async (c) => {
+  const id = c.req.param('id');
+  const body = await c.req.json<UpdateTimestampsBody>();
+  const updated = await updatePerformanceTimestamps(c.env.DB, id, {
+    timestamp: body.timestamp,
+    endTimestamp: body.endTimestamp,
+  });
+  if (!updated) return c.json({ error: 'Performance not found' }, 404);
+  return c.json({ ok: true });
+});
+
+app.patch('/api/performances/:id/details', async (c) => {
+  const id = c.req.param('id');
+  const body = await c.req.json<UpdateSongDetailsBody>();
+  const updated = await updatePerformanceSongDetails(c.env.DB, id, {
+    title: body.title,
+    originalArtist: body.originalArtist,
+  });
+  if (!updated) return c.json({ error: 'Performance not found' }, 404);
+  return c.json({ ok: true });
+});
+
+app.delete('/api/performances/:id', async (c) => {
+  const id = c.req.param('id');
+  const deleted = await deletePerformanceAndOrphanSong(c.env.DB, id);
+  if (!deleted) return c.json({ error: 'Performance not found' }, 404);
+  return c.json({ ok: true });
 });
 
 // --- Export (fan-site format) ---
