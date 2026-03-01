@@ -1283,6 +1283,9 @@ export default function Home() {
                   className="grid grid-cols-[32px_40px_1fr_60px] lg:grid-cols-[32px_40px_2fr_2fr_100px_60px] gap-0 px-3 py-2 sticky top-[88px] z-10"
                   style={{
                     borderBottom: '1px solid var(--border-table)',
+                    background: 'var(--bg-surface-frosted)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
                   }}
                 >
                   <div
