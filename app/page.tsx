@@ -574,7 +574,7 @@ export default function Home() {
               style={{
                 width: '160px',
                 height: '160px',
-                borderRadius: '80px',
+                borderRadius: 'var(--radius-xl)',
                 padding: '3px',
                 background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
                 boxShadow: '0 8px 32px rgba(244, 114, 182, 0.25)',
@@ -584,7 +584,7 @@ export default function Home() {
                 style={{
                   width: '100%',
                   height: '100%',
-                  borderRadius: '80px',
+                  borderRadius: 'var(--radius-xl)',
                   overflow: 'hidden',
                 }}
               >
@@ -647,11 +647,11 @@ export default function Home() {
                 margin: 0,
               }}
             >
-              Virtual Singer &amp; Streamer
+              {streamerData.description}
               {' '}
               <span style={{ color: 'var(--text-tertiary)' }}>·</span>
               {' '}
-              <span style={{ fontWeight: 600 }}>{songs.length} Songs</span>
+              <span style={{ fontWeight: 600 }}>{flattenedSongs.length} 首歌曲</span>
             </p>
 
             {/* Stats row: followerCount Followers · Rank #rank (rank in accent-pink), centered */}

@@ -159,6 +159,35 @@ export default function MiniPlayer() {
             />
           </button>
 
+          {/* Queue button — mobile */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowQueue(true);
+            }}
+            className="flex-shrink-0 relative"
+            aria-label="Open queue"
+            data-testid="mini-player-queue-button-mobile"
+            style={{ color: 'var(--text-secondary)', padding: '4px' }}
+          >
+            <ListMusic style={{ width: '20px', height: '20px' }} />
+            {queue.length > 0 && (
+              <span
+                className="absolute -top-1 -right-1 flex items-center justify-center font-bold"
+                style={{
+                  width: '14px',
+                  height: '14px',
+                  borderRadius: 'var(--radius-circle)',
+                  background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+                  color: 'white',
+                  fontSize: '9px',
+                }}
+              >
+                {queue.length}
+              </span>
+            )}
+          </button>
+
           {/* Play/Pause icon — 24px, text-primary */}
           <button
             onClick={(e) => {

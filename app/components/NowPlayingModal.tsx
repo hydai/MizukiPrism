@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Play, Pause, SkipBack, SkipForward, ChevronDown, Shuffle, Repeat, Repeat1 } from 'lucide-react';
+import { X, Play, Pause, SkipBack, SkipForward, ChevronDown, Shuffle, Repeat, Repeat1, ListMusic } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import AlbumArt from './AlbumArt';
 import VolumeControl from './VolumeControl';
@@ -30,6 +30,8 @@ export default function NowPlayingModal() {
     shuffleOn,
     toggleRepeat,
     toggleShuffle,
+    queue,
+    setShowQueue,
   } = usePlayer();
 
   // Keyboard navigation: Escape to close modal
@@ -173,6 +175,48 @@ export default function NowPlayingModal() {
           {/* Volume control */}
           <div className="flex justify-center mt-6">
             <VolumeControl size="full" />
+          </div>
+
+          {/* Next Up — queue preview */}
+          <div className="mt-8 border-t border-slate-200/60 pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wider">Next Up</h4>
+              {queue.length > 0 && (
+                <button
+                  onClick={() => {
+                    setShowQueue(true);
+                    setShowModal(false);
+                  }}
+                  className="text-xs font-medium transition-colors hover:brightness-110"
+                  style={{ color: 'var(--accent-pink)' }}
+                >
+                  查看完整佇列
+                </button>
+              )}
+            </div>
+            {queue.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-4">佇列中沒有歌曲</p>
+            ) : (
+              <div className="flex flex-col">
+                {queue.slice(0, 5).map((track, index) => (
+                  <div
+                    key={track.id}
+                    className="flex items-center gap-3 py-2"
+                    style={{ borderBottom: index < Math.min(queue.length, 5) - 1 ? '1px solid rgba(0,0,0,0.06)' : undefined }}
+                  >
+                    <AlbumArt
+                      src={track.albumArtUrl}
+                      alt={`${track.title} - ${track.originalArtist}`}
+                      size={40}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-slate-800 truncate">{track.title}</div>
+                      <div className="text-xs text-slate-500 truncate">{track.originalArtist}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>
