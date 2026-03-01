@@ -121,7 +121,7 @@ Admin pages: Dashboard, Streams List, Songs List, Song Detail, Stamp Editor, Sub
 
 ## Specifications
 
-- [SPEC.md](SPEC.md) — Core song catalog and player
-- [SPEC-MizukiLens.md](SPEC-MizukiLens.md) — MizukiLens data pipeline CLI
-- [SPEC-Metadata.md](SPEC-Metadata.md) — Album art and lyrics metadata integration
-- [SPEC-Auth.md](SPEC-Auth.md) — Fan authentication
+- [SPEC.md](docs/SPEC.md) — Core song catalog and player
+- [SPEC-MizukiLens.md](docs/SPEC-MizukiLens.md) — MizukiLens data pipeline CLI
+- [SPEC-Metadata.md](docs/SPEC-Metadata.md) — Album art and lyrics metadata integration
+- [SPEC-Auth.md](docs/SPEC-Auth.md) — Fan authentication
