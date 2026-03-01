@@ -326,6 +326,7 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
   // Stream state
   const [streams, setStreams] = useState<StreamWithPending[]>([]);
   const [streamSearch, setStreamSearch] = useState('');
+  const [streamYearFilter, setStreamYearFilter] = useState('');
   const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
 
   // Performance state
@@ -573,11 +574,12 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
     [performances, showToast],
   );
 
-  // --- Copy video ID (Step 1) ---
-  const copyVideoId = useCallback(() => {
+  // --- Copy full VOD URL ---
+  const copyVideoUrl = useCallback(() => {
     if (!selectedStream) return;
-    navigator.clipboard.writeText(selectedStream.videoId).then(
-      () => showToast(`Copied ${selectedStream.videoId}`),
+    const url = `https://www.youtube.com/watch?v=${selectedStream.videoId}`;
+    navigator.clipboard.writeText(url).then(
+      () => showToast(`Copied ${url}`),
       () => showToast('Failed to copy', true),
     );
   }, [selectedStream, showToast]);
@@ -703,7 +705,7 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
           selectPrev();
           break;
         case 'c':
-          copyVideoId();
+          copyVideoUrl();
           break;
         case 'f':
           fetchDuration();
@@ -731,16 +733,31 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [markEndTimestamp, markStartTimestamp, seekToStart, seekToEnd, selectNext, selectPrev, copyVideoId, fetchDuration, fetchAllDurations, selectedStreamId]);
+  }, [markEndTimestamp, markStartTimestamp, seekToStart, seekToEnd, selectNext, selectPrev, copyVideoUrl, fetchDuration, fetchAllDurations, selectedStreamId]);
 
   // --- Filter streams ---
-  const filteredStreams = streamSearch
-    ? streams.filter(
-        (s) =>
-          s.title.toLowerCase().includes(streamSearch.toLowerCase()) ||
-          s.date.includes(streamSearch),
-      )
-    : streams;
+  const streamYears = useMemo(() => {
+    const ySet = new Set<string>();
+    for (const s of streams) {
+      const y = s.date?.slice(0, 4);
+      if (y) ySet.add(y);
+    }
+    return [...ySet].sort().reverse();
+  }, [streams]);
+
+  const filteredStreams = useMemo(() => {
+    let list = streams;
+    if (streamYearFilter) {
+      list = list.filter((s) => s.date?.startsWith(streamYearFilter));
+    }
+    if (streamSearch) {
+      const q = streamSearch.toLowerCase();
+      list = list.filter(
+        (s) => s.title.toLowerCase().includes(q) || s.date.includes(streamSearch),
+      );
+    }
+    return list;
+  }, [streams, streamYearFilter, streamSearch]);
 
   // --- Render ---
 
@@ -749,7 +766,21 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
       {/* Stream sidebar */}
       <div className="flex w-64 flex-shrink-0 flex-col rounded-lg border border-slate-200 bg-white">
         <div className="border-b border-slate-200 p-3">
-          <h3 className="text-sm font-semibold text-slate-700">Streams</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-700">Streams</h3>
+            {streamYears.length > 1 && (
+              <select
+                value={streamYearFilter}
+                onChange={(e) => setStreamYearFilter(e.target.value)}
+                className="rounded border border-slate-300 px-1 py-0.5 text-xs"
+              >
+                <option value="">All</option>
+                {streamYears.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            )}
+          </div>
           <input
             type="text"
             placeholder="Search streams..."
@@ -821,7 +852,7 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
               </span>
               <span>
                 <kbd className="rounded border border-slate-300 bg-slate-100 px-1 font-mono">c</kbd>{' '}
-                Copy ID
+                Copy URL
               </span>
               <span>
                 <kbd className="rounded border border-slate-300 bg-slate-100 px-1 font-mono">f</kbd>/
