@@ -449,6 +449,65 @@ export async function deletePerformanceAndOrphanSong(
   return true;
 }
 
+// --- Paste import: bulk create performances ---
+
+export async function bulkCreatePerformances(
+  db: D1Database,
+  streamId: string,
+  date: string,
+  streamTitle: string,
+  videoId: string,
+  songs: Array<{
+    songName: string;
+    artist: string;
+    startSeconds: number;
+    endSeconds: number | null;
+  }>,
+  submittedBy: string,
+  replace: boolean,
+): Promise<{ created: number }> {
+  const stmts: D1PreparedStatement[] = [];
+
+  // If replacing, delete existing performances and orphan songs for this stream
+  if (replace) {
+    // Delete orphan songs (songs that only have performances in this stream)
+    stmts.push(
+      db.prepare(
+        `DELETE FROM songs WHERE id IN (
+           SELECT p.song_id FROM performances p
+           WHERE p.stream_id = ?
+           AND (SELECT COUNT(*) FROM performances p2 WHERE p2.song_id = p.song_id) = 1
+         )`,
+      ).bind(streamId),
+    );
+    stmts.push(
+      db.prepare('DELETE FROM performances WHERE stream_id = ?').bind(streamId),
+    );
+  }
+
+  // Insert song + performance pairs
+  for (const song of songs) {
+    const songId = generateSongId();
+    const perfId = generatePerformanceId();
+
+    stmts.push(
+      db.prepare(
+        'INSERT INTO songs (id, title, original_artist, tags, status, submitted_by) VALUES (?, ?, ?, ?, ?, ?)',
+      ).bind(songId, song.songName, song.artist || 'Unknown', '[]', 'pending', submittedBy),
+    );
+    stmts.push(
+      db.prepare(
+        `INSERT INTO performances (id, song_id, stream_id, date, stream_title, video_id, timestamp, end_timestamp, note, status, submitted_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(perfId, songId, streamId, date, streamTitle, videoId, song.startSeconds, song.endSeconds, '', 'pending', submittedBy),
+    );
+  }
+
+  // D1 batch() is atomic — all or nothing
+  await db.batch(stmts);
+  return { created: songs.length };
+}
+
 // --- Stamp: streams with pending counts ---
 
 interface StreamWithPendingRow extends StreamRow {

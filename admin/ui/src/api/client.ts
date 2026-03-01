@@ -15,6 +15,8 @@ import type {
   CreateStampPerformanceBody,
   UpdateTimestampsBody,
   UpdateSongDetailsBody,
+  PasteImportBody,
+  PasteImportResponse,
 } from '../../../shared/types';
 
 class ApiError extends Error {
@@ -143,6 +145,13 @@ export const api = {
   deletePerformance: (id: string) =>
     request<{ ok: boolean }>(`/api/performances/${id}`, {
       method: 'DELETE',
+    }),
+
+  // Paste import
+  pasteImport: (streamId: string, body: PasteImportBody) =>
+    request<PasteImportResponse>(`/api/streams/${streamId}/paste-import`, {
+      method: 'POST',
+      body: JSON.stringify(body),
     }),
 };
 

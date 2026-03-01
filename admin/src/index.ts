@@ -30,8 +30,10 @@ import {
   getStampStats,
   clearAllEndTimestamps,
   getPerformanceWithSong,
+  bulkCreatePerformances,
 } from './db';
 import { fetchItunesDuration } from './itunes';
+import { parseTextToSongs } from '../shared/parse';
 import type {
   AuthUser,
   CreateSongBody,
@@ -43,6 +45,8 @@ import type {
   UpdateTimestampsBody,
   UpdateSongDetailsBody,
   FetchDurationResponse,
+  PasteImportBody,
+  PasteImportResponse,
 } from '../shared/types';
 
 type Bindings = {
@@ -333,6 +337,57 @@ app.get('/api/stamp/streams', async (c) => {
 app.get('/api/stamp/stats', async (c) => {
   const stats = await getStampStats(c.env.DB);
   return c.json(stats);
+});
+
+// --- Stamp: paste import ---
+
+app.post('/api/streams/:streamId/paste-import', async (c) => {
+  const streamId = c.req.param('streamId');
+  const body = await c.req.json<PasteImportBody>();
+  if (!body.text || !body.text.trim()) {
+    return c.json({ error: 'text is required' }, 400);
+  }
+
+  const stream = await getStreamById(c.env.DB, streamId);
+  if (!stream) return c.json({ error: 'Stream not found' }, 404);
+
+  const parsed = parseTextToSongs(body.text);
+  if (parsed.length === 0) {
+    return c.json<PasteImportResponse>({
+      ok: false,
+      parsed: 0,
+      created: 0,
+      replaced: false,
+      errors: ['No valid song lines found in the pasted text'],
+    });
+  }
+
+  const user = c.get('user');
+  const songs = parsed.map((s) => ({
+    songName: s.songName,
+    artist: s.artist,
+    startSeconds: s.startSeconds,
+    endSeconds: s.endSeconds,
+  }));
+
+  const { created } = await bulkCreatePerformances(
+    c.env.DB,
+    streamId,
+    stream.date,
+    stream.title,
+    stream.videoId,
+    songs,
+    user.email,
+    body.replace ?? false,
+  );
+
+  return c.json<PasteImportResponse>({
+    ok: true,
+    parsed: parsed.length,
+    created,
+    replaced: body.replace ?? false,
+    errors: [],
+  });
 });
 
 // --- Stamp: clear all end timestamps ---

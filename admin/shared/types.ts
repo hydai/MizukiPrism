@@ -198,6 +198,30 @@ export interface FetchDurationResponse {
   matchConfidence: string | null;
 }
 
+// --- Paste import types ---
+
+export interface PasteImportBody {
+  text: string;
+  replace?: boolean;
+}
+
+export interface PasteImportParsedSong {
+  songName: string;
+  artist: string;
+  startSeconds: number;
+  endSeconds: number | null;
+  startTimestamp: string;
+  endTimestamp: string | null;
+}
+
+export interface PasteImportResponse {
+  ok: boolean;
+  parsed: number;
+  created: number;
+  replaced: boolean;
+  errors: string[];
+}
+
 // --- Dashboard stats ---
 
 export interface DashboardStats {
