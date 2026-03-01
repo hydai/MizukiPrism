@@ -1,0 +1,47 @@
+name: DB Sync — Export approved entries
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  workflow_dispatch:       # Manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install MizukiLens
+        run: |
+          cd tools/mizukilens
+          pip install -e .
+          pip install httpx
+
+      - name: Export approved entries
+        env:
+          ADMIN_API_URL: ${{ secrets.ADMIN_API_URL }}
+          ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+        run: mizukilens db export --output data/
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: 'chore: sync approved songs and streams from staging DB'
+          title: 'chore: DB sync — updated songs and streams'
+          body: |
+            Automated export of approved entries from the admin staging database.
+
+            Run by the `db-sync` workflow.
+          branch: chore/db-sync
+          delete-branch: true
+          labels: automated
