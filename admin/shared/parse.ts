@@ -124,6 +124,20 @@ export function parseSongLine(line: string): RawSong | null {
   return result;
 }
 
+export function formatSongList(
+  performances: { title: string; originalArtist: string; timestamp: number; endTimestamp: number | null }[],
+): string {
+  return performances
+    .map((p, i) => {
+      const num = String(i + 1).padStart(2, '0');
+      const start = secondsToTimestamp(p.timestamp);
+      const end = p.endTimestamp !== null ? secondsToTimestamp(p.endTimestamp) : '--:--';
+      const artist = p.originalArtist ? ` / ${p.originalArtist}` : '';
+      return `${num}. ${start} ~ ${end} ${p.title}${artist}`;
+    })
+    .join('\n');
+}
+
 export function parseTextToSongs(text: string): ParsedSong[] {
   const rawSongs: RawSong[] = [];
   for (const line of text.split('\n')) {

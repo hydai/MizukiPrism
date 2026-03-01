@@ -3,7 +3,7 @@ import type { AuthUser, StreamWithPending, StampPerformance, StampStats } from '
 import { api } from '../api/client';
 import { YouTubePlayer } from '../components/YouTubePlayer';
 import type { YouTubePlayerHandle } from '../components/YouTubePlayer';
-import { parseTextToSongs } from '../../../shared/parse';
+import { parseTextToSongs, formatSongList } from '../../../shared/parse';
 
 // --- Helpers ---
 
@@ -584,6 +584,16 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
     );
   }, [selectedStream, showToast]);
 
+  // --- Export song list ---
+  const exportSongList = useCallback(() => {
+    if (performances.length === 0) return;
+    const text = formatSongList(performances);
+    navigator.clipboard.writeText(text).then(
+      () => showToast('Copied song list to clipboard'),
+      () => showToast('Failed to copy', true),
+    );
+  }, [performances, showToast]);
+
   // --- Clear all end timestamps (Step 4) ---
   const clearAllEndTimestampsAction = useCallback(async () => {
     if (!selectedStreamId) return;
@@ -713,6 +723,9 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
         case 'F':
           fetchAllDurations();
           break;
+        case 'x':
+          exportSongList();
+          break;
         case 'i':
           if (selectedStreamId) setShowPasteImport(true);
           break;
@@ -733,7 +746,7 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [markEndTimestamp, markStartTimestamp, seekToStart, seekToEnd, selectNext, selectPrev, copyVideoUrl, fetchDuration, fetchAllDurations, selectedStreamId]);
+  }, [markEndTimestamp, markStartTimestamp, seekToStart, seekToEnd, selectNext, selectPrev, copyVideoUrl, exportSongList, fetchDuration, fetchAllDurations, selectedStreamId]);
 
   // --- Filter streams ---
   const streamYears = useMemo(() => {
@@ -860,6 +873,10 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
                 Fetch/all durations
               </span>
               <span>
+                <kbd className="rounded border border-slate-300 bg-slate-100 px-1 font-mono">x</kbd>{' '}
+                Export
+              </span>
+              <span>
                 <kbd className="rounded border border-slate-300 bg-slate-100 px-1 font-mono">i</kbd>{' '}
                 Paste import
               </span>
@@ -896,6 +913,13 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
                   className="rounded-md border border-slate-300 px-3 py-1 text-sm font-medium text-slate-600 hover:bg-slate-100"
                 >
                   Clear All
+                </button>
+                <button
+                  onClick={exportSongList}
+                  disabled={performances.length === 0}
+                  className="rounded-md border border-slate-300 px-3 py-1 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                >
+                  Export
                 </button>
                 <button
                   onClick={() => setShowPasteImport(true)}

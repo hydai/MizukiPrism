@@ -5,7 +5,7 @@ import { api } from '../api/client';
 import StatusBadge from '../components/StatusBadge';
 import { YouTubePlayer } from '../components/YouTubePlayer';
 import type { YouTubePlayerHandle } from '../components/YouTubePlayer';
-import { parseTextToSongs } from '../../../shared/parse';
+import { parseTextToSongs, formatSongList } from '../../../shared/parse';
 
 // --- Helpers ---
 
@@ -257,6 +257,16 @@ export default function StreamDetail({ user }: { user: AuthUser }) {
     );
   }, [detail, showToast]);
 
+  // --- Export song list ---
+  const exportSongList = useCallback(() => {
+    if (!detail || detail.performances.length === 0) return;
+    const text = formatSongList(detail.performances);
+    navigator.clipboard.writeText(text).then(
+      () => showToast('Copied song list to clipboard'),
+      () => showToast('Failed to copy', true),
+    );
+  }, [detail, showToast]);
+
   if (loading) return <div className="text-slate-500">Loading...</div>;
   if (error || !detail) return <div className="text-red-600">{error ?? 'Stream not found'}</div>;
 
@@ -323,6 +333,11 @@ export default function StreamDetail({ user }: { user: AuthUser }) {
           Performances ({detail.performances.length})
         </h3>
         <div className="flex gap-2">
+          <button onClick={exportSongList}
+            disabled={detail.performances.length === 0}
+            className="rounded-md border border-slate-300 px-3 py-1 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50">
+            Export
+          </button>
           <button onClick={() => setShowPasteImport(true)}
             className="rounded-md border border-blue-600 px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50">
             Paste Import
