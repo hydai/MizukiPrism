@@ -37,6 +37,7 @@ import {
 } from './db';
 import { fetchItunesDuration } from './itunes';
 import { parseTextToSongs } from '../shared/parse';
+import { discoverStreams, fetchComments, findCandidateComment, countTimestamps } from './youtube';
 import type {
   AuthUser,
   CreateSongBody,
@@ -50,6 +51,13 @@ import type {
   FetchDurationResponse,
   PasteImportBody,
   PasteImportResponse,
+  DiscoverStreamsResponse,
+  DiscoveredStream,
+  ImportStreamsBody,
+  ImportStreamsResponse,
+  ExtractResponse,
+  ExtractImportBody,
+  ExtractImportResponse,
 } from '../shared/types';
 
 type Bindings = {
@@ -494,6 +502,209 @@ app.get('/api/export/songs', requireCurator, async (c) => {
 app.get('/api/export/streams', requireCurator, async (c) => {
   const streams = await exportStreams(c.env.DB);
   return c.json(streams);
+});
+
+// --- Pipeline: Discover streams from YouTube ---
+
+app.post('/api/pipeline/discover', requireCurator, async (c) => {
+  const apiKey = c.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
+    return c.json({ error: 'YOUTUBE_API_KEY not configured' }, 500);
+  }
+
+  const videos = await discoverStreams(apiKey, c.env.CHANNEL_ID);
+
+  // Check which videos already exist in D1 (by video_id)
+  const existing = await c.env.DB
+    .prepare('SELECT id, video_id, status FROM streams')
+    .all<{ id: string; video_id: string; status: string }>();
+
+  const existingByVideoId = new Map(
+    existing.results.map((r) => [r.video_id, { id: r.id, status: r.status }]),
+  );
+
+  const streams: DiscoveredStream[] = videos.map((v) => {
+    const ex = existingByVideoId.get(v.videoId);
+    return {
+      videoId: v.videoId,
+      title: v.title,
+      date: v.date,
+      isNew: !ex,
+      existingStreamId: ex?.id,
+      existingStatus: ex?.status as DiscoveredStream['existingStatus'],
+    };
+  });
+
+  // Sort: new first, then by date desc
+  streams.sort((a, b) => {
+    if (a.isNew !== b.isNew) return a.isNew ? -1 : 1;
+    return b.date.localeCompare(a.date);
+  });
+
+  return c.json<DiscoverStreamsResponse>({ streams, total: streams.length });
+});
+
+// --- Pipeline: Import selected streams to D1 ---
+
+app.post('/api/pipeline/import-streams', requireCurator, async (c) => {
+  const body = await c.req.json<ImportStreamsBody>();
+  if (!body.videoIds || body.videoIds.length === 0) {
+    return c.json({ error: 'videoIds is required' }, 400);
+  }
+
+  const apiKey = c.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
+    return c.json({ error: 'YOUTUBE_API_KEY not configured' }, 500);
+  }
+
+  // Fetch full details for the selected videos
+  const { getVideoDetails } = await import('./youtube');
+  const videos = await getVideoDetails(apiKey, body.videoIds);
+
+  const user = c.get('user');
+  const streamIds: string[] = [];
+
+  for (const v of videos) {
+    let id = generateStreamId(v.date);
+    if (await streamIdExists(c.env.DB, id)) {
+      id = generateStreamIdFallback();
+    }
+
+    await insertStream(
+      c.env.DB,
+      id,
+      v.title,
+      v.date,
+      v.videoId,
+      `https://www.youtube.com/watch?v=${v.videoId}`,
+      '{}',
+      user.email,
+    );
+
+    // Set status to 'extracted' (ready for timestamp extraction)
+    await updateStreamStatus(c.env.DB, id, 'extracted', user.email);
+
+    streamIds.push(id);
+  }
+
+  return c.json<ImportStreamsResponse>({ created: videos.length, streamIds });
+});
+
+// --- Pipeline: Extract timestamps from YouTube comments/description ---
+
+app.post('/api/pipeline/extract', requireCurator, async (c) => {
+  const { streamId } = await c.req.json<{ streamId: string }>();
+  if (!streamId) {
+    return c.json({ error: 'streamId is required' }, 400);
+  }
+
+  const stream = await getStreamById(c.env.DB, streamId);
+  if (!stream) return c.json({ error: 'Stream not found' }, 404);
+
+  const apiKey = c.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
+    return c.json({ error: 'YOUTUBE_API_KEY not configured' }, 500);
+  }
+
+  // Stage 1: Try comments
+  let comments: Awaited<ReturnType<typeof fetchComments>> = [];
+  try {
+    comments = await fetchComments(apiKey, stream.videoId);
+  } catch (err) {
+    // If quota exceeded, propagate; otherwise fall through to description
+    if (err instanceof Error && err.message.includes('quota')) {
+      return c.json({ error: err.message }, 429);
+    }
+    // Comments disabled or other error — fall through
+  }
+
+  const candidate = findCandidateComment(comments);
+  const allCandidates = comments
+    .filter((c) => c.timestampCount >= 3)
+    .sort((a, b) => {
+      const pd = (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0);
+      if (pd !== 0) return pd;
+      const ld = b.likes - a.likes;
+      if (ld !== 0) return ld;
+      return b.timestampCount - a.timestampCount;
+    });
+
+  if (candidate) {
+    // Parse the candidate comment text
+    const parsed = parseTextToSongs(candidate.text);
+    const credit = {
+      author: candidate.author,
+      commentUrl: `https://www.youtube.com/watch?v=${stream.videoId}&lc=${candidate.commentId}`,
+    };
+    return c.json<ExtractResponse>({
+      source: 'comment',
+      candidateComment: candidate,
+      allCandidates,
+      parsedSongs: parsed,
+      credit,
+    });
+  }
+
+  // Stage 2: Try video description
+  const { getVideoDetails: getDetails } = await import('./youtube');
+  const details = await getDetails(apiKey, [stream.videoId]);
+  const desc = details[0]?.description ?? '';
+  const descTimestamps = countTimestamps(desc);
+
+  if (descTimestamps >= 3) {
+    const parsed = parseTextToSongs(desc);
+    return c.json<ExtractResponse>({
+      source: 'description',
+      candidateComment: null,
+      allCandidates,
+      parsedSongs: parsed,
+      credit: null,
+    });
+  }
+
+  // Stage 3: No timestamps found
+  return c.json<ExtractResponse>({
+    source: null,
+    candidateComment: null,
+    allCandidates,
+    parsedSongs: [],
+    credit: null,
+  });
+});
+
+// --- Pipeline: Import extracted songs to D1 ---
+
+app.post('/api/pipeline/extract-import', requireCurator, async (c) => {
+  const body = await c.req.json<ExtractImportBody>();
+  if (!body.streamId || !body.songs || body.songs.length === 0) {
+    return c.json({ error: 'streamId and songs are required' }, 400);
+  }
+
+  const stream = await getStreamById(c.env.DB, body.streamId);
+  if (!stream) return c.json({ error: 'Stream not found' }, 404);
+
+  const user = c.get('user');
+
+  // Update stream credit if provided
+  if (body.credit) {
+    await c.env.DB
+      .prepare('UPDATE streams SET credit = ? WHERE id = ?')
+      .bind(JSON.stringify(body.credit), body.streamId)
+      .run();
+  }
+
+  const { created } = await bulkCreatePerformances(
+    c.env.DB,
+    body.streamId,
+    stream.date,
+    stream.title,
+    stream.videoId,
+    body.songs,
+    user.email,
+    body.replace ?? false,
+  );
+
+  return c.json<ExtractImportResponse>({ ok: true, created });
 });
 
 // --- Stats ---
