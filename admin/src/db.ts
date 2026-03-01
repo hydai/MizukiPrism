@@ -7,6 +7,8 @@ import type {
   StreamRow,
   StreamCredit,
   StampPerformance,
+  StreamWithPending,
+  StampStats,
   Status,
 } from '../shared/types';
 
@@ -445,6 +447,97 @@ export async function deletePerformanceAndOrphanSong(
   }
 
   return true;
+}
+
+// --- Stamp: streams with pending counts ---
+
+interface StreamWithPendingRow extends StreamRow {
+  pending_count: number;
+}
+
+export async function listStreamsWithPendingCounts(
+  db: D1Database,
+): Promise<StreamWithPending[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT s.*, (SELECT COUNT(*) FROM performances p
+         WHERE p.stream_id = s.id AND p.end_timestamp IS NULL) AS pending_count
+       FROM streams s ORDER BY s.date DESC`,
+    )
+    .all<StreamWithPendingRow>();
+  return results.map((row) => ({
+    ...streamFromRow(row),
+    pendingCount: row.pending_count,
+  }));
+}
+
+// --- Stamp: stats ---
+
+export async function getStampStats(db: D1Database): Promise<StampStats> {
+  const row = await db
+    .prepare(
+      `SELECT COUNT(*) AS total,
+              SUM(CASE WHEN end_timestamp IS NOT NULL THEN 1 ELSE 0 END) AS filled
+       FROM performances`,
+    )
+    .first<{ total: number; filled: number }>();
+  const total = row?.total ?? 0;
+  const filled = row?.filled ?? 0;
+  return { total, filled, remaining: total - filled };
+}
+
+// --- Stamp: clear all end timestamps ---
+
+export async function clearAllEndTimestamps(
+  db: D1Database,
+  streamId: string,
+): Promise<number> {
+  const result = await db
+    .prepare(
+      'UPDATE performances SET end_timestamp = NULL WHERE stream_id = ? AND end_timestamp IS NOT NULL',
+    )
+    .bind(streamId)
+    .run();
+  return result.meta.changes;
+}
+
+// --- Stamp: get performance with song details (for iTunes fetch) ---
+
+export interface PerformanceWithSong {
+  id: string;
+  title: string;
+  originalArtist: string;
+  timestamp: number;
+  endTimestamp: number | null;
+}
+
+export async function getPerformanceWithSong(
+  db: D1Database,
+  perfId: string,
+): Promise<PerformanceWithSong | null> {
+  const row = await db
+    .prepare(
+      `SELECT p.id, s.title, s.original_artist, p.timestamp, p.end_timestamp
+       FROM performances p
+       JOIN songs s ON s.id = p.song_id
+       WHERE p.id = ?`,
+    )
+    .bind(perfId)
+    .first<{
+      id: string;
+      title: string;
+      original_artist: string;
+      timestamp: number;
+      end_timestamp: number | null;
+    }>();
+  if (!row) return null;
+  return {
+    id: row.id,
+    title: row.title,
+    originalArtist: row.original_artist,
+    timestamp: row.timestamp,
+    endTimestamp: row.end_timestamp,
+  };
 }
 
 // --- Stats ---

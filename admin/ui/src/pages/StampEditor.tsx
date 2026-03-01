@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { AuthUser, Stream, StampPerformance } from '../../../shared/types';
+import type { AuthUser, StreamWithPending, StampPerformance, StampStats } from '../../../shared/types';
 import { api } from '../api/client';
 import { YouTubePlayer } from '../components/YouTubePlayer';
 import type { YouTubePlayerHandle } from '../components/YouTubePlayer';
@@ -182,7 +182,7 @@ interface EditingField {
 
 export default function StampEditor({ user: _user }: { user: AuthUser }) {
   // Stream state
-  const [streams, setStreams] = useState<Stream[]>([]);
+  const [streams, setStreams] = useState<StreamWithPending[]>([]);
   const [streamSearch, setStreamSearch] = useState('');
   const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
 
@@ -196,6 +196,12 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
   const [editingField, setEditingField] = useState<EditingField | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Stamp stats
+  const [stampStats, setStampStats] = useState<StampStats | null>(null);
+
+  // Fetch-all state
+  const [isFetchingAll, setIsFetchingAll] = useState(false);
+
   const playerRef = useRef<YouTubePlayerHandle>(null);
   const toastKeyRef = useRef(0);
 
@@ -207,10 +213,19 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
     setToast({ message, isError, key: toastKeyRef.current });
   }, []);
 
-  // --- Load streams ---
-  useEffect(() => {
-    api.listStreams().then(({ data }) => setStreams(data));
+  // --- Load streams + stats ---
+  const loadStats = useCallback(() => {
+    api.stampStats().then(setStampStats).catch(() => {});
   }, []);
+
+  const loadStreams = useCallback(() => {
+    api.listStampStreams().then(({ data }) => setStreams(data));
+  }, []);
+
+  useEffect(() => {
+    loadStreams();
+    loadStats();
+  }, [loadStreams, loadStats]);
 
   // --- Load performances when stream changes ---
   const loadPerformances = useCallback(
@@ -230,7 +245,7 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
   );
 
   const selectStream = useCallback(
-    (stream: Stream) => {
+    (stream: StreamWithPending) => {
       setSelectedStreamId(stream.id);
       setEditingField(null);
       loadPerformances(stream.id);
@@ -252,6 +267,8 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
         prev.map((p, i) => (i === selectedIndex ? { ...p, endTimestamp: currentTime } : p)),
       );
       showToast(`Marked ${perf.title} \u2192 ${formatTimestamp(currentTime)}`);
+      loadStats();
+      loadStreams();
 
       // Auto-advance to next unstamped
       const nextIdx = performances.findIndex(
@@ -263,7 +280,7 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Failed to mark timestamp', true);
     }
-  }, [performances, selectedIndex, showToast]);
+  }, [performances, selectedIndex, showToast, loadStats, loadStreams]);
 
   const markStartTimestamp = useCallback(async () => {
     if (selectedIndex < 0 || !playerRef.current) return;
@@ -311,11 +328,13 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
           prev.map((p, i) => (i === idx ? { ...p, endTimestamp: null } : p)),
         );
         showToast('Cleared end timestamp');
+        loadStats();
+        loadStreams();
       } catch (err: unknown) {
         showToast(err instanceof Error ? err.message : 'Failed to clear', true);
       }
     },
-    [showToast],
+    [showToast, loadStats, loadStreams],
   );
 
   const deletePerformance = useCallback(
@@ -337,11 +356,13 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
           setSelectedIndex(idx);
         }
         showToast(`Deleted ${perf.title}`);
+        loadStats();
+        loadStreams();
       } catch (err: unknown) {
         showToast(err instanceof Error ? err.message : 'Failed to delete', true);
       }
     },
-    [performances, showToast],
+    [performances, showToast, loadStats, loadStreams],
   );
 
   const handleAddSong = useCallback(
@@ -358,11 +379,13 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
         setShowAddModal(false);
         await loadPerformances(selectedStreamId);
         showToast(`Added ${title} at ${formatTimestamp(timestamp)}`);
+        loadStats();
+        loadStreams();
       } catch (err: unknown) {
         showToast(err instanceof Error ? err.message : 'Failed to add song', true);
       }
     },
-    [selectedStreamId, loadPerformances, showToast],
+    [selectedStreamId, loadPerformances, showToast, loadStats, loadStreams],
   );
 
   const handleInlineEditSave = useCallback(
@@ -392,6 +415,109 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
     [performances, showToast],
   );
 
+  // --- Copy video ID (Step 1) ---
+  const copyVideoId = useCallback(() => {
+    if (!selectedStream) return;
+    navigator.clipboard.writeText(selectedStream.videoId).then(
+      () => showToast(`Copied ${selectedStream.videoId}`),
+      () => showToast('Failed to copy', true),
+    );
+  }, [selectedStream, showToast]);
+
+  // --- Clear all end timestamps (Step 4) ---
+  const clearAllEndTimestampsAction = useCallback(async () => {
+    if (!selectedStreamId) return;
+    if (!confirm('Clear ALL end timestamps for this stream?')) return;
+
+    try {
+      const { cleared } = await api.clearAllEndTimestamps(selectedStreamId);
+      setPerformances((prev) =>
+        prev.map((p) => ({ ...p, endTimestamp: null })),
+      );
+      showToast(`Cleared ${cleared} end timestamps`);
+      loadStats();
+      loadStreams();
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Failed to clear', true);
+    }
+  }, [selectedStreamId, showToast, loadStats, loadStreams]);
+
+  // --- Fetch duration from iTunes (Step 5) ---
+  const fetchDuration = useCallback(async () => {
+    if (selectedIndex < 0) return;
+    const perf = performances[selectedIndex];
+    if (!perf) return;
+
+    showToast(`Fetching duration for ${perf.title}...`);
+    try {
+      const result = await api.fetchPerformanceDuration(perf.id);
+      if (result.endTimestamp !== null) {
+        setPerformances((prev) =>
+          prev.map((p, i) =>
+            i === selectedIndex ? { ...p, endTimestamp: result.endTimestamp } : p,
+          ),
+        );
+        showToast(`${perf.title}: ${result.durationSec}s (${result.matchConfidence})`);
+        loadStats();
+        loadStreams();
+      } else if (result.durationSec) {
+        showToast(`${perf.title}: ${result.durationSec}s (already has end timestamp)`);
+      } else {
+        showToast(`${perf.title}: no match on iTunes`, true);
+      }
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Fetch failed', true);
+    }
+  }, [performances, selectedIndex, showToast, loadStats, loadStreams]);
+
+  // --- Fetch all missing durations (Step 6) ---
+  const fetchAllDurations = useCallback(async () => {
+    if (isFetchingAll) return;
+    const missing = performances
+      .map((p, i) => ({ perf: p, index: i }))
+      .filter(({ perf }) => perf.endTimestamp === null);
+    if (missing.length === 0) {
+      showToast('All songs already have end timestamps');
+      return;
+    }
+
+    setIsFetchingAll(true);
+    let fetched = 0;
+    let noMatch = 0;
+    let errors = 0;
+
+    for (let i = 0; i < missing.length; i++) {
+      const { perf, index } = missing[i]!;
+      showToast(`Fetching ${i + 1}/${missing.length}: ${perf.title}...`);
+
+      try {
+        const result = await api.fetchPerformanceDuration(perf.id);
+        if (result.endTimestamp !== null) {
+          fetched++;
+          setPerformances((prev) =>
+            prev.map((p, j) =>
+              j === index ? { ...p, endTimestamp: result.endTimestamp } : p,
+            ),
+          );
+        } else {
+          noMatch++;
+        }
+      } catch {
+        errors++;
+      }
+
+      // 1s delay between calls to respect iTunes rate limits
+      if (i < missing.length - 1) {
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
+
+    setIsFetchingAll(false);
+    loadStats();
+    loadStreams();
+    showToast(`Fetched ${fetched}/${missing.length}, ${noMatch} no match, ${errors} errors`);
+  }, [performances, isFetchingAll, showToast, loadStats, loadStreams]);
+
   // --- Keyboard shortcuts ---
 
   useEffect(() => {
@@ -418,6 +544,15 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
         case 'p':
           selectPrev();
           break;
+        case 'c':
+          copyVideoId();
+          break;
+        case 'f':
+          fetchDuration();
+          break;
+        case 'F':
+          fetchAllDurations();
+          break;
         case 'ArrowLeft':
           if (playerRef.current) {
             e.preventDefault();
@@ -435,7 +570,7 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [markEndTimestamp, markStartTimestamp, seekToStart, seekToEnd, selectNext, selectPrev]);
+  }, [markEndTimestamp, markStartTimestamp, seekToStart, seekToEnd, selectNext, selectPrev, copyVideoId, fetchDuration, fetchAllDurations]);
 
   // --- Filter streams ---
   const filteredStreams = streamSearch
@@ -473,8 +608,15 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
                   : ''
               }`}
             >
-              <div className="truncate text-sm font-medium text-slate-800">
-                {stream.title || stream.videoId}
+              <div className="flex items-center gap-1.5">
+                <span className="truncate text-sm font-medium text-slate-800">
+                  {stream.title || stream.videoId}
+                </span>
+                {stream.pendingCount > 0 && (
+                  <span className="flex-shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                    {stream.pendingCount}
+                  </span>
+                )}
               </div>
               <div className="mt-0.5 text-xs text-slate-500">{stream.date}</div>
             </li>
@@ -517,11 +659,30 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
                 Next/prev
               </span>
               <span>
+                <kbd className="rounded border border-slate-300 bg-slate-100 px-1 font-mono">c</kbd>{' '}
+                Copy ID
+              </span>
+              <span>
+                <kbd className="rounded border border-slate-300 bg-slate-100 px-1 font-mono">f</kbd>/
+                <kbd className="rounded border border-slate-300 bg-slate-100 px-1 font-mono">F</kbd>{' '}
+                Fetch/all durations
+              </span>
+              <span>
                 <kbd className="rounded border border-slate-300 bg-slate-100 px-1 font-mono">&larr;</kbd>/
                 <kbd className="rounded border border-slate-300 bg-slate-100 px-1 font-mono">&rarr;</kbd>{' '}
                 Seek &plusmn;5s
               </span>
             </div>
+
+            {/* Stamp stats */}
+            {stampStats && (
+              <div className="text-xs text-slate-500">
+                <span className="font-medium text-slate-700">{stampStats.filled}/{stampStats.total}</span> stamped
+                {stampStats.remaining > 0 && (
+                  <span className="ml-1 text-amber-600">({stampStats.remaining} remaining)</span>
+                )}
+              </div>
+            )}
 
             {/* Song list header */}
             <div className="flex items-center justify-between">
@@ -533,12 +694,20 @@ export default function StampEditor({ user: _user }: { user: AuthUser }) {
                   </span>
                 )}
               </div>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                + Add Song
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={clearAllEndTimestampsAction}
+                  className="rounded-md border border-slate-300 px-3 py-1 text-sm font-medium text-slate-600 hover:bg-slate-100"
+                >
+                  Clear All
+                </button>
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  + Add Song
+                </button>
+              </div>
             </div>
 
             {/* Song list */}

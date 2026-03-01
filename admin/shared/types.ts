@@ -179,6 +179,25 @@ export interface UpdateSongDetailsBody {
   originalArtist?: string;
 }
 
+// --- Stamp editor extended types ---
+
+export interface StreamWithPending extends Stream {
+  pendingCount: number;
+}
+
+export interface StampStats {
+  total: number;
+  filled: number;
+  remaining: number;
+}
+
+export interface FetchDurationResponse {
+  ok: boolean;
+  durationSec: number | null;
+  endTimestamp: number | null;
+  matchConfidence: string | null;
+}
+
 // --- Dashboard stats ---
 
 export interface DashboardStats {

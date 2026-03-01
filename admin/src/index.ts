@@ -26,7 +26,12 @@ import {
   updatePerformanceTimestamps,
   updatePerformanceSongDetails,
   deletePerformanceAndOrphanSong,
+  listStreamsWithPendingCounts,
+  getStampStats,
+  clearAllEndTimestamps,
+  getPerformanceWithSong,
 } from './db';
+import { fetchItunesDuration } from './itunes';
 import type {
   AuthUser,
   CreateSongBody,
@@ -37,6 +42,7 @@ import type {
   CreateStampPerformanceBody,
   UpdateTimestampsBody,
   UpdateSongDetailsBody,
+  FetchDurationResponse,
 } from '../shared/types';
 
 type Bindings = {
@@ -313,6 +319,55 @@ app.delete('/api/performances/:id', async (c) => {
   const deleted = await deletePerformanceAndOrphanSong(c.env.DB, id);
   if (!deleted) return c.json({ error: 'Performance not found' }, 404);
   return c.json({ ok: true });
+});
+
+// --- Stamp: streams with pending counts ---
+
+app.get('/api/stamp/streams', async (c) => {
+  const streams = await listStreamsWithPendingCounts(c.env.DB);
+  return c.json({ data: streams, total: streams.length });
+});
+
+// --- Stamp: stats ---
+
+app.get('/api/stamp/stats', async (c) => {
+  const stats = await getStampStats(c.env.DB);
+  return c.json(stats);
+});
+
+// --- Stamp: clear all end timestamps ---
+
+app.delete('/api/streams/:streamId/end-timestamps', async (c) => {
+  const streamId = c.req.param('streamId');
+  const cleared = await clearAllEndTimestamps(c.env.DB, streamId);
+  return c.json({ ok: true, cleared });
+});
+
+// --- Stamp: fetch duration from iTunes ---
+
+app.post('/api/performances/:id/fetch-duration', async (c) => {
+  const id = c.req.param('id');
+  const perf = await getPerformanceWithSong(c.env.DB, id);
+  if (!perf) return c.json({ error: 'Performance not found' }, 404);
+
+  const { durationSec, matchConfidence } = await fetchItunesDuration(
+    perf.originalArtist,
+    perf.title,
+  );
+
+  let endTimestamp: number | null = null;
+  if (durationSec && perf.endTimestamp === null) {
+    endTimestamp = perf.timestamp + durationSec;
+    await updatePerformanceTimestamps(c.env.DB, id, { endTimestamp });
+  }
+
+  const resp: FetchDurationResponse = {
+    ok: true,
+    durationSec,
+    endTimestamp,
+    matchConfidence,
+  };
+  return c.json(resp);
 });
 
 // --- Export (fan-site format) ---

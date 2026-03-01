@@ -9,6 +9,9 @@ import type {
   CreateStreamBody,
   StatusUpdateBody,
   StampPerformance,
+  StreamWithPending,
+  StampStats,
+  FetchDurationResponse,
   CreateStampPerformanceBody,
   UpdateTimestampsBody,
   UpdateSongDetailsBody,
@@ -97,6 +100,22 @@ export const api = {
     request<Stream>(`/api/streams/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify(body),
+    }),
+
+  // Stamp editor — extended
+  listStampStreams: () =>
+    request<ListResponse<StreamWithPending>>('/api/stamp/streams'),
+
+  stampStats: () => request<StampStats>('/api/stamp/stats'),
+
+  clearAllEndTimestamps: (streamId: string) =>
+    request<{ ok: boolean; cleared: number }>(`/api/streams/${streamId}/end-timestamps`, {
+      method: 'DELETE',
+    }),
+
+  fetchPerformanceDuration: (perfId: string) =>
+    request<FetchDurationResponse>(`/api/performances/${perfId}/fetch-duration`, {
+      method: 'POST',
     }),
 
   // Stamp editor
