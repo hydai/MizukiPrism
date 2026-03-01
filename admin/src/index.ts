@@ -37,7 +37,7 @@ import {
 } from './db';
 import { fetchItunesDuration } from './itunes';
 import { parseTextToSongs } from '../shared/parse';
-import { discoverStreams, fetchComments, findCandidateComment, countTimestamps } from './youtube';
+import { discoverStreams, getVideoDetails, fetchComments, findCandidateComment, countTimestamps } from './youtube';
 import type {
   AuthUser,
   CreateSongBody,
@@ -509,10 +509,16 @@ app.get('/api/export/streams', requireCurator, async (c) => {
 app.post('/api/pipeline/discover', requireCurator, async (c) => {
   const apiKey = c.env.YOUTUBE_API_KEY;
   if (!apiKey) {
-    return c.json({ error: 'YOUTUBE_API_KEY not configured' }, 500);
+    return c.json({ error: 'YOUTUBE_API_KEY not configured. Add it to .dev.vars for local dev or use wrangler secret put for production.' }, 500);
   }
 
-  const videos = await discoverStreams(apiKey, c.env.CHANNEL_ID);
+  let videos;
+  try {
+    videos = await discoverStreams(apiKey, c.env.CHANNEL_ID);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown YouTube API error';
+    return c.json({ error: msg }, 502);
+  }
 
   // Check which videos already exist in D1 (by video_id)
   const existing = await c.env.DB
@@ -557,9 +563,13 @@ app.post('/api/pipeline/import-streams', requireCurator, async (c) => {
     return c.json({ error: 'YOUTUBE_API_KEY not configured' }, 500);
   }
 
-  // Fetch full details for the selected videos
-  const { getVideoDetails } = await import('./youtube');
-  const videos = await getVideoDetails(apiKey, body.videoIds);
+  let videos;
+  try {
+    videos = await getVideoDetails(apiKey, body.videoIds);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown YouTube API error';
+    return c.json({ error: msg }, 502);
+  }
 
   const user = c.get('user');
   const streamIds: string[] = [];
@@ -620,7 +630,7 @@ app.post('/api/pipeline/extract', requireCurator, async (c) => {
 
   const candidate = findCandidateComment(comments);
   const allCandidates = comments
-    .filter((c) => c.timestampCount >= 3)
+    .filter((cc) => cc.timestampCount >= 3)
     .sort((a, b) => {
       const pd = (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0);
       if (pd !== 0) return pd;
@@ -630,7 +640,6 @@ app.post('/api/pipeline/extract', requireCurator, async (c) => {
     });
 
   if (candidate) {
-    // Parse the candidate comment text
     const parsed = parseTextToSongs(candidate.text);
     const credit = {
       author: candidate.author,
@@ -646,20 +655,23 @@ app.post('/api/pipeline/extract', requireCurator, async (c) => {
   }
 
   // Stage 2: Try video description
-  const { getVideoDetails: getDetails } = await import('./youtube');
-  const details = await getDetails(apiKey, [stream.videoId]);
-  const desc = details[0]?.description ?? '';
-  const descTimestamps = countTimestamps(desc);
+  try {
+    const details = await getVideoDetails(apiKey, [stream.videoId]);
+    const desc = details[0]?.description ?? '';
+    const descTimestamps = countTimestamps(desc);
 
-  if (descTimestamps >= 3) {
-    const parsed = parseTextToSongs(desc);
-    return c.json<ExtractResponse>({
-      source: 'description',
-      candidateComment: null,
-      allCandidates,
-      parsedSongs: parsed,
-      credit: null,
-    });
+    if (descTimestamps >= 3) {
+      const parsed = parseTextToSongs(desc);
+      return c.json<ExtractResponse>({
+        source: 'description',
+        candidateComment: null,
+        allCandidates,
+        parsedSongs: parsed,
+        credit: null,
+      });
+    }
+  } catch {
+    // Fall through to "no timestamps found"
   }
 
   // Stage 3: No timestamps found
