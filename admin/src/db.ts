@@ -222,6 +222,17 @@ export async function insertPerformance(
     .run();
 }
 
+export async function getPerformanceStatus(
+  db: D1Database,
+  id: string,
+): Promise<string | null> {
+  const row = await db
+    .prepare('SELECT status FROM performances WHERE id = ?')
+    .bind(id)
+    .first<{ status: string }>();
+  return row?.status ?? null;
+}
+
 export async function updatePerformanceStatus(
   db: D1Database,
   id: string,
@@ -601,11 +612,7 @@ export async function getPerformanceWithSong(
 
 // --- Stats ---
 
-interface StatusCounts {
-  pending: number;
-  approved: number;
-  rejected: number;
-}
+import type { StatusCounts } from '../shared/types';
 
 async function countByStatus(
   db: D1Database,
@@ -615,7 +622,7 @@ async function countByStatus(
     .prepare(`SELECT status, COUNT(*) as count FROM ${table} GROUP BY status`)
     .all<{ status: string; count: number }>();
 
-  const counts: StatusCounts = { pending: 0, approved: 0, rejected: 0 };
+  const counts: StatusCounts = { pending: 0, approved: 0, rejected: 0, excluded: 0, extracted: 0 };
   for (const row of results) {
     if (row.status in counts) {
       counts[row.status as keyof StatusCounts] = row.count;

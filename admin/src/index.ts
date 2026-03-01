@@ -9,6 +9,7 @@ import {
   generateSongId,
   listPerformances,
   insertPerformance,
+  getPerformanceStatus as db_getPerformanceStatus,
   updatePerformanceStatus,
   generatePerformanceId,
   listStreams,
@@ -59,6 +60,22 @@ type Variables = {
 };
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+
+// --- Status transition rules ---
+
+const VALID_STATUSES = new Set(['pending', 'approved', 'rejected', 'excluded', 'extracted']);
+
+const ALLOWED_TRANSITIONS: Record<string, Set<string>> = {
+  pending:   new Set(['approved', 'rejected', 'excluded', 'extracted']),
+  extracted: new Set(['approved', 'rejected', 'excluded', 'pending']),
+  approved:  new Set(['extracted', 'pending']),  // unapprove
+  rejected:  new Set(['pending', 'excluded']),
+  excluded:  new Set(['pending']),               // restore from excluded
+};
+
+function isValidTransition(from: string, to: string): boolean {
+  return ALLOWED_TRANSITIONS[from]?.has(to) ?? false;
+}
 
 // All routes require authentication
 app.use('/api/*', requireAuth);
@@ -149,14 +166,19 @@ app.patch('/api/songs/:id/status', requireCurator, async (c) => {
   const id = c.req.param('id');
   const body = await c.req.json<StatusUpdateBody>();
 
-  if (body.status !== 'approved' && body.status !== 'rejected') {
-    return c.json({ error: 'status must be "approved" or "rejected"' }, 400);
+  if (!VALID_STATUSES.has(body.status)) {
+    return c.json({ error: `Invalid status: ${body.status}` }, 400);
+  }
+
+  const existing = await getSongById(c.env.DB, id);
+  if (!existing) return c.json({ error: 'Song not found' }, 404);
+
+  if (!isValidTransition(existing.status, body.status)) {
+    return c.json({ error: `Cannot transition from ${existing.status} to ${body.status}` }, 400);
   }
 
   const user = c.get('user');
-  const updated = await updateSongStatus(c.env.DB, id, body.status, user.email);
-  if (!updated) return c.json({ error: 'Song not found' }, 404);
-
+  await updateSongStatus(c.env.DB, id, body.status, user.email);
   const song = await getSongById(c.env.DB, id);
   return c.json(song);
 });
@@ -199,13 +221,19 @@ app.patch('/api/performances/:id/status', requireCurator, async (c) => {
   const id = c.req.param('id');
   const body = await c.req.json<StatusUpdateBody>();
 
-  if (body.status !== 'approved' && body.status !== 'rejected') {
-    return c.json({ error: 'status must be "approved" or "rejected"' }, 400);
+  if (!VALID_STATUSES.has(body.status)) {
+    return c.json({ error: `Invalid status: ${body.status}` }, 400);
   }
 
-  const updated = await updatePerformanceStatus(c.env.DB, id, body.status);
-  if (!updated) return c.json({ error: 'Performance not found' }, 404);
+  // Get current status for transition check
+  const current = await db_getPerformanceStatus(c.env.DB, id);
+  if (!current) return c.json({ error: 'Performance not found' }, 404);
 
+  if (!isValidTransition(current, body.status)) {
+    return c.json({ error: `Cannot transition from ${current} to ${body.status}` }, 400);
+  }
+
+  await updatePerformanceStatus(c.env.DB, id, body.status);
   return c.json({ id, status: body.status });
 });
 
@@ -249,14 +277,19 @@ app.patch('/api/streams/:id/status', requireCurator, async (c) => {
   const id = c.req.param('id');
   const body = await c.req.json<StatusUpdateBody>();
 
-  if (body.status !== 'approved' && body.status !== 'rejected') {
-    return c.json({ error: 'status must be "approved" or "rejected"' }, 400);
+  if (!VALID_STATUSES.has(body.status)) {
+    return c.json({ error: `Invalid status: ${body.status}` }, 400);
+  }
+
+  const existing = await getStreamById(c.env.DB, id);
+  if (!existing) return c.json({ error: 'Stream not found' }, 404);
+
+  if (!isValidTransition(existing.status, body.status)) {
+    return c.json({ error: `Cannot transition from ${existing.status} to ${body.status}` }, 400);
   }
 
   const user = c.get('user');
-  const updated = await updateStreamStatus(c.env.DB, id, body.status, user.email);
-  if (!updated) return c.json({ error: 'Stream not found' }, 404);
-
+  await updateStreamStatus(c.env.DB, id, body.status, user.email);
   return c.json({ id, status: body.status });
 });
 

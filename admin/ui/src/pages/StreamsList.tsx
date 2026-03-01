@@ -13,6 +13,7 @@ export default function StreamsList({ user }: { user: AuthUser }) {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'' | Status>('');
+  const [yearFilter, setYearFilter] = useState<string>('');
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
@@ -38,8 +39,22 @@ export default function StreamsList({ user }: { user: AuthUser }) {
     fetchStreams();
   };
 
+  // Extract unique years from stream dates for filter
+  const years = useMemo(() => {
+    const ySet = new Set<string>();
+    for (const s of streams) {
+      const y = s.date?.slice(0, 4);
+      if (y) ySet.add(y);
+    }
+    return [...ySet].sort().reverse();
+  }, [streams]);
+
   const sorted = useMemo(() => {
-    const copy = [...streams];
+    let filtered = streams;
+    if (yearFilter) {
+      filtered = filtered.filter((s) => s.date?.startsWith(yearFilter));
+    }
+    const copy = [...filtered];
     copy.sort((a, b) => {
       const av = a[sortKey] ?? '';
       const bv = b[sortKey] ?? '';
@@ -47,7 +62,7 @@ export default function StreamsList({ user }: { user: AuthUser }) {
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return copy;
-  }, [streams, sortKey, sortDir]);
+  }, [streams, yearFilter, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -58,7 +73,7 @@ export default function StreamsList({ user }: { user: AuthUser }) {
     }
   };
 
-  const handleStatus = async (id: string, status: 'approved' | 'rejected') => {
+  const handleStatus = async (id: string, status: Status) => {
     try {
       const updated = await api.updateStreamStatus(id, { status });
       setStreams((prev) => prev.map((s) => (s.id === id ? updated : s)));
@@ -116,7 +131,21 @@ export default function StreamsList({ user }: { user: AuthUser }) {
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
+          <option value="excluded">Excluded</option>
+          <option value="extracted">Extracted</option>
         </select>
+        {years.length > 1 && (
+          <select
+            value={yearFilter}
+            onChange={(e) => setYearFilter(e.target.value)}
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+          >
+            <option value="">All years</option>
+            {years.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
@@ -159,22 +188,48 @@ export default function StreamsList({ user }: { user: AuthUser }) {
                   <td className="px-4 py-3 text-slate-500">{stream.createdAt}</td>
                   {isCurator && (
                     <td className="px-4 py-3">
-                      {stream.status === 'pending' && (
-                        <div className="flex gap-1">
+                      <div className="flex flex-wrap gap-1">
+                        {(stream.status === 'pending' || stream.status === 'extracted') && (
+                          <>
+                            <button
+                              onClick={() => handleStatus(stream.id, 'approved')}
+                              className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleStatus(stream.id, 'rejected')}
+                              className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        {stream.status === 'approved' && (
                           <button
-                            onClick={() => handleStatus(stream.id, 'approved')}
-                            className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
+                            onClick={() => handleStatus(stream.id, 'pending')}
+                            className="rounded bg-yellow-500 px-2 py-1 text-xs text-white hover:bg-yellow-600"
                           >
-                            Approve
+                            Unapprove
                           </button>
+                        )}
+                        {stream.status !== 'excluded' && (
                           <button
-                            onClick={() => handleStatus(stream.id, 'rejected')}
-                            className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
+                            onClick={() => handleStatus(stream.id, 'excluded')}
+                            className="rounded bg-slate-500 px-2 py-1 text-xs text-white hover:bg-slate-600"
                           >
-                            Reject
+                            Exclude
                           </button>
-                        </div>
-                      )}
+                        )}
+                        {stream.status === 'excluded' && (
+                          <button
+                            onClick={() => handleStatus(stream.id, 'pending')}
+                            className="rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-600"
+                          >
+                            Restore
+                          </button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>

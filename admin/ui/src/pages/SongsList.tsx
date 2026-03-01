@@ -58,7 +58,7 @@ export default function SongsList({ user }: { user: AuthUser }) {
     }
   };
 
-  const handleStatus = async (id: string, status: 'approved' | 'rejected') => {
+  const handleStatus = async (id: string, status: Status) => {
     try {
       const updated = await api.updateSongStatus(id, { status });
       setSongs((prev) => prev.map((s) => (s.id === id ? updated : s)));
@@ -116,6 +116,8 @@ export default function SongsList({ user }: { user: AuthUser }) {
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
+          <option value="excluded">Excluded</option>
+          <option value="extracted">Extracted</option>
         </select>
       </div>
 

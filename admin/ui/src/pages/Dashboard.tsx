@@ -3,24 +3,33 @@ import type { DashboardStats } from '../../../shared/types';
 import { api } from '../api/client';
 import StatusBadge from '../components/StatusBadge';
 
-function StatCard({ label, pending, approved, rejected }: {
+function StatCard({ label, pending, approved, rejected, excluded, extracted }: {
   label: string;
   pending: number;
   approved: number;
   rejected: number;
+  excluded: number;
+  extracted: number;
 }) {
+  const total = pending + approved + rejected + excluded + extracted;
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
       <h3 className="text-sm font-medium text-slate-500">{label}</h3>
       <div className="mt-3 flex items-end gap-4">
         <div>
-          <span className="text-2xl font-bold text-slate-900">{pending + approved + rejected}</span>
+          <span className="text-2xl font-bold text-slate-900">{total}</span>
           <span className="ml-1 text-sm text-slate-400">total</span>
         </div>
-        <div className="flex gap-2 text-xs">
+        <div className="flex flex-wrap gap-2 text-xs">
           <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-yellow-800">{pending} pending</span>
           <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-800">{approved} approved</span>
           <span className="rounded bg-red-100 px-1.5 py-0.5 text-red-800">{rejected} rejected</span>
+          {extracted > 0 && (
+            <span className="rounded bg-teal-100 px-1.5 py-0.5 text-teal-800">{extracted} extracted</span>
+          )}
+          {excluded > 0 && (
+            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">{excluded} excluded</span>
+          )}
         </div>
       </div>
     </div>

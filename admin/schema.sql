@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS songs (
   title TEXT NOT NULL,
   original_artist TEXT NOT NULL,
   tags TEXT DEFAULT '[]',  -- JSON array of strings
-  status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected')),
+  status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected', 'excluded', 'extracted')),
   submitted_by TEXT,
   reviewed_by TEXT,
   created_at TEXT DEFAULT (datetime('now')),
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS performances (
   timestamp INTEGER NOT NULL,
   end_timestamp INTEGER,
   note TEXT DEFAULT '',
-  status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected')),
+  status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected', 'excluded', 'extracted')),
   submitted_by TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS streams (
   video_id TEXT NOT NULL UNIQUE,
   youtube_url TEXT NOT NULL,
   credit TEXT DEFAULT '{}',  -- JSON object {author, authorUrl, commentUrl}
-  status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected')),
+  status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected', 'excluded', 'extracted')),
   submitted_by TEXT,
   reviewed_by TEXT,
   created_at TEXT DEFAULT (datetime('now'))

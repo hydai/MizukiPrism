@@ -1,7 +1,7 @@
 // Shared types between Workers API and Admin UI
 // Derived from lib/types.ts (fan site) with admin-specific additions
 
-export type Status = 'pending' | 'approved' | 'rejected';
+export type Status = 'pending' | 'approved' | 'rejected' | 'excluded' | 'extracted';
 
 // --- Database row types (match D1 schema) ---
 
@@ -129,7 +129,7 @@ export interface CreateStreamBody {
 }
 
 export interface StatusUpdateBody {
-  status: 'approved' | 'rejected';
+  status: Status;
 }
 
 // --- Auth types ---
@@ -224,9 +224,17 @@ export interface PasteImportResponse {
 
 // --- Dashboard stats ---
 
+export interface StatusCounts {
+  pending: number;
+  approved: number;
+  rejected: number;
+  excluded: number;
+  extracted: number;
+}
+
 export interface DashboardStats {
-  songs: { pending: number; approved: number; rejected: number };
-  streams: { pending: number; approved: number; rejected: number };
-  performances: { pending: number; approved: number; rejected: number };
+  songs: StatusCounts;
+  streams: StatusCounts;
+  performances: StatusCounts;
   recentSubmissions: (Song | Stream)[];
 }
