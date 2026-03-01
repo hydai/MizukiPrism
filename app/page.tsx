@@ -1002,7 +1002,7 @@ export default function Home() {
           {/* Mobile Year Filter Scroll — horizontal scrolling row, mobile only */}
           <div
             data-testid="mobile-stream-scroll"
-            className="lg:hidden flex items-center flex-shrink-0"
+            className="lg:hidden flex items-center flex-shrink-0 sticky top-0 z-[15]"
             style={{
               padding: '12px 20px',
               gap: '8px',
@@ -1010,6 +1010,9 @@ export default function Home() {
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
               borderBottom: '1px solid var(--border-glass)',
+              background: 'var(--bg-surface-frosted)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
             }}
           >
             {/* All years chip */}
@@ -1280,7 +1283,7 @@ export default function Home() {
               <>
                 {/* SongTableHeader */}
                 <div
-                  className="grid grid-cols-[32px_40px_1fr_60px] lg:grid-cols-[32px_40px_2fr_2fr_100px_60px] gap-0 px-3 py-2 sticky top-[88px] z-10"
+                  className="grid grid-cols-[32px_40px_1fr_60px] lg:grid-cols-[32px_40px_2fr_2fr_100px_60px] gap-0 px-3 py-2 sticky top-[60px] lg:top-[88px] z-10"
                   style={{
                     borderBottom: '1px solid var(--border-table)',
                     background: 'var(--bg-surface-frosted)',
