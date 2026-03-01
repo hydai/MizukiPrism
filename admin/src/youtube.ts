@@ -85,6 +85,15 @@ export interface CandidateComment {
   isPinned: boolean;
 }
 
+// --- Helpers ---
+
+/** Wrap fetch with Referer header to satisfy API key HTTP referrer restrictions. */
+function ytFetch(url: string): Promise<Response> {
+  return fetch(url, {
+    headers: { Referer: 'https://mizukiprism-admin.mizuki.tw/' },
+  });
+}
+
 // --- Core functions ---
 
 function matchesKaraoke(title: string): boolean {
@@ -129,7 +138,7 @@ export async function discoverStreams(
   url.searchParams.set('maxResults', String(maxResults));
   url.searchParams.set('key', apiKey);
 
-  const res = await fetch(url.toString());
+  const res = await ytFetch(url.toString());
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`YouTube playlistItems.list failed (${res.status}): ${body}`);
@@ -163,7 +172,7 @@ export async function getVideoDetails(
     url.searchParams.set('id', chunk.join(','));
     url.searchParams.set('key', apiKey);
 
-    const res = await fetch(url.toString());
+    const res = await ytFetch(url.toString());
     if (!res.ok) {
       const body = await res.text();
       throw new Error(`YouTube videos.list failed (${res.status}): ${body}`);
@@ -203,7 +212,7 @@ export async function fetchComments(
   url.searchParams.set('order', 'relevance');
   url.searchParams.set('key', apiKey);
 
-  const res = await fetch(url.toString());
+  const res = await ytFetch(url.toString());
   if (!res.ok) {
     // Comments disabled returns 403
     if (res.status === 403) {
