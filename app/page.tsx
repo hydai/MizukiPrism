@@ -408,7 +408,7 @@ export default function Home() {
                 placeholder="搜尋歌曲..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full font-medium py-2.5 pl-9 pr-4 outline-none transition-all text-sm"
+                className="w-full font-medium py-2.5 pl-9 pr-4 outline-none transition-all text-base"
                 style={{
                   background: 'var(--bg-surface-glass)',
                   backdropFilter: 'blur(8px)',
@@ -1467,7 +1467,7 @@ export default function Home() {
                   placeholder="搜尋..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  className="w-full py-3 pl-10 pr-4 text-sm outline-none"
+                  className="w-full py-3 pl-10 pr-4 text-base outline-none"
                   style={{
                     background: 'var(--bg-surface-glass)',
                     border: '1px solid var(--border-glass)',
