@@ -15,7 +15,7 @@ binding = "ASSETS"
 # Comma-separated list of curator emails
 CURATOR_EMAILS = "z54981220@gmail.com"
 # YouTube channel ID for stream discovery
-CHANNEL_ID = "UCMyyp5PtfCOIJxRkn8aHq7Q"
+CHANNEL_ID = "UCjv4bfP_67WLuPheS-Z8Ekg"
 
 [observability]
 [observability.logs]
