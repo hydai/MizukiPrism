@@ -2,6 +2,10 @@ name = "mizukiprism-admin"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
+# Serve the admin UI as static assets from the Worker
+[assets]
+directory = "./ui/dist"
+
 [vars]
 # Comma-separated list of curator emails
 CURATOR_EMAILS = "z54981220@gmail.com"

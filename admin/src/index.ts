@@ -260,4 +260,6 @@ app.get('/api/stats', async (c) => {
   return c.json(stats);
 });
 
+// Static assets (admin UI) are served automatically by the [assets]
+// binding in wrangler.toml for non-API routes.
 export default app;
