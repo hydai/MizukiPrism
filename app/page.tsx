@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff, House } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
@@ -330,6 +331,41 @@ export default function Home() {
     });
   }, [allGroupedSongs, debouncedSearch, selectedStreamId, selectedArtist, selectedYears]);
 
+  // Virtual scrolling refs and virtualizers
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const timelineListRef = useRef<HTMLDivElement>(null);
+  const groupedListRef = useRef<HTMLDivElement>(null);
+  const mobileSearchListRef = useRef<HTMLDivElement>(null);
+
+  // Only activate the virtualizer for the current view to avoid scroll conflicts
+  const isTimelineActive = viewMode === 'timeline' && mobileTab === 'home';
+  const isGroupedActive = viewMode === 'grouped' && mobileTab === 'home';
+  const isMobileSearchActive = mobileTab === 'search';
+
+  const timelineVirtualizer = useVirtualizer({
+    count: isTimelineActive ? flattenedSongs.length : 0,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 56,
+    overscan: 15,
+    scrollMargin: timelineListRef.current?.offsetTop ?? 0,
+  });
+
+  const groupedVirtualizer = useVirtualizer({
+    count: isGroupedActive ? groupedSongs.length : 0,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 96,
+    overscan: 10,
+    scrollMargin: groupedListRef.current?.offsetTop ?? 0,
+  });
+
+  const mobileSearchVirtualizer = useVirtualizer({
+    count: isMobileSearchActive ? flattenedSongs.length : 0,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 64,
+    overscan: 15,
+    scrollMargin: mobileSearchListRef.current?.offsetTop ?? 0,
+  });
+
   const gradientText = "bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500";
 
   return (
@@ -517,7 +553,7 @@ export default function Home() {
         <div className="absolute top-40 -left-20 w-72 h-72 bg-blue-300/20 rounded-full blur-3xl pointer-events-none"></div>
 
         {/* Scrollable area */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10 pt-14 lg:pt-0">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar relative z-10 pt-14 lg:pt-0">
 
           {/* Home tab content wrapper: always visible on desktop, only on home tab on mobile */}
           <div className={mobileTab !== 'home' ? 'hidden lg:block' : ''}>
@@ -1202,6 +1238,9 @@ export default function Home() {
 
           {/* Song List - Conditional Rendering based on View Mode */}
           <div className="px-4 pb-32 mt-2">
+            {/* Always-visible logical counts for E2E tests (virtual scrolling caps DOM nodes) */}
+            <span data-testid="total-performance-count" className="sr-only">{flattenedSongs.length}</span>
+            <span data-testid="total-song-card-count" className="sr-only">{groupedSongs.length}</span>
             {loadError ? (
               /* Song API Load Error State */
               <div
@@ -1280,7 +1319,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="mt-1 space-y-0.5">
+                <div className="mt-1">
                   {flattenedSongs.length === 0 ? (
                     songs.length === 0 && !hasActiveFilters ? (
                       <div className="py-20 text-center" data-testid="empty-catalog" style={{ color: 'var(--text-tertiary)' }}>
@@ -1302,24 +1341,49 @@ export default function Home() {
                       </div>
                     )
                   ) : (
-                    flattenedSongs.map((song, index) => (
-                      <TimelineRow
-                        key={`${song.id}-${song.performanceId}`}
-                        song={song}
-                        index={index}
-                        isCurrentlyPlaying={currentTrackId === song.performanceId}
-                        isUnavailable={unavailableVideoIds.has(song.videoId)}
-                        onPlay={playTrack}
-                        onAddToQueue={handleAddToQueue}
-                        onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
-                      />
-                    ))
+                    <div
+                      ref={timelineListRef}
+                      style={{
+                        height: `${timelineVirtualizer.getTotalSize()}px`,
+                        width: '100%',
+                        position: 'relative',
+                      }}
+                    >
+                      {timelineVirtualizer.getVirtualItems().map(virtualItem => {
+                        const song = flattenedSongs[virtualItem.index];
+                        return (
+                          <div
+                            key={`${song.id}-${song.performanceId}`}
+                            data-index={virtualItem.index}
+                            ref={timelineVirtualizer.measureElement}
+                            className="hover:z-10 focus-within:z-10"
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              transform: `translateY(${virtualItem.start - (timelineVirtualizer.options.scrollMargin ?? 0)}px)`,
+                            }}
+                          >
+                            <TimelineRow
+                              song={song}
+                              index={virtualItem.index}
+                              isCurrentlyPlaying={currentTrackId === song.performanceId}
+                              isUnavailable={unavailableVideoIds.has(song.videoId)}
+                              onPlay={playTrack}
+                              onAddToQueue={handleAddToQueue}
+                              onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </>
             ) : (
               /* Grouped View */
-              <div className="mt-2 space-y-3">
+              <div className="mt-2">
                 {groupedSongs.length === 0 ? (
                   songs.length === 0 && !hasActiveFilters ? (
                     <div className="py-20 text-center" data-testid="empty-catalog" style={{ color: 'var(--text-tertiary)' }}>
@@ -1341,18 +1405,44 @@ export default function Home() {
                     </div>
                   )
                 ) : (
-                  groupedSongs.map((song) => (
-                    <SongCard
-                      key={song.id}
-                      song={song}
-                      isExpanded={expandedSongs.has(song.id)}
-                      onToggleExpand={toggleSongExpansion}
-                      onPlay={playTrack}
-                      onAddToQueue={handleAddToQueue}
-                      onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
-                      unavailableVideoIds={unavailableVideoIds}
-                    />
-                  ))
+                  <div
+                    ref={groupedListRef}
+                    style={{
+                      height: `${groupedVirtualizer.getTotalSize()}px`,
+                      width: '100%',
+                      position: 'relative',
+                    }}
+                  >
+                    {groupedVirtualizer.getVirtualItems().map(virtualItem => {
+                      const song = groupedSongs[virtualItem.index];
+                      return (
+                        <div
+                          key={song.id}
+                          data-index={virtualItem.index}
+                          ref={groupedVirtualizer.measureElement}
+                          className="hover:z-10 focus-within:z-10"
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            transform: `translateY(${virtualItem.start - (groupedVirtualizer.options.scrollMargin ?? 0)}px)`,
+                            paddingBottom: '12px',
+                          }}
+                        >
+                          <SongCard
+                            song={song}
+                            isExpanded={expandedSongs.has(song.id)}
+                            onToggleExpand={toggleSongExpansion}
+                            onPlay={playTrack}
+                            onAddToQueue={handleAddToQueue}
+                            onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
+                            unavailableVideoIds={unavailableVideoIds}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             )}
@@ -1413,19 +1503,45 @@ export default function Home() {
                 </div>
               </div>
               {/* Search results */}
-              <div className="space-y-0.5">
-                {flattenedSongs.map((song) => (
-                  <MobileSearchRow
-                    key={`search-${song.id}-${song.performanceId}`}
-                    song={song}
-                    isCurrentlyPlaying={currentTrackId === song.performanceId}
-                    isUnavailable={unavailableVideoIds.has(song.videoId)}
-                    onPlay={playTrack}
-                  />
-                ))}
-                {flattenedSongs.length === 0 && (
+              <div>
+                {flattenedSongs.length === 0 ? (
                   <div className="py-16 text-center" style={{ color: 'var(--text-tertiary)' }}>
                     <p className="text-base font-medium" style={{ color: 'var(--text-secondary)' }}>找不到符合條件的歌曲</p>
+                  </div>
+                ) : (
+                  <div
+                    ref={mobileSearchListRef}
+                    style={{
+                      height: `${mobileSearchVirtualizer.getTotalSize()}px`,
+                      width: '100%',
+                      position: 'relative',
+                    }}
+                  >
+                    {mobileSearchVirtualizer.getVirtualItems().map(virtualItem => {
+                      const song = flattenedSongs[virtualItem.index];
+                      return (
+                        <div
+                          key={`search-${song.id}-${song.performanceId}`}
+                          data-index={virtualItem.index}
+                          ref={mobileSearchVirtualizer.measureElement}
+                          className="hover:z-10 focus-within:z-10"
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            transform: `translateY(${virtualItem.start - (mobileSearchVirtualizer.options.scrollMargin ?? 0)}px)`,
+                          }}
+                        >
+                          <MobileSearchRow
+                            song={song}
+                            isCurrentlyPlaying={currentTrackId === song.performanceId}
+                            isUnavailable={unavailableVideoIds.has(song.videoId)}
+                            onPlay={playTrack}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

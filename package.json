@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@tanstack/react-virtual": "^3.13.19",
     "lucide-react": "^0.564.0",
     "next": "^16.1.6",
     "react": "^19.2.4",

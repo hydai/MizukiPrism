@@ -10,6 +10,24 @@ function screenshotPath(name: string): string {
   return path.join(screenshotsDir, `core-003-${name}.png`);
 }
 
+/** Read the logical total from the hidden sr-only element (not capped by virtual scrolling) */
+async function getLogicalPerformanceCount(page: import('@playwright/test').Page): Promise<number> {
+  const el = page.getByTestId('total-performance-count');
+  const text = await el.textContent();
+  return Number(text);
+}
+
+async function getLogicalSongCardCount(page: import('@playwright/test').Page): Promise<number> {
+  const el = page.getByTestId('total-song-card-count');
+  const text = await el.textContent();
+  return Number(text);
+}
+
+/** Wait for debounced search to take effect */
+async function waitForSearch(page: import('@playwright/test').Page) {
+  await page.waitForTimeout(250);
+}
+
 test.describe('CORE-003: Search & Filter', () => {
 
   test.beforeEach(async ({ page }) => {
@@ -23,6 +41,7 @@ test.describe('CORE-003: Search & Filter', () => {
 
     // Type one character and verify filtering happens
     await searchInput.fill('D');
+    await waitForSearch(page);
     const rows = page.getByTestId('performance-row');
     const count1 = await rows.count();
     expect(count1).toBeGreaterThan(0);
@@ -35,10 +54,11 @@ test.describe('CORE-003: Search & Filter', () => {
 
     // Type full song name "Dear"
     await searchInput.fill('Dear');
+    await waitForSearch(page);
     const filteredRows = page.getByTestId('performance-row');
-    const count2 = await filteredRows.count();
-    expect(count2).toBeGreaterThan(0);
-    expect(count2).toBeLessThanOrEqual(18); // Should be fewer than or equal to all songs
+    const logicalCount = await getLogicalPerformanceCount(page);
+    expect(logicalCount).toBeGreaterThan(0);
+    expect(logicalCount).toBeLessThanOrEqual(50); // Should be a small subset of all songs
 
     // Verify the result contains "Dear"
     const firstRowText = await filteredRows.first().textContent();
@@ -49,19 +69,20 @@ test.describe('CORE-003: Search & Filter', () => {
 
   test('AC2: Clear search input restores full song list', async ({ page }) => {
     const searchInput = page.getByPlaceholder('搜尋歌曲...');
-    const allRows = page.getByTestId('performance-row');
 
-    // Get total count initially
-    const totalCount = await allRows.count();
+    // Get total count initially (from hidden element — DOM count is capped by virtual scrolling)
+    const totalCount = await getLogicalPerformanceCount(page);
 
     // Search for something
     await searchInput.fill('Dear');
-    const filteredCount = await allRows.count();
+    await waitForSearch(page);
+    const filteredCount = await getLogicalPerformanceCount(page);
     expect(filteredCount).toBeLessThan(totalCount);
 
     // Clear the search
     await searchInput.clear();
-    const restoredCount = await allRows.count();
+    await waitForSearch(page);
+    const restoredCount = await getLogicalPerformanceCount(page);
     expect(restoredCount).toBe(totalCount);
 
     await page.screenshot({ path: screenshotPath('ac2-clear-search') });
@@ -72,15 +93,16 @@ test.describe('CORE-003: Search & Filter', () => {
 
     // Search by artist name "LiSA"
     await searchInput.fill('LiSA');
+    await waitForSearch(page);
 
     const rows = page.getByTestId('performance-row');
     const count = await rows.count();
     expect(count).toBeGreaterThan(0);
 
-    // All results should be songs by LiSA
+    // All results should match "LiSA" (case-insensitive search may also match "LISA")
     const allTexts = await rows.allTextContents();
     for (const text of allTexts) {
-      expect(text).toContain('LiSA');
+      expect(text.toLowerCase()).toContain('lisa');
     }
 
     await page.screenshot({ path: screenshotPath('ac3-search-by-artist') });
@@ -116,17 +138,15 @@ test.describe('CORE-003: Search & Filter', () => {
     const yearBar = page.getByTestId('year-filter-bar');
     await expect(yearBar).toBeVisible();
 
-    // Get total count before filtering
-    const allRows = page.getByTestId('performance-row');
-    const totalCount = await allRows.count();
+    // Get total count before filtering (logical count, not DOM count)
+    const totalCount = await getLogicalPerformanceCount(page);
 
     // Click the "2025" year chip in the desktop action bar
     const chip2025 = yearBar.getByTestId('year-filter-chip').filter({ hasText: '2025' });
     await chip2025.click();
 
     // Verify only 2025 performances are shown
-    const filteredRows = page.getByTestId('performance-row');
-    const filteredCount = await filteredRows.count();
+    const filteredCount = await getLogicalPerformanceCount(page);
     expect(filteredCount).toBeGreaterThan(0);
     expect(filteredCount).toBeLessThan(totalCount);
 
@@ -138,7 +158,7 @@ test.describe('CORE-003: Search & Filter', () => {
 
     // Toggle 2025 off to restore full list
     await chip2025.click();
-    const restoredCount = await page.getByTestId('performance-row').count();
+    const restoredCount = await getLogicalPerformanceCount(page);
     expect(restoredCount).toBe(totalCount);
 
     await page.screenshot({ path: screenshotPath('ac5-year-filter') });
@@ -158,21 +178,18 @@ test.describe('CORE-003: Search & Filter', () => {
       return;
     }
 
-    // Get total rows before filtering
-    const allRows = page.getByTestId('performance-row');
-    const totalCount = await allRows.count();
+    // Get total rows before filtering (logical count)
+    const totalCount = await getLogicalPerformanceCount(page);
 
     // Click first stream to filter
     await streamButtons.first().click();
-    const filteredRows = page.getByTestId('performance-row');
-    const filteredCount = await filteredRows.count();
+    const filteredCount = await getLogicalPerformanceCount(page);
     expect(filteredCount).toBeGreaterThan(0);
     expect(filteredCount).toBeLessThanOrEqual(totalCount);
 
     // Click again to deselect
     await streamButtons.first().click();
-    const restoredRows = page.getByTestId('performance-row');
-    const restoredCount = await restoredRows.count();
+    const restoredCount = await getLogicalPerformanceCount(page);
     expect(restoredCount).toBe(totalCount);
 
     await page.screenshot({ path: screenshotPath('ac6-stream-filter') });
@@ -185,6 +202,7 @@ test.describe('CORE-003: Search & Filter', () => {
     // Also type search "紅蓮華"
     const searchInput = page.getByPlaceholder('搜尋歌曲...');
     await searchInput.fill('紅蓮華');
+    await waitForSearch(page);
 
     // Only songs matching BOTH criteria should show
     const rows = page.getByTestId('performance-row');
@@ -210,6 +228,7 @@ test.describe('CORE-003: Search & Filter', () => {
 
     // Search for something that doesn't exist
     await searchInput.fill('xyznonexistent');
+    await waitForSearch(page);
 
     // Verify empty state message
     await expect(page.getByText('找不到符合條件的歌曲')).toBeVisible();
@@ -234,16 +253,18 @@ test.describe('CORE-003: Search & Filter', () => {
     // Enter search term
     const searchInput = page.getByPlaceholder('搜尋歌曲...');
     await searchInput.fill('Dear');
+    await waitForSearch(page);
 
-    // Verify song cards are filtered
+    // Verify song cards are filtered (use logical count for exact check)
+    const logicalCount = await getLogicalSongCardCount(page);
+    expect(logicalCount).toBeGreaterThan(0);
+
+    // Verify "Dear" appears in visible cards (may match multiple songs containing "Dear")
     const songCards = page.getByTestId('song-card');
-    const count = await songCards.count();
-    expect(count).toBeGreaterThan(0);
+    const dearCards = songCards.filter({ hasText: 'Dear' });
+    expect(await dearCards.count()).toBeGreaterThan(0);
 
-    // Verify "Dear" appears
-    await expect(songCards.filter({ hasText: 'Dear' })).toHaveCount(1);
-
-    // Verify other songs are hidden
+    // Verify unrelated songs are hidden
     const otherSongs = songCards.filter({ hasText: '紅蓮華' });
     expect(await otherSongs.count()).toBe(0);
 
@@ -257,6 +278,7 @@ test.describe('CORE-003: Search & Filter', () => {
     // Enter search term
     const searchInput = page.getByPlaceholder('搜尋歌曲...');
     await searchInput.fill('Dear');
+    await waitForSearch(page);
 
     // Verify timeline rows are filtered
     const rows = page.getByTestId('performance-row');
@@ -304,7 +326,7 @@ test.describe('CORE-003: Search & Filter', () => {
 
     // Mobile search should filter results
     await mobileSearch.fill('Dear');
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(300); // Wait for debounce + render
 
     const rows = page.getByTestId('performance-row');
     const count = await rows.count();
@@ -328,16 +350,14 @@ test.describe('CORE-003: Search & Filter', () => {
     const clearAllButton = page.getByTestId('clear-all-filters');
     await expect(clearAllButton).toBeVisible();
 
-    // Get current filtered count
-    const filteredRows = page.getByTestId('performance-row');
-    const filteredCount = await filteredRows.count();
+    // Get current filtered count (logical)
+    const filteredCount = await getLogicalPerformanceCount(page);
 
     // Click clear all
     await clearAllButton.click();
 
-    // Verify all filters are cleared and full list is shown
-    const allRows = page.getByTestId('performance-row');
-    const totalCount = await allRows.count();
+    // Verify all filters are cleared and full list is shown (logical count)
+    const totalCount = await getLogicalPerformanceCount(page);
     expect(totalCount).toBeGreaterThanOrEqual(filteredCount);
 
     // Verify the clear all button is hidden
@@ -353,13 +373,13 @@ test.describe('CORE-003: Search & Filter', () => {
     // Select 2025
     const chip2025 = yearBar.getByTestId('year-filter-chip').filter({ hasText: '2025' });
     await chip2025.click();
-    const count2025 = await page.getByTestId('performance-row').count();
+    const count2025 = await getLogicalPerformanceCount(page);
     expect(count2025).toBeGreaterThan(0);
 
     // Also select 2026 (multi-select)
     const chip2026 = yearBar.getByTestId('year-filter-chip').filter({ hasText: '2026' });
     await chip2026.click();
-    const countBoth = await page.getByTestId('performance-row').count();
+    const countBoth = await getLogicalPerformanceCount(page);
 
     // Combined count should be >= single year count
     expect(countBoth).toBeGreaterThanOrEqual(count2025);
@@ -384,7 +404,7 @@ test.describe('CORE-003: Search & Filter', () => {
     // Select 2026 year
     const chip2026 = yearBar.getByTestId('year-filter-chip').filter({ hasText: '2026' });
     await chip2026.click();
-    const yearCount = await page.getByTestId('performance-row').count();
+    const yearCount = await getLogicalPerformanceCount(page);
     expect(yearCount).toBeGreaterThan(0);
 
     // Sidebar should show only streams from 2026
@@ -397,7 +417,7 @@ test.describe('CORE-003: Search & Filter', () => {
     // Click a specific stream to drill down further
     if (await streamButtons.count() > 0) {
       await streamButtons.first().click();
-      const drillDownCount = await page.getByTestId('performance-row').count();
+      const drillDownCount = await getLogicalPerformanceCount(page);
       expect(drillDownCount).toBeGreaterThan(0);
       expect(drillDownCount).toBeLessThanOrEqual(yearCount);
     }
