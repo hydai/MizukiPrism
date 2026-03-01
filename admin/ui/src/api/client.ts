@@ -18,6 +18,12 @@ import type {
   PasteImportBody,
   PasteImportResponse,
   StreamDetail,
+  DiscoverStreamsResponse,
+  ImportStreamsBody,
+  ImportStreamsResponse,
+  ExtractResponse,
+  ExtractImportBody,
+  ExtractImportResponse,
 } from '../../../shared/types';
 
 class ApiError extends Error {
@@ -164,6 +170,30 @@ export const api = {
     request<{ ok: boolean }>(`/api/performances/${id}/note`, {
       method: 'PATCH',
       body: JSON.stringify({ note }),
+    }),
+
+  // Pipeline
+  discoverStreams: () =>
+    request<DiscoverStreamsResponse>('/api/pipeline/discover', {
+      method: 'POST',
+    }),
+
+  importStreams: (body: ImportStreamsBody) =>
+    request<ImportStreamsResponse>('/api/pipeline/import-streams', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  extractTimestamps: (streamId: string) =>
+    request<ExtractResponse>('/api/pipeline/extract', {
+      method: 'POST',
+      body: JSON.stringify({ streamId }),
+    }),
+
+  extractImport: (body: ExtractImportBody) =>
+    request<ExtractImportResponse>('/api/pipeline/extract-import', {
+      method: 'POST',
+      body: JSON.stringify(body),
     }),
 };
 

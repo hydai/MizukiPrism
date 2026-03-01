@@ -9,6 +9,7 @@ const navItems = [
   { to: '/submit/song', label: 'Submit Song' },
   { to: '/submit/stream', label: 'Submit Stream' },
   { to: '/stamp', label: 'Stamp Editor' },
+  { to: '/pipeline', label: 'Pipeline' },
 ];
 
 export default function Layout({ user, children }: { user: AuthUser; children: ReactNode }) {

@@ -11,6 +11,7 @@ import SubmitSong from './pages/SubmitSong';
 import SubmitStream from './pages/SubmitStream';
 import StampEditor from './pages/StampEditor';
 import StreamDetailPage from './pages/StreamDetail';
+import Pipeline from './pages/Pipeline';
 
 export default function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="/submit/song" element={<SubmitSong />} />
         <Route path="/submit/stream" element={<SubmitStream />} />
         <Route path="/stamp" element={<StampEditor user={user} />} />
+        <Route path="/pipeline" element={<Pipeline user={user} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
