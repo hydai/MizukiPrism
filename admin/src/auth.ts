@@ -4,6 +4,7 @@ import type { AuthUser, Role } from '../shared/types';
 type Bindings = {
   DB: D1Database;
   CURATOR_EMAILS: string;
+  DEV_AUTH_EMAIL?: string;
 };
 
 type Env = { Bindings: Bindings; Variables: { user: AuthUser } };
@@ -14,7 +15,9 @@ function resolveRole(email: string, curatorEmails: string): Role {
 }
 
 export async function requireAuth(c: Context<Env>, next: Next) {
-  const email = c.req.header('CF-Access-Authenticated-User-Email');
+  // In local dev, Miniflare strips CF-Access-* headers.
+  // Use DEV_AUTH_EMAIL env var as fallback (never set in production).
+  const email = c.req.header('CF-Access-Authenticated-User-Email') || c.env.DEV_AUTH_EMAIL;
   if (!email) {
     return c.json({ error: 'Unauthorized: missing CF Access header' }, 401);
   }

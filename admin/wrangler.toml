@@ -4,9 +4,9 @@ compatibility_date = "2024-12-01"
 
 [vars]
 # Comma-separated list of curator emails
-CURATOR_EMAILS = "hydai@example.com"
+CURATOR_EMAILS = "z54981220@gmail.com"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "mizukiprism-staging"
-database_id = "placeholder-update-after-d1-create"
+database_id = "02f829c1-b66a-44e3-b475-2a10720b7edb"
