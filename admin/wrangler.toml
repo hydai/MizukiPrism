@@ -5,6 +5,8 @@ compatibility_date = "2024-12-01"
 # Serve the admin UI as static assets from the Worker
 [assets]
 directory = "./ui/dist"
+not_found_handling = "single-page-application"
+binding = "ASSETS"
 
 [vars]
 # Comma-separated list of curator emails
