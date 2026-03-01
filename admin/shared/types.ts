@@ -244,3 +244,62 @@ export interface DashboardStats {
   performances: StatusCounts;
   recentSubmissions: (Song | Stream)[];
 }
+
+// --- Pipeline types (YouTube fetch & extract) ---
+
+export interface DiscoveredStream {
+  videoId: string;
+  title: string;
+  date: string;
+  isNew: boolean;
+  existingStreamId?: string;
+  existingStatus?: Status;
+}
+
+export interface DiscoverStreamsResponse {
+  streams: DiscoveredStream[];
+  total: number;
+}
+
+export interface ImportStreamsBody {
+  videoIds: string[];
+}
+
+export interface ImportStreamsResponse {
+  created: number;
+  streamIds: string[];
+}
+
+export interface CandidateComment {
+  commentId: string;
+  text: string;
+  author: string;
+  likes: number;
+  timestampCount: number;
+  isPinned: boolean;
+}
+
+export interface ExtractResponse {
+  source: 'comment' | 'description' | null;
+  candidateComment: CandidateComment | null;
+  allCandidates: CandidateComment[];
+  parsedSongs: PasteImportParsedSong[];
+  credit: StreamCredit | null;
+}
+
+export interface ExtractImportBody {
+  streamId: string;
+  songs: Array<{
+    songName: string;
+    artist: string;
+    startSeconds: number;
+    endSeconds: number | null;
+  }>;
+  credit?: StreamCredit;
+  replace?: boolean;
+}
+
+export interface ExtractImportResponse {
+  ok: boolean;
+  created: number;
+}

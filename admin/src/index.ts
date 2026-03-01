@@ -55,6 +55,8 @@ import type {
 type Bindings = {
   DB: D1Database;
   CURATOR_EMAILS: string;
+  CHANNEL_ID: string;
+  YOUTUBE_API_KEY: string;
 };
 
 type Variables = {
