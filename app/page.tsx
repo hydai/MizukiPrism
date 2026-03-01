@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff, House } from 'lucide-react';
+import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff, House, Radio } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
@@ -70,7 +70,7 @@ export default function Home() {
   const [showLikedSongsPanel, setShowLikedSongsPanel] = useState(false);
   const [showRecentlyPlayedPanel, setShowRecentlyPlayedPanel] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [mobileTab, setMobileTab] = useState<'home' | 'search' | 'library'>('home');
+  const [mobileTab, setMobileTab] = useState<'home' | 'search' | 'library' | 'streams'>('home');
   const [songs, setSongs] = useState<Song[]>([]);
   const [loadError, setLoadError] = useState(false);
   // Map from songId to albumArtUrl — populated from /api/metadata
@@ -1661,6 +1661,91 @@ export default function Home() {
             </div>
           )}
 
+          {/* Mobile Streams Tab content — only visible on mobile when Streams tab is active */}
+          {mobileTab === 'streams' && (
+            <div
+              className="lg:hidden flex-1 px-4 pt-4 pb-32"
+              data-testid="mobile-streams-tab"
+            >
+              <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>歌枠回放</h2>
+
+              {/* Year filter chips */}
+              <div className="flex gap-1.5 mb-4 overflow-x-auto" data-testid="mobile-streams-year-filter">
+                {availableYears.map(year => (
+                  <button
+                    key={year}
+                    data-testid="mobile-streams-year-chip"
+                    onClick={() => toggleYear(year)}
+                    className="font-medium text-sm transition-all flex-shrink-0"
+                    style={{
+                      borderRadius: 'var(--radius-pill)',
+                      padding: '4px 12px',
+                      ...(selectedYears.has(year)
+                        ? { background: 'var(--bg-accent-pink)', color: 'var(--accent-pink)' }
+                        : { background: 'var(--bg-surface-glass)', border: '1px solid var(--border-glass)', color: 'var(--text-secondary)' }),
+                    }}
+                  >
+                    {year}
+                  </button>
+                ))}
+                {selectedYears.size > 0 && (
+                  <button
+                    onClick={clearYears}
+                    className="font-medium text-xs transition-all flex-shrink-0"
+                    style={{
+                      borderRadius: 'var(--radius-pill)',
+                      padding: '4px 10px',
+                      color: 'var(--text-tertiary)',
+                    }}
+                  >
+                    清除
+                  </button>
+                )}
+              </div>
+
+              {/* All songs button */}
+              <button
+                onClick={() => { setSelectedStreamId(null); setMobileTab('home'); }}
+                className="w-full text-left px-4 py-3 rounded-radius-lg text-sm font-medium transition-all mb-2"
+                style={{
+                  background: 'var(--bg-surface-glass)',
+                  border: '1px solid var(--border-glass)',
+                  color: 'var(--text-secondary)',
+                  borderRadius: 'var(--radius-lg)',
+                }}
+                data-testid="mobile-streams-all-songs"
+              >
+                全部歌曲
+              </button>
+
+              {/* Stream list */}
+              {filteredStreams.length === 0 ? (
+                <div className="py-16 text-center" style={{ color: 'var(--text-tertiary)' }}>
+                  <p className="text-base" style={{ color: 'var(--text-secondary)' }}>沒有符合條件的歌枠</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {filteredStreams.map(stream => (
+                    <button
+                      key={stream.id}
+                      data-testid="mobile-stream-card"
+                      onClick={() => { setSelectedStreamId(stream.id); setMobileTab('home'); }}
+                      className="w-full text-left px-4 py-3 rounded-radius-lg transition-all"
+                      style={{
+                        background: 'var(--bg-surface-glass)',
+                        border: '1px solid var(--border-glass)',
+                        borderRadius: 'var(--radius-lg)',
+                      }}
+                    >
+                      <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{stream.title}</div>
+                      <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{stream.date}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </main>
       </div>
@@ -1724,6 +1809,31 @@ export default function Home() {
             }}
           >
             Search
+          </span>
+        </button>
+
+        {/* Streams */}
+        <button
+          data-testid="bottom-nav-streams"
+          onClick={() => setMobileTab('streams')}
+          className="flex flex-col items-center justify-start"
+          style={{ gap: '4px', flex: 1 }}
+        >
+          <Radio
+            style={{
+              width: '22px',
+              height: '22px',
+              color: mobileTab === 'streams' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
+            }}
+          />
+          <span
+            style={{
+              fontSize: '10px',
+              fontWeight: mobileTab === 'streams' ? 700 : 500,
+              color: mobileTab === 'streams' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
+            }}
+          >
+            歌枠
           </span>
         </button>
 
