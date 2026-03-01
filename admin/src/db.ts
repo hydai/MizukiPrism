@@ -299,6 +299,17 @@ export async function streamIdExists(
   return row !== null;
 }
 
+export async function videoIdExists(
+  db: D1Database,
+  videoId: string,
+): Promise<boolean> {
+  const row = await db
+    .prepare('SELECT 1 FROM streams WHERE video_id = ?')
+    .bind(videoId)
+    .first();
+  return row !== null;
+}
+
 export async function updateStreamStatus(
   db: D1Database,
   id: string,

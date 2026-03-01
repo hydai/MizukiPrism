@@ -19,6 +19,7 @@ import {
   generateStreamId,
   generateStreamIdFallback,
   streamIdExists,
+  videoIdExists,
   getDashboardStats,
   exportSongs,
   exportStreams,
@@ -574,30 +575,39 @@ app.post('/api/pipeline/import-streams', requireCurator, async (c) => {
   const user = c.get('user');
   const streamIds: string[] = [];
 
-  for (const v of videos) {
-    let id = generateStreamId(v.date);
-    if (await streamIdExists(c.env.DB, id)) {
-      id = generateStreamIdFallback();
+  try {
+    for (const v of videos) {
+      if (await videoIdExists(c.env.DB, v.videoId)) {
+        continue; // already imported, skip
+      }
+
+      let id = generateStreamId(v.date);
+      if (await streamIdExists(c.env.DB, id)) {
+        id = generateStreamIdFallback();
+      }
+
+      await insertStream(
+        c.env.DB,
+        id,
+        v.title,
+        v.date,
+        v.videoId,
+        `https://www.youtube.com/watch?v=${v.videoId}`,
+        '{}',
+        user.email,
+      );
+
+      // Set status to 'extracted' (ready for timestamp extraction)
+      await updateStreamStatus(c.env.DB, id, 'extracted', user.email);
+
+      streamIds.push(id);
     }
-
-    await insertStream(
-      c.env.DB,
-      id,
-      v.title,
-      v.date,
-      v.videoId,
-      `https://www.youtube.com/watch?v=${v.videoId}`,
-      '{}',
-      user.email,
-    );
-
-    // Set status to 'extracted' (ready for timestamp extraction)
-    await updateStreamStatus(c.env.DB, id, 'extracted', user.email);
-
-    streamIds.push(id);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Database error';
+    return c.json({ error: `Failed to import streams: ${msg}` }, 500);
   }
 
-  return c.json<ImportStreamsResponse>({ created: videos.length, streamIds });
+  return c.json<ImportStreamsResponse>({ created: streamIds.length, streamIds });
 });
 
 // --- Pipeline: Extract timestamps from YouTube comments/description ---
