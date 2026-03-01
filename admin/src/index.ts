@@ -597,9 +597,6 @@ app.post('/api/pipeline/import-streams', requireCurator, async (c) => {
         user.email,
       );
 
-      // Set status to 'extracted' (ready for timestamp extraction)
-      await updateStreamStatus(c.env.DB, id, 'extracted', user.email);
-
       streamIds.push(id);
     }
   } catch (err) {
