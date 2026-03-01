@@ -17,6 +17,7 @@ import type {
   UpdateSongDetailsBody,
   PasteImportBody,
   PasteImportResponse,
+  StreamDetail,
 } from '../../../shared/types';
 
 class ApiError extends Error {
@@ -152,6 +153,17 @@ export const api = {
     request<PasteImportResponse>(`/api/streams/${streamId}/paste-import`, {
       method: 'POST',
       body: JSON.stringify(body),
+    }),
+
+  // Stream detail
+  getStreamDetail: (streamId: string) =>
+    request<StreamDetail>(`/api/streams/${streamId}/detail`),
+
+  // Performance note
+  updatePerformanceNote: (id: string, note: string) =>
+    request<{ ok: boolean }>(`/api/performances/${id}/note`, {
+      method: 'PATCH',
+      body: JSON.stringify({ note }),
     }),
 };
 

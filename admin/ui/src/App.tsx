@@ -10,6 +10,7 @@ import StreamsList from './pages/StreamsList';
 import SubmitSong from './pages/SubmitSong';
 import SubmitStream from './pages/SubmitStream';
 import StampEditor from './pages/StampEditor';
+import StreamDetailPage from './pages/StreamDetail';
 
 export default function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="/songs" element={<SongsList user={user} />} />
         <Route path="/songs/:id" element={<SongDetail user={user} />} />
         <Route path="/streams" element={<StreamsList user={user} />} />
+        <Route path="/streams/:id" element={<StreamDetailPage user={user} />} />
         <Route path="/submit/song" element={<SubmitSong />} />
         <Route path="/submit/stream" element={<SubmitStream />} />
         <Route path="/stamp" element={<StampEditor user={user} />} />

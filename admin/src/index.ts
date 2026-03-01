@@ -32,6 +32,8 @@ import {
   clearAllEndTimestamps,
   getPerformanceWithSong,
   bulkCreatePerformances,
+  getStreamDetail,
+  updatePerformanceNote,
 } from './db';
 import { fetchItunesDuration } from './itunes';
 import { parseTextToSongs } from '../shared/parse';
@@ -370,6 +372,28 @@ app.get('/api/stamp/streams', async (c) => {
 app.get('/api/stamp/stats', async (c) => {
   const stats = await getStampStats(c.env.DB);
   return c.json(stats);
+});
+
+// --- Stream detail ---
+
+app.get('/api/streams/:streamId/detail', async (c) => {
+  const streamId = c.req.param('streamId');
+  const detail = await getStreamDetail(c.env.DB, streamId);
+  if (!detail) return c.json({ error: 'Stream not found' }, 404);
+  return c.json(detail);
+});
+
+// --- Performance note update ---
+
+app.patch('/api/performances/:id/note', async (c) => {
+  const id = c.req.param('id');
+  const body = await c.req.json<{ note: string }>();
+  if (body.note === undefined) {
+    return c.json({ error: 'note is required' }, 400);
+  }
+  const updated = await updatePerformanceNote(c.env.DB, id, body.note);
+  if (!updated) return c.json({ error: 'Performance not found' }, 404);
+  return c.json({ ok: true });
 });
 
 // --- Stamp: paste import ---

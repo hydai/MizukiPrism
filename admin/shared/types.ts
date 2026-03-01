@@ -198,6 +198,12 @@ export interface FetchDurationResponse {
   matchConfidence: string | null;
 }
 
+// --- Stream detail response ---
+
+export interface StreamDetail extends Stream {
+  performances: StampPerformance[];
+}
+
 // --- Paste import types ---
 
 export interface PasteImportBody {

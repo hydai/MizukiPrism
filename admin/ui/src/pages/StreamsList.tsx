@@ -169,7 +169,11 @@ export default function StreamsList({ user }: { user: AuthUser }) {
             <tbody className="divide-y divide-slate-100">
               {sorted.map((stream) => (
                 <tr key={stream.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-800">{stream.title}</td>
+                  <td className="px-4 py-3 font-medium">
+                    <Link to={`/streams/${stream.id}`} className="text-blue-600 hover:underline">
+                      {stream.title}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 text-slate-600">{stream.date}</td>
                   <td className="px-4 py-3">
                     <a

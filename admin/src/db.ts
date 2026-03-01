@@ -8,6 +8,7 @@ import type {
   StreamCredit,
   StampPerformance,
   StreamWithPending,
+  StreamDetail,
   StampStats,
   Status,
 } from '../shared/types';
@@ -458,6 +459,33 @@ export async function deletePerformanceAndOrphanSong(
   }
 
   return true;
+}
+
+// --- Stream detail (stream + performances in one call) ---
+
+export async function getStreamDetail(
+  db: D1Database,
+  streamId: string,
+): Promise<StreamDetail | null> {
+  const stream = await getStreamById(db, streamId);
+  if (!stream) return null;
+
+  const performances = await listPerformancesForStream(db, streamId);
+  return { ...stream, performances };
+}
+
+// --- Update performance note ---
+
+export async function updatePerformanceNote(
+  db: D1Database,
+  perfId: string,
+  note: string,
+): Promise<boolean> {
+  const result = await db
+    .prepare('UPDATE performances SET note = ? WHERE id = ?')
+    .bind(note, perfId)
+    .run();
+  return result.meta.changes > 0;
 }
 
 // --- Paste import: bulk create performances ---
