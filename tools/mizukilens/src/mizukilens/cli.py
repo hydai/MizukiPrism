@@ -2182,3 +2182,136 @@ def cache_fill_durations_cmd(dry_run: bool, stream_id: str | None) -> None:
             console.print("[dim]Dry run — no changes written.[/dim]")
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# db  (admin database integration)
+# ---------------------------------------------------------------------------
+
+@main.group("db")
+def db_group() -> None:
+    """Interact with the MizukiPrism admin staging database."""
+
+
+@db_group.command("export")
+@click.option("--output", "-o", type=click.Path(), default="data/",
+              help="Output directory for songs.json and streams.json.")
+@click.option("--dry-run", is_flag=True, default=False,
+              help="Preview export without writing files.")
+def db_export_cmd(output: str, dry_run: bool) -> None:
+    """Export approved songs and streams from the admin database.
+
+    \b
+    Fetches approved entries via the admin API and writes them as
+    songs.json and streams.json in fan-site format.
+
+    \b
+    Required environment variables:
+      ADMIN_API_URL    — base URL of the admin Workers API
+      ADMIN_API_TOKEN  — Bearer token for authentication
+    """
+    import json
+    import sys
+    from pathlib import Path
+    from rich.table import Table
+    from rich import box
+
+    from mizukilens.db_client import AdminApiClient, AdminApiError
+
+    try:
+        client = AdminApiClient()
+    except AdminApiError as exc:
+        console.print(f"[red]Error:[/red] {exc}")
+        sys.exit(1)
+
+    try:
+        console.print("[cyan]Fetching approved songs…[/cyan]")
+        songs = client.get_approved_songs()
+
+        console.print("[cyan]Fetching approved streams…[/cyan]")
+        streams = client.get_approved_streams()
+    except AdminApiError as exc:
+        console.print(f"[red]API Error:[/red] {exc}")
+        sys.exit(1)
+    finally:
+        client.close()
+
+    # Sort: songs by id, streams by date descending
+    songs.sort(key=lambda s: s.get("id", ""))
+    streams.sort(key=lambda s: s.get("date", ""), reverse=True)
+
+    # Summary table
+    tbl = Table(title="Export Summary", box=box.ROUNDED, show_header=True,
+                header_style="bold cyan")
+    tbl.add_column("Type", style="bold")
+    tbl.add_column("Count", justify="right")
+    tbl.add_row("Songs", str(len(songs)))
+    tbl.add_row("Streams", str(len(streams)))
+    console.print(tbl)
+
+    if dry_run:
+        console.print("\n[dim]Dry run — no files written.[/dim]")
+        return
+
+    # Write files
+    out_dir = Path(output)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    songs_path = out_dir / "songs.json"
+    streams_path = out_dir / "streams.json"
+
+    songs_text = json.dumps(songs, ensure_ascii=False, indent=2) + "\n"
+    streams_text = json.dumps(streams, ensure_ascii=False, indent=2) + "\n"
+
+    songs_path.write_text(songs_text, encoding="utf-8")
+    streams_path.write_text(streams_text, encoding="utf-8")
+
+    console.print(f"\n[green]✓[/green] Wrote {len(songs)} songs to {songs_path}")
+    console.print(f"[green]✓[/green] Wrote {len(streams)} streams to {streams_path}")
+
+
+@db_group.command("status")
+def db_status_cmd() -> None:
+    """Show database entry counts by status.
+
+    \b
+    Required environment variables:
+      ADMIN_API_URL    — base URL of the admin Workers API
+      ADMIN_API_TOKEN  — Bearer token for authentication
+    """
+    import sys
+    from rich.table import Table
+    from rich import box
+
+    from mizukilens.db_client import AdminApiClient, AdminApiError
+
+    try:
+        client = AdminApiClient()
+    except AdminApiError as exc:
+        console.print(f"[red]Error:[/red] {exc}")
+        sys.exit(1)
+
+    try:
+        stats = client.get_stats()
+    except AdminApiError as exc:
+        console.print(f"[red]API Error:[/red] {exc}")
+        sys.exit(1)
+    finally:
+        client.close()
+
+    # Display stats as a table
+    tbl = Table(title="Database Status", box=box.ROUNDED, show_header=True,
+                header_style="bold cyan")
+    tbl.add_column("Category", style="bold")
+    tbl.add_column("Status")
+    tbl.add_column("Count", justify="right")
+
+    for category in ("songs", "streams"):
+        cat_stats = stats.get(category, {})
+        if isinstance(cat_stats, dict):
+            for status, count in cat_stats.items():
+                tbl.add_row(category, status, str(count))
+        else:
+            tbl.add_row(category, "total", str(cat_stats))
+
+    console.print(tbl)
