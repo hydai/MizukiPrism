@@ -15,6 +15,11 @@ binding = "ASSETS"
 # Comma-separated list of curator emails
 CURATOR_EMAILS = "z54981220@gmail.com"
 
+[observability]
+[observability.logs]
+enabled = true
+invocation_logs = true
+
 [[d1_databases]]
 binding = "DB"
 database_name = "mizukiprism-staging"
