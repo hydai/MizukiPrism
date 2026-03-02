@@ -306,7 +306,7 @@ export default function AuroraPage() {
             <div className="w-full max-w-lg">
               <div className="flex gap-2">
                 <input
-                  className="flex-1 rounded-xl border border-[var(--border-default)] bg-white/60 px-4 py-3 text-[14px] outline-none focus:border-[var(--accent-purple)] placeholder:text-[var(--text-tertiary)]"
+                  className="flex-1 rounded-xl border border-[var(--border-default)] bg-white/60 px-4 py-3 text-base outline-none focus:border-[var(--accent-purple)] placeholder:text-[var(--text-tertiary)]"
                   placeholder="貼上 YouTube 歌枠網址..."
                   value={vodUrl}
                   onChange={(e) => { setVodUrl(e.target.value); setUrlError(''); }}

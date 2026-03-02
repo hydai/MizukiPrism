@@ -56,7 +56,7 @@ export default function ExportModal({ open, onClose, songs, vodUrl }: Props) {
         <div className="px-5 py-4">
           <textarea
             readOnly
-            className="w-full h-64 rounded-lg border border-[var(--border-default)] bg-white/60 px-3 py-2 text-[13px] font-mono outline-none resize-none"
+            className="w-full h-64 rounded-lg border border-[var(--border-default)] bg-white/60 px-3 py-2 text-base font-mono outline-none resize-none"
             value={output}
             data-testid="export-textarea"
           />

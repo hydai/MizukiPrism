@@ -45,7 +45,7 @@ function InlineCell({ value, onCommit, className = '', onClick, placeholder }: I
     return (
       <input
         ref={inputRef}
-        className={`bg-white/80 border border-[var(--border-default)] rounded px-1 py-0.5 text-[13px] w-full outline-none focus:border-[var(--accent-purple)] ${className}`}
+        className={`bg-white/80 border border-[var(--border-default)] rounded px-1 py-0.5 text-base w-full outline-none focus:border-[var(--accent-purple)] ${className}`}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={() => { onCommit(draft); setEditing(false); }}

@@ -80,7 +80,7 @@ export default function PasteImportModal({ open, onClose, onImport }: Props) {
 
           {/* Textarea */}
           <textarea
-            className="w-full h-40 rounded-lg border border-[var(--border-default)] bg-white/60 px-3 py-2 text-[13px] font-mono outline-none focus:border-[var(--accent-purple)] resize-none"
+            className="w-full h-40 rounded-lg border border-[var(--border-default)] bg-white/60 px-3 py-2 text-base font-mono outline-none focus:border-[var(--accent-purple)] resize-none"
             placeholder={'貼上時間戳文字...\n例如:\n0:00 歌名 / 原唱\n5:30 另一首歌 - 歌手'}
             value={text}
             onChange={(e) => setText(e.target.value)}
