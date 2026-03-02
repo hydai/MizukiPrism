@@ -202,6 +202,11 @@ export default function AuroraPage() {
           addSong();
           break;
         }
+        case ' ': {
+          // Toggle play/pause
+          playerRef.current?.togglePlay();
+          break;
+        }
         case 'ArrowLeft': {
           // Seek backward 5 seconds
           const cur = playerRef.current?.getCurrentTime() ?? 0;
@@ -270,6 +275,7 @@ export default function AuroraPage() {
                 ['N', '選取下一首歌'],
                 ['P', '選取上一首歌'],
                 ['A', '在當前播放時間新增歌曲'],
+                ['Space', '播放 / 暫停'],
                 ['←', '倒退 5 秒'],
                 ['→', '快進 5 秒'],
               ].map(([key, desc]) => (

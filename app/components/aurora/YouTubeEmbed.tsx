@@ -11,6 +11,7 @@ export interface YouTubeEmbedHandle {
   getCurrentTime: () => number;
   seekTo: (seconds: number) => void;
   loadVideo: (videoId: string) => void;
+  togglePlay: () => void;
 }
 
 interface Props {
@@ -121,6 +122,15 @@ export const YouTubeEmbed = forwardRef<YouTubeEmbedHandle, Props>(
           playerRef.current.loadVideoById(vid);
         } else {
           loadYouTubeAPI().then(() => initPlayer(vid));
+        }
+      },
+      togglePlay: () => {
+        if (!playerRef.current || !readyRef.current) return;
+        const state = playerRef.current.getPlayerState();
+        if (state === 1) {
+          playerRef.current.pauseVideo();
+        } else {
+          playerRef.current.playVideo();
         }
       },
     }));
