@@ -31,7 +31,7 @@ export default function AuroraStampControls({
 
   return (
     <div
-      className="flex items-center gap-2 flex-wrap"
+      className="grid grid-cols-2 sm:flex sm:items-center gap-2"
       style={{ touchAction: 'manipulation' }}
       data-testid="aurora-stamp-controls"
     >

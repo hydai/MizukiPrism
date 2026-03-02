@@ -409,7 +409,7 @@ export default function AuroraPage() {
                   data-testid="import-button"
                 >
                   <FileText size={14} />
-                  匯入
+                  <span className="hidden sm:inline">匯入</span>
                 </button>
                 <button
                   onClick={() => setShowExport(true)}
@@ -418,7 +418,7 @@ export default function AuroraPage() {
                   data-testid="export-button"
                 >
                   <Download size={14} />
-                  匯出
+                  <span className="hidden sm:inline">匯出</span>
                 </button>
                 <button
                   onClick={handleFillAllDurations}
@@ -427,7 +427,7 @@ export default function AuroraPage() {
                   data-testid="fill-all-durations-button"
                 >
                   <Clock size={14} className={fillingIndex !== null ? 'animate-spin' : ''} />
-                  {bulkFillStatus ?? '填入時長'}
+                  <span className="hidden sm:inline">{bulkFillStatus ?? '填入時長'}</span>
                 </button>
                 <div className="flex-1" />
                 {songs.length > 0 && (
@@ -436,7 +436,7 @@ export default function AuroraPage() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 text-[13px] font-medium"
                   >
                     <Trash2 size={14} />
-                    清除
+                    <span className="hidden sm:inline">清除</span>
                   </button>
                 )}
               </div>
