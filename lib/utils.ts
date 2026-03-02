@@ -20,3 +20,15 @@ export function secondsToTimestamp(seconds: number): string {
   const s = seconds % 60;
   return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
+
+export function extractVideoId(youtubeUrl: string): string | null {
+  // Match youtube.com/watch?v=VIDEO_ID
+  const watchMatch = youtubeUrl.match(/youtube\.com\/watch\?(?:.*&)?v=([a-zA-Z0-9_-]+)/);
+  if (watchMatch) return watchMatch[1];
+
+  // Match youtu.be/VIDEO_ID
+  const shortMatch = youtubeUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+  if (shortMatch) return shortMatch[1];
+
+  return null;
+}

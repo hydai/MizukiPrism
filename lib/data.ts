@@ -6,6 +6,7 @@ export {
   validateTimestamp,
   timestampToSeconds,
   secondsToTimestamp,
+  extractVideoId,
 } from './utils';
 
 const songsPath = path.join(process.cwd(), 'data', 'songs.json');
@@ -31,16 +32,4 @@ export function writeStreams(streams: Stream[]): void {
 
 export function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
-
-export function extractVideoId(youtubeUrl: string): string | null {
-  // Match youtube.com/watch?v=VIDEO_ID
-  const watchMatch = youtubeUrl.match(/youtube\.com\/watch\?(?:.*&)?v=([a-zA-Z0-9_-]+)/);
-  if (watchMatch) return watchMatch[1];
-
-  // Match youtu.be/VIDEO_ID
-  const shortMatch = youtubeUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
-  if (shortMatch) return shortMatch[1];
-
-  return null;
 }
