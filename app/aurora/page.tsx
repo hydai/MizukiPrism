@@ -146,6 +146,7 @@ export default function AuroraPage() {
   }, [updateSongs]);
 
   const handleClear = useCallback(() => {
+    if (!window.confirm('確定要清除所有歌曲嗎？此操作無法復原。')) return;
     updateSongs(() => []);
     setSelectedIndex(null);
   }, [updateSongs]);
