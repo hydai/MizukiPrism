@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { ArrowLeft, Plus, FileText, Download, Trash2, Sparkles, Keyboard } from 'lucide-react';
+import { ArrowLeft, Plus, FileText, Download, Trash2, Sparkles, Keyboard, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { extractVideoId, validateYoutubeUrl } from '@/lib/utils';
 import { YouTubeEmbed, type YouTubeEmbedHandle } from '../components/aurora/YouTubeEmbed';
@@ -11,6 +11,7 @@ import ExportModal from '../components/aurora/ExportModal';
 import AuroraPlayerControls from '../components/aurora/AuroraPlayerControls';
 import AuroraStampControls from '../components/aurora/AuroraStampControls';
 import type { ParsedSong } from '@/lib/parse';
+import { fetchItunesDuration } from '@/lib/itunes';
 
 // --- localStorage helpers ---
 
@@ -45,6 +46,8 @@ export default function AuroraPage() {
   const [showExport, setShowExport] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [fillingIndex, setFillingIndex] = useState<number | null>(null);
+  const [bulkFillStatus, setBulkFillStatus] = useState<string | null>(null);
   const playerRef = useRef<YouTubeEmbedHandle>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -200,6 +203,50 @@ export default function AuroraPage() {
     if (end !== null) playerRef.current?.seekTo(end);
   }, [selectedIndex, songs]);
 
+  // Fill duration from iTunes
+  const handleFillDuration = useCallback(async (index: number) => {
+    const song = songs[index];
+    if (!song || !song.name) return;
+    setFillingIndex(index);
+    try {
+      const { durationSec } = await fetchItunesDuration(song.artist, song.name);
+      if (durationSec !== null) {
+        handleUpdate(index, { endSeconds: song.startSeconds + durationSec });
+      }
+    } finally {
+      setFillingIndex(null);
+    }
+  }, [songs, handleUpdate]);
+
+  const handleFillAllDurations = useCallback(async () => {
+    const targets = songs
+      .map((s, i) => ({ song: s, index: i }))
+      .filter(({ song }) => song.endSeconds === null && song.name.trim() !== '');
+    if (targets.length === 0) return;
+
+    let filled = 0;
+    let noMatch = 0;
+    for (let ti = 0; ti < targets.length; ti++) {
+      const { song, index } = targets[ti]!;
+      setFillingIndex(index);
+      setBulkFillStatus(`填入中 ${ti + 1}/${targets.length}...`);
+      try {
+        const { durationSec } = await fetchItunesDuration(song.artist, song.name);
+        if (durationSec !== null) {
+          handleUpdate(index, { endSeconds: song.startSeconds + durationSec });
+          filled++;
+        } else {
+          noMatch++;
+        }
+      } catch {
+        noMatch++;
+      }
+    }
+    setFillingIndex(null);
+    setBulkFillStatus(`完成：${filled} 首填入，${noMatch} 首未找到`);
+    setTimeout(() => setBulkFillStatus(null), 5000);
+  }, [songs, handleUpdate]);
+
   // Keyboard shortcuts
   useEffect(() => {
     if (!videoId) return;
@@ -219,6 +266,7 @@ export default function AuroraPage() {
         case ' ': handleTogglePlay(); break;
         case 'ArrowLeft': handleSeekBackward(); break;
         case 'ArrowRight': handleSeekForward(); break;
+        case 'f': if (selectedIndex !== null && fillingIndex === null) handleFillDuration(selectedIndex); break;
         default: return;
       }
       e.preventDefault();
@@ -226,7 +274,7 @@ export default function AuroraPage() {
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [videoId, addSong, handleTogglePlay, handleSeekBackward, handleSeekForward, handleSelectPrev, handleSelectNext, handleSetStart, handleSetEnd, handleSeekToStart, handleSeekToEnd]);
+  }, [videoId, addSong, handleTogglePlay, handleSeekBackward, handleSeekForward, handleSelectPrev, handleSelectNext, handleSetStart, handleSetEnd, handleSeekToStart, handleSeekToEnd, handleFillDuration, selectedIndex, fillingIndex]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -274,6 +322,7 @@ export default function AuroraPage() {
                 ['N', '選取下一首歌'],
                 ['P', '選取上一首歌'],
                 ['A', '在當前播放時間新增歌曲'],
+                ['F', '從 iTunes 填入選取歌曲的時長'],
                 ['Space', '播放 / 暫停'],
                 ['←', '倒退 5 秒'],
                 ['→', '快進 5 秒'],
@@ -371,6 +420,15 @@ export default function AuroraPage() {
                   <Download size={14} />
                   匯出
                 </button>
+                <button
+                  onClick={handleFillAllDurations}
+                  disabled={fillingIndex !== null || !songs.some((s) => s.endSeconds === null && s.name.trim() !== '')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/60 border border-[var(--border-default)] text-[var(--text-secondary)] text-[13px] font-medium hover:bg-white/80 disabled:opacity-40"
+                  data-testid="fill-all-durations-button"
+                >
+                  <Clock size={14} className={fillingIndex !== null ? 'animate-spin' : ''} />
+                  {bulkFillStatus ?? '填入時長'}
+                </button>
                 <div className="flex-1" />
                 {songs.length > 0 && (
                   <button
@@ -406,6 +464,8 @@ export default function AuroraPage() {
                   onDelete={handleDelete}
                   onMove={handleMove}
                   onSeekTo={handleSeekTo}
+                  onFillDuration={handleFillDuration}
+                  fillingIndex={fillingIndex}
                 />
               </div>
 

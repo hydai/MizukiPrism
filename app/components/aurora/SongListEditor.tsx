@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Trash2, ChevronUp, ChevronDown, Clock } from 'lucide-react';
 
 export interface AuroraSong {
   id: string;
@@ -77,9 +77,11 @@ interface Props {
   onDelete: (index: number) => void;
   onMove: (index: number, direction: 'up' | 'down') => void;
   onSeekTo: (seconds: number) => void;
+  onFillDuration?: (index: number) => void;
+  fillingIndex?: number | null;
 }
 
-export default function SongListEditor({ songs, selectedIndex, onSelect, onUpdate, onDelete, onMove, onSeekTo }: Props) {
+export default function SongListEditor({ songs, selectedIndex, onSelect, onUpdate, onDelete, onMove, onSeekTo, onFillDuration, fillingIndex }: Props) {
   return (
     <div className="flex flex-col gap-1 overflow-y-auto custom-scrollbar" data-testid="song-list-editor">
       {songs.length === 0 && (
@@ -169,6 +171,17 @@ export default function SongListEditor({ songs, selectedIndex, onSelect, onUpdat
             >
               <ChevronDown size={14} />
             </button>
+            {onFillDuration && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onFillDuration(i); }}
+                disabled={song.endSeconds !== null || fillingIndex !== undefined && fillingIndex !== null}
+                className="p-1 rounded hover:bg-purple-100 text-purple-400 hover:text-purple-600 disabled:opacity-30"
+                title="從 iTunes 自動填入結束時間"
+                data-testid="fill-duration-button"
+              >
+                <Clock size={14} className={fillingIndex === i ? 'animate-spin' : ''} />
+              </button>
+            )}
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(i); }}
               className="p-1 rounded hover:bg-red-100 text-red-400 hover:text-red-600"

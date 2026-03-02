@@ -155,6 +155,45 @@ test.describe('Aurora: Community Timestamping Tool', () => {
     await expect(page.getByTestId('seek-to-end-button')).toBeDisabled();
   });
 
+  test('Fill duration button calls iTunes and sets end time', async ({ page }) => {
+    // Mock the iTunes API to return a 4-minute track
+    await page.route('https://itunes.apple.com/search*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          resultCount: 1,
+          results: [{ trackTimeMillis: 240000, trackName: '紅蓮華', artistName: 'LiSA' }],
+        }),
+      });
+    });
+
+    await page.goto(`${BASE_URL}/aurora`);
+    await page.getByTestId('vod-url-input').fill('https://youtu.be/dQw4w9WgXcQ');
+    await page.getByTestId('load-video-button').click();
+    await expect(page.getByTestId('aurora-workspace')).toBeVisible({ timeout: 10000 });
+
+    // Import a song with start time 0:00 and no end time
+    await page.getByTestId('import-button').click();
+    await page.getByTestId('paste-import-textarea').fill('0:00 紅蓮華 / LiSA');
+    await page.getByTestId('import-confirm-button').click();
+    await expect(page.getByTestId('song-row')).toHaveCount(1);
+
+    // The end time should show --:--:--
+    const songRow = page.getByTestId('song-row').first();
+    await expect(songRow).toContainText('--:--:--');
+
+    // Hover to reveal action buttons, then click fill duration
+    await songRow.hover();
+    const fillBtn = songRow.getByTestId('fill-duration-button');
+    await expect(fillBtn).toBeVisible();
+    await fillBtn.click();
+
+    // After iTunes mock responds, end time should be 0:04:00 (240 seconds from start 0)
+    await expect(songRow).toContainText('0:04:00', { timeout: 10000 });
+    await expect(songRow).not.toContainText('--:--:--');
+  });
+
   test('Stamp controls enabled after adding a song', async ({ page }) => {
     await page.goto(`${BASE_URL}/aurora`);
     await page.getByTestId('vod-url-input').fill('https://youtu.be/dQw4w9WgXcQ');
