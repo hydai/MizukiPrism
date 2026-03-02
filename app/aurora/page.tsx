@@ -8,6 +8,8 @@ import { YouTubeEmbed, type YouTubeEmbedHandle } from '../components/aurora/YouT
 import SongListEditor, { type AuroraSong } from '../components/aurora/SongListEditor';
 import PasteImportModal from '../components/aurora/PasteImportModal';
 import ExportModal from '../components/aurora/ExportModal';
+import AuroraPlayerControls from '../components/aurora/AuroraPlayerControls';
+import AuroraStampControls from '../components/aurora/AuroraStampControls';
 import type { ParsedSong } from '@/lib/parse';
 
 // --- localStorage helpers ---
@@ -42,6 +44,7 @@ export default function AuroraPage() {
   const [showImport, setShowImport] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const playerRef = useRef<YouTubeEmbedHandle>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -149,6 +152,54 @@ export default function AuroraPage() {
     playerRef.current?.seekTo(seconds);
   }, []);
 
+  // Shared action callbacks (used by both keyboard shortcuts and control buttons)
+  const handleTogglePlay = useCallback(() => {
+    playerRef.current?.togglePlay();
+  }, []);
+
+  const handleSeekBackward = useCallback(() => {
+    const cur = playerRef.current?.getCurrentTime() ?? 0;
+    playerRef.current?.seekTo(Math.max(0, cur - 5));
+  }, []);
+
+  const handleSeekForward = useCallback(() => {
+    const cur = playerRef.current?.getCurrentTime() ?? 0;
+    playerRef.current?.seekTo(cur + 5);
+  }, []);
+
+  const handleSelectPrev = useCallback(() => {
+    if (songs.length === 0) return;
+    setSelectedIndex((prev) => prev === null ? 0 : Math.max(prev - 1, 0));
+  }, [songs.length]);
+
+  const handleSelectNext = useCallback(() => {
+    if (songs.length === 0) return;
+    setSelectedIndex((prev) => prev === null ? 0 : Math.min(prev + 1, songs.length - 1));
+  }, [songs.length]);
+
+  const handleSetStart = useCallback(() => {
+    if (selectedIndex === null) return;
+    const time = Math.floor(playerRef.current?.getCurrentTime() ?? 0);
+    handleUpdate(selectedIndex, { startSeconds: time });
+  }, [selectedIndex, handleUpdate]);
+
+  const handleSetEnd = useCallback(() => {
+    if (selectedIndex === null) return;
+    const time = Math.floor(playerRef.current?.getCurrentTime() ?? 0);
+    handleUpdate(selectedIndex, { endSeconds: time });
+  }, [selectedIndex, handleUpdate]);
+
+  const handleSeekToStart = useCallback(() => {
+    if (selectedIndex === null || !songs[selectedIndex]) return;
+    playerRef.current?.seekTo(songs[selectedIndex].startSeconds);
+  }, [selectedIndex, songs]);
+
+  const handleSeekToEnd = useCallback(() => {
+    if (selectedIndex === null || !songs[selectedIndex]) return;
+    const end = songs[selectedIndex].endSeconds;
+    if (end !== null) playerRef.current?.seekTo(end);
+  }, [selectedIndex, songs]);
+
   // Keyboard shortcuts
   useEffect(() => {
     if (!videoId) return;
@@ -158,76 +209,24 @@ export default function AuroraPage() {
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
       switch (e.key) {
-        case 't': {
-          // Set start timestamp for selected song
-          if (selectedIndex === null) return;
-          const time = Math.floor(playerRef.current?.getCurrentTime() ?? 0);
-          handleUpdate(selectedIndex, { startSeconds: time });
-          break;
-        }
-        case 'm': {
-          // Set end timestamp for selected song
-          if (selectedIndex === null) return;
-          const time = Math.floor(playerRef.current?.getCurrentTime() ?? 0);
-          handleUpdate(selectedIndex, { endSeconds: time });
-          break;
-        }
-        case 's': {
-          // Seek to selected song's start
-          if (selectedIndex === null || !songs[selectedIndex]) return;
-          playerRef.current?.seekTo(songs[selectedIndex].startSeconds);
-          break;
-        }
-        case 'e': {
-          // Seek to selected song's end
-          if (selectedIndex === null || !songs[selectedIndex]) return;
-          const end = songs[selectedIndex].endSeconds;
-          if (end !== null) playerRef.current?.seekTo(end);
-          break;
-        }
-        case 'n': {
-          // Select next song
-          if (songs.length === 0) return;
-          setSelectedIndex((prev) => prev === null ? 0 : Math.min(prev + 1, songs.length - 1));
-          break;
-        }
-        case 'p': {
-          // Select previous song
-          if (songs.length === 0) return;
-          setSelectedIndex((prev) => prev === null ? 0 : Math.max(prev - 1, 0));
-          break;
-        }
-        case 'a': {
-          // Add new song at current time
-          addSong();
-          break;
-        }
-        case ' ': {
-          // Toggle play/pause
-          playerRef.current?.togglePlay();
-          break;
-        }
-        case 'ArrowLeft': {
-          // Seek backward 5 seconds
-          const cur = playerRef.current?.getCurrentTime() ?? 0;
-          playerRef.current?.seekTo(Math.max(0, cur - 5));
-          break;
-        }
-        case 'ArrowRight': {
-          // Seek forward 5 seconds
-          const cur = playerRef.current?.getCurrentTime() ?? 0;
-          playerRef.current?.seekTo(cur + 5);
-          break;
-        }
-        default:
-          return;
+        case 't': handleSetStart(); break;
+        case 'm': handleSetEnd(); break;
+        case 's': handleSeekToStart(); break;
+        case 'e': handleSeekToEnd(); break;
+        case 'n': handleSelectNext(); break;
+        case 'p': handleSelectPrev(); break;
+        case 'a': addSong(); break;
+        case ' ': handleTogglePlay(); break;
+        case 'ArrowLeft': handleSeekBackward(); break;
+        case 'ArrowRight': handleSeekForward(); break;
+        default: return;
       }
       e.preventDefault();
     };
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [videoId, selectedIndex, songs, handleUpdate, addSong]);
+  }, [videoId, addSong, handleTogglePlay, handleSeekBackward, handleSeekForward, handleSelectPrev, handleSelectNext, handleSetStart, handleSetEnd, handleSeekToStart, handleSeekToEnd]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -331,7 +330,13 @@ export default function AuroraPage() {
           <div className="flex flex-col lg:flex-row gap-6" data-testid="aurora-workspace">
             {/* Left: YouTube Player */}
             <div className="lg:w-1/2 flex flex-col gap-4">
-              <YouTubeEmbed ref={playerRef} videoId={videoId} />
+              <YouTubeEmbed ref={playerRef} videoId={videoId} onStateChange={setIsPlaying} />
+              <AuroraPlayerControls
+                isPlaying={isPlaying}
+                onTogglePlay={handleTogglePlay}
+                onSeekBackward={handleSeekBackward}
+                onSeekForward={handleSeekForward}
+              />
               <p className="text-[12px] text-[var(--text-tertiary)] font-mono truncate">
                 {vodUrl || `https://youtube.com/watch?v=${videoId}`}
               </p>
@@ -377,6 +382,19 @@ export default function AuroraPage() {
                   </button>
                 )}
               </div>
+
+              {/* Stamp controls */}
+              <AuroraStampControls
+                selectedIndex={selectedIndex}
+                songCount={songs.length}
+                selectedSong={selectedIndex !== null ? songs[selectedIndex] ?? null : null}
+                onSelectPrev={handleSelectPrev}
+                onSelectNext={handleSelectNext}
+                onSetStart={handleSetStart}
+                onSetEnd={handleSetEnd}
+                onSeekToStart={handleSeekToStart}
+                onSeekToEnd={handleSeekToEnd}
+              />
 
               {/* Song list */}
               <div

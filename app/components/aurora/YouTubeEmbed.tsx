@@ -17,6 +17,7 @@ export interface YouTubeEmbedHandle {
 interface Props {
   videoId?: string;
   onReady?: () => void;
+  onStateChange?: (isPlaying: boolean) => void;
 }
 
 let apiLoaded = false;
@@ -51,12 +52,14 @@ function loadYouTubeAPI(): Promise<void> {
 }
 
 export const YouTubeEmbed = forwardRef<YouTubeEmbedHandle, Props>(
-  function YouTubeEmbed({ videoId, onReady }, ref) {
+  function YouTubeEmbed({ videoId, onReady, onStateChange }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
     const playerRef = useRef<any>(null);
     const readyRef = useRef(false);
     const onReadyRef = useRef(onReady);
     onReadyRef.current = onReady;
+    const onStateChangeRef = useRef(onStateChange);
+    onStateChangeRef.current = onStateChange;
 
     const initPlayer = useCallback((vid: string) => {
       if (!containerRef.current) return;
@@ -80,6 +83,9 @@ export const YouTubeEmbed = forwardRef<YouTubeEmbedHandle, Props>(
           onReady: () => {
             readyRef.current = true;
             onReadyRef.current?.();
+          },
+          onStateChange: (event: any) => {
+            onStateChangeRef.current?.(event.data === 1);
           },
         },
       });
