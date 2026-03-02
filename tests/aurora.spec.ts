@@ -149,8 +149,6 @@ test.describe('Aurora: Community Timestamping Tool', () => {
     await expect(page.getByTestId('aurora-workspace')).toBeVisible({ timeout: 10000 });
 
     await expect(page.getByTestId('aurora-stamp-controls')).toBeVisible();
-    await expect(page.getByTestId('prev-song-button')).toBeDisabled();
-    await expect(page.getByTestId('next-song-button')).toBeDisabled();
     await expect(page.getByTestId('set-start-button')).toBeDisabled();
     await expect(page.getByTestId('set-end-button')).toBeDisabled();
     await expect(page.getByTestId('seek-to-start-button')).toBeDisabled();
@@ -173,36 +171,5 @@ test.describe('Aurora: Community Timestamping Tool', () => {
     await expect(page.getByTestId('seek-to-start-button')).toBeEnabled();
     // seek-to-end remains disabled because endSeconds is null
     await expect(page.getByTestId('seek-to-end-button')).toBeDisabled();
-    // prev/next disabled because there's only one song
-    await expect(page.getByTestId('prev-song-button')).toBeDisabled();
-    await expect(page.getByTestId('next-song-button')).toBeDisabled();
-  });
-
-  test('Next/prev song buttons change selection', async ({ page }) => {
-    await page.goto(`${BASE_URL}/aurora`);
-    await page.getByTestId('vod-url-input').fill('https://youtu.be/dQw4w9WgXcQ');
-    await page.getByTestId('load-video-button').click();
-    await expect(page.getByTestId('aurora-workspace')).toBeVisible({ timeout: 10000 });
-
-    // Import 3 songs
-    await page.getByTestId('import-button').click();
-    await page.getByTestId('paste-import-textarea').fill('0:00 歌A / ArtA\n5:00 歌B / ArtB\n10:00 歌C / ArtC');
-    await page.getByTestId('import-confirm-button').click();
-    await expect(page.getByTestId('song-row')).toHaveCount(3);
-
-    // First song should be selected (index 0) — status text shows #1
-    await expect(page.locator('text=已選取 #1')).toBeVisible();
-
-    // Click next
-    await page.getByTestId('next-song-button').click();
-    await expect(page.locator('text=已選取 #2')).toBeVisible();
-
-    // Click next again
-    await page.getByTestId('next-song-button').click();
-    await expect(page.locator('text=已選取 #3')).toBeVisible();
-
-    // Click prev
-    await page.getByTestId('prev-song-button').click();
-    await expect(page.locator('text=已選取 #2')).toBeVisible();
   });
 });

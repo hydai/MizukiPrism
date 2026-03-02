@@ -386,10 +386,7 @@ export default function AuroraPage() {
               {/* Stamp controls */}
               <AuroraStampControls
                 selectedIndex={selectedIndex}
-                songCount={songs.length}
                 selectedSong={selectedIndex !== null ? songs[selectedIndex] ?? null : null}
-                onSelectPrev={handleSelectPrev}
-                onSelectNext={handleSelectNext}
                 onSetStart={handleSetStart}
                 onSetEnd={handleSetEnd}
                 onSeekToStart={handleSeekToStart}

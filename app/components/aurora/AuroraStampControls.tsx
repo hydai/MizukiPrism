@@ -1,14 +1,11 @@
 'use client';
 
-import { ChevronUp, ChevronDown, Timer, TimerOff, SkipBack, SkipForward } from 'lucide-react';
+import { Timer, TimerOff, SkipBack, SkipForward } from 'lucide-react';
 import type { AuroraSong } from './SongListEditor';
 
 interface Props {
   selectedIndex: number | null;
-  songCount: number;
   selectedSong: AuroraSong | null;
-  onSelectPrev: () => void;
-  onSelectNext: () => void;
   onSetStart: () => void;
   onSetEnd: () => void;
   onSeekToStart: () => void;
@@ -23,10 +20,7 @@ const btnDisabled = 'opacity-40 cursor-not-allowed';
 
 export default function AuroraStampControls({
   selectedIndex,
-  songCount,
   selectedSong,
-  onSelectPrev,
-  onSelectNext,
   onSetStart,
   onSetEnd,
   onSeekToStart,
@@ -41,30 +35,6 @@ export default function AuroraStampControls({
       style={{ touchAction: 'manipulation' }}
       data-testid="aurora-stamp-controls"
     >
-      {/* Song navigation */}
-      <button
-        onClick={onSelectPrev}
-        disabled={noSong || selectedIndex === 0}
-        className={`${btnBase} ${btnSecondary} ${noSong || selectedIndex === 0 ? btnDisabled : ''}`}
-        title="選取上一首歌 (P)"
-        data-testid="prev-song-button"
-      >
-        <ChevronUp size={14} />
-        上一首
-      </button>
-      <button
-        onClick={onSelectNext}
-        disabled={noSong || selectedIndex === songCount - 1}
-        className={`${btnBase} ${btnSecondary} ${noSong || selectedIndex === songCount - 1 ? btnDisabled : ''}`}
-        title="選取下一首歌 (N)"
-        data-testid="next-song-button"
-      >
-        <ChevronDown size={14} />
-        下一首
-      </button>
-
-      <div className="w-px h-6 bg-[var(--border-default)] mx-1 hidden sm:block" />
-
       {/* Timestamp editing */}
       <button
         onClick={onSetStart}
