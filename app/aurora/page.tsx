@@ -202,6 +202,18 @@ export default function AuroraPage() {
           addSong();
           break;
         }
+        case 'ArrowLeft': {
+          // Seek backward 5 seconds
+          const cur = playerRef.current?.getCurrentTime() ?? 0;
+          playerRef.current?.seekTo(Math.max(0, cur - 5));
+          break;
+        }
+        case 'ArrowRight': {
+          // Seek forward 5 seconds
+          const cur = playerRef.current?.getCurrentTime() ?? 0;
+          playerRef.current?.seekTo(cur + 5);
+          break;
+        }
         default:
           return;
       }
@@ -258,6 +270,8 @@ export default function AuroraPage() {
                 ['N', '選取下一首歌'],
                 ['P', '選取上一首歌'],
                 ['A', '在當前播放時間新增歌曲'],
+                ['←', '倒退 5 秒'],
+                ['→', '快進 5 秒'],
               ].map(([key, desc]) => (
                 <div key={key} className="flex items-center gap-3">
                   <kbd className="w-7 text-center px-1.5 py-0.5 rounded bg-white/60 border border-[var(--border-default)] text-[12px] font-mono font-medium">{key}</kbd>
