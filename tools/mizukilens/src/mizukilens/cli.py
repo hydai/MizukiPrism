@@ -2573,3 +2573,194 @@ def ssl_normalize_cmd(ssl_dump: str, do_apply: bool, yes: bool) -> None:
         encoding="utf-8",
     )
     console.print(f"[bold green]Done![/bold green] Updated {count} songs in {songs_path}.")
+
+
+# ---------------------------------------------------------------------------
+# merge  (duplicate song consolidation)
+# ---------------------------------------------------------------------------
+
+@main.command("merge")
+@click.option("--apply", "do_apply", is_flag=True, help="Apply merge (default is dry-run).")
+@click.option("--yes", "-y", is_flag=True, help="Skip per-group confirmation.")
+def merge_cmd(do_apply: bool, yes: bool) -> None:
+    """Merge duplicate song entries in songs.json.
+
+    \b
+    Songs with the same title and artist (after normalization) are
+    consolidated into a single entry.  Performances are merged and
+    deduplicated; metadata references are remapped.
+
+    \b
+    Without --apply, shows a dry-run preview.  With --apply, backs up
+    songs.json and song-metadata.json before writing.
+
+    \b
+    Examples:
+      mizukilens merge                  # dry-run preview
+      mizukilens merge --apply          # apply with per-group confirmation
+      mizukilens merge --apply -y       # apply all without prompts
+    """
+    import json
+    import shutil
+    import sys
+
+    from rich import box
+    from rich.table import Table
+
+    from mizukilens.merge import (
+        apply_merge_plan,
+        compute_merge_plan,
+        update_metadata_for_merge,
+    )
+
+    # Locate MizukiPrism root
+    prism_root = _find_prism_root_from_cwd()
+    if prism_root is None:
+        console.print(
+            "[red]Error:[/red] Could not locate MizukiPrism project root "
+            "(expected data/songs.json). Run from inside the MizukiPrism directory."
+        )
+        sys.exit(1)
+
+    songs_path = prism_root / "data" / "songs.json"
+    metadata_path = prism_root / "data" / "metadata" / "song-metadata.json"
+
+    # Load songs
+    try:
+        songs: list[dict] = json.loads(songs_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        console.print(f"[red]Error reading songs.json:[/red] {exc}")
+        sys.exit(1)
+
+    console.print(f"[cyan]Loaded {len(songs)} songs from {songs_path}[/cyan]")
+
+    # Compute plan
+    plan = compute_merge_plan(songs)
+
+    if not plan.groups:
+        console.print("[dim]No duplicate songs found — nothing to merge.[/dim]")
+        return
+
+    # Show merge groups
+    tbl = Table(
+        title=f"{'Planned' if not do_apply else 'Applying'} Merge Groups ({plan.total_groups})",
+        box=box.ROUNDED,
+        show_lines=False,
+    )
+    tbl.add_column("#", style="dim", justify="right")
+    tbl.add_column("Title", max_width=40)
+    tbl.add_column("Artist", max_width=20)
+    tbl.add_column("Canonical", style="green")
+    tbl.add_column("Duplicates", style="red")
+    tbl.add_column("Perfs", justify="right")
+
+    for i, group in enumerate(plan.groups, 1):
+        tbl.add_row(
+            str(i),
+            group.title,
+            group.artist,
+            group.canonical_id,
+            ", ".join(group.duplicate_ids),
+            str(group.perf_count),
+        )
+    console.print(tbl)
+
+    # Summary
+    songs_after = plan.songs_before - plan.total_duplicates_removed
+    console.print(
+        f"\n[bold]Summary:[/bold] {plan.total_groups} merge groups, "
+        f"{plan.total_duplicates_removed} duplicates to remove\n"
+        f"  Songs: {plan.songs_before} → {songs_after}"
+    )
+
+    if not do_apply:
+        console.print("[dim]Dry run — no changes written. Use --apply to write.[/dim]")
+        return
+
+    # Per-group confirmation (unless -y)
+    if not yes:
+        approved_groups = []
+        skipped = 0
+        console.print(
+            "\n[bold]Review each merge group:[/bold]  "
+            "[dim](y)es / (n)o / (a)ll remaining / (q)uit[/dim]\n"
+        )
+        accept_all = False
+        for i, group in enumerate(plan.groups, 1):
+            if accept_all:
+                approved_groups.append(group)
+                continue
+            console.print(
+                f"  ({i}/{plan.total_groups}) [bold]{group.title}[/bold] — {group.artist}\n"
+                f"           keep [green]{group.canonical_id}[/green], "
+                f"remove [red]{', '.join(group.duplicate_ids)}[/red] "
+                f"→ {group.perf_count} perfs"
+            )
+            choice = click.prompt("  Merge?", type=str, default="y").strip().lower()
+            if choice in ("y", "yes"):
+                approved_groups.append(group)
+            elif choice in ("a", "all"):
+                approved_groups.append(group)
+                accept_all = True
+            elif choice in ("q", "quit"):
+                console.print("[dim]Stopped.[/dim]")
+                break
+            else:
+                skipped += 1
+
+        if not approved_groups:
+            console.print("[dim]No merges approved — nothing to write.[/dim]")
+            return
+
+        if skipped:
+            console.print(f"\n[dim]Skipped {skipped} group(s).[/dim]")
+
+        # Rebuild plan with only approved groups
+        approved_dup_ids = set()
+        for g in approved_groups:
+            for dup_id in g.duplicate_ids:
+                approved_dup_ids.add(dup_id)
+        plan.groups = approved_groups
+        plan.song_id_remap = {
+            k: v for k, v in plan.song_id_remap.items() if k in approved_dup_ids
+        }
+
+    # Backup and apply
+    backup_songs = songs_path.with_suffix(".json.bak")
+    shutil.copy2(songs_path, backup_songs)
+    console.print(f"[dim]Backup: {backup_songs}[/dim]")
+
+    merged_songs = apply_merge_plan(songs, plan)
+
+    songs_path.write_text(
+        json.dumps(merged_songs, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    console.print(
+        f"[bold green]Songs merged![/bold green] "
+        f"{plan.songs_before} → {len(merged_songs)} songs in {songs_path}"
+    )
+
+    # Remap metadata if file exists
+    if metadata_path.exists() and plan.song_id_remap:
+        try:
+            metadata: list[dict] = json.loads(
+                metadata_path.read_text(encoding="utf-8")
+            )
+            backup_meta = metadata_path.with_suffix(".json.bak")
+            shutil.copy2(metadata_path, backup_meta)
+            console.print(f"[dim]Backup: {backup_meta}[/dim]")
+
+            updated_metadata = update_metadata_for_merge(metadata, plan)
+
+            metadata_path.write_text(
+                json.dumps(updated_metadata, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            removed_meta = len(metadata) - len(updated_metadata)
+            console.print(
+                f"[bold green]Metadata updated![/bold green] "
+                f"Remapped/removed {removed_meta} entries in {metadata_path}"
+            )
+        except (OSError, json.JSONDecodeError) as exc:
+            console.print(f"[yellow]Warning: could not update metadata:[/yellow] {exc}")
