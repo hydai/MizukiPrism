@@ -542,9 +542,9 @@ class TestSSLCLI:
         # Create SSL dump
         ssl_path = tmp_path / "ssl_songs.json"
         ssl_songs = [
-            {"name": "Song A", "artist": "New Art"},
-            {"name": "Song B", "artist": "Same Art"},
-            {"name": "Song C", "artist": "Fill Art"},
+            {"title": "Song A", "artist": "New Art"},
+            {"title": "Song B", "artist": "Same Art"},
+            {"title": "Song C", "artist": "Fill Art"},
         ]
         ssl_path.write_text(json.dumps(ssl_songs, ensure_ascii=False), encoding="utf-8")
 
@@ -635,7 +635,7 @@ class TestSSLCLI:
 
         ssl_path = tmp_path / "ssl.json"
         ssl_path.write_text(json.dumps([
-            {"name": "Song", "artist": "Art"},
+            {"title": "Song", "artist": "Art"},
         ]))
 
         monkeypatch.chdir(tmp_path)
@@ -656,8 +656,8 @@ class TestSSLCLI:
 
         ssl_path = tmp_path / "ssl.json"
         ssl_path.write_text(json.dumps([
-            {"name": "Song", "artist": "A"},
-            {"name": "Song", "artist": "B"},
+            {"title": "Song", "artist": "A"},
+            {"title": "Song", "artist": "B"},
         ]))
 
         monkeypatch.chdir(tmp_path)

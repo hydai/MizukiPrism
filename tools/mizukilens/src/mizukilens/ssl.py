@@ -33,7 +33,7 @@ _WS_COLLAPSE = re.compile(r"\s+")
 def load_ssl_songs(path: str) -> list[dict]:
     """Load an SSL JSON dump, trimming whitespace from title/artist fields.
 
-    Expects a JSON array of objects, each with at least ``name`` and
+    Expects a JSON array of objects, each with at least ``title`` and
     ``artist`` keys.  Returns the cleaned list.
     """
     with open(path, encoding="utf-8") as fh:
@@ -45,7 +45,7 @@ def load_ssl_songs(path: str) -> list[dict]:
     cleaned: list[dict] = []
     for entry in data:
         entry = dict(entry)  # shallow copy
-        for key in ("name", "artist"):
+        for key in ("title", "artist"):
             val = entry.get(key, "")
             if isinstance(val, str):
                 entry[key] = _WS_COLLAPSE.sub(" ", val.strip())
@@ -62,7 +62,7 @@ def count_ssl_whitespace_issues(songs: list[dict]) -> int:
     """
     count = 0
     for entry in songs:
-        for key in ("name", "artist"):
+        for key in ("title", "artist"):
             val = entry.get(key, "")
             if isinstance(val, str):
                 cleaned = _WS_COLLAPSE.sub(" ", val.strip())
@@ -104,7 +104,7 @@ def compute_diff(mp_songs: list[dict], ssl_songs: list[dict]) -> DiffReport:
     # Build SSL index: normalized_title → list of (original_title, artist)
     ssl_index: dict[str, list[tuple[str, str]]] = {}
     for entry in ssl_songs:
-        name = entry.get("name", "")
+        name = entry.get("title", "")
         artist = entry.get("artist", "")
         norm = normalize_title(name)
         if norm:
@@ -191,7 +191,7 @@ def compute_normalize_plan(
     # Build SSL index: normalized_title → set of distinct artists
     ssl_artist_map: dict[str, set[str]] = {}
     for entry in ssl_songs:
-        name = entry.get("name", "")
+        name = entry.get("title", "")
         artist = entry.get("artist", "")
         norm = normalize_title(name)
         if norm:

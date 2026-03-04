@@ -58,21 +58,21 @@ class TestNormalizeTitle:
 class TestLoadSslSongs:
     def test_valid_json(self, tmp_path: Path) -> None:
         data = [
-            {"name": "Song A", "artist": "Artist X"},
-            {"name": "Song B", "artist": "Artist Y"},
+            {"title": "Song A", "artist": "Artist X"},
+            {"title": "Song B", "artist": "Artist Y"},
         ]
         p = tmp_path / "ssl.json"
         p.write_text(json.dumps(data), encoding="utf-8")
         result = load_ssl_songs(str(p))
         assert len(result) == 2
-        assert result[0]["name"] == "Song A"
+        assert result[0]["title"] == "Song A"
 
     def test_whitespace_trimming(self, tmp_path: Path) -> None:
-        data = [{"name": "  Song A  ", "artist": "  Artist  X  "}]
+        data = [{"title": "  Song A  ", "artist": "  Artist  X  "}]
         p = tmp_path / "ssl.json"
         p.write_text(json.dumps(data), encoding="utf-8")
         result = load_ssl_songs(str(p))
-        assert result[0]["name"] == "Song A"
+        assert result[0]["title"] == "Song A"
         assert result[0]["artist"] == "Artist X"
 
     def test_non_array_rejection(self, tmp_path: Path) -> None:
@@ -87,7 +87,7 @@ class TestLoadSslSongs:
         assert load_ssl_songs(str(p)) == []
 
     def test_preserves_extra_fields(self, tmp_path: Path) -> None:
-        data = [{"name": "Song", "artist": "Art", "extra": 42}]
+        data = [{"title": "Song", "artist": "Art", "extra": 42}]
         p = tmp_path / "ssl.json"
         p.write_text(json.dumps(data), encoding="utf-8")
         result = load_ssl_songs(str(p))
@@ -99,24 +99,24 @@ class TestLoadSslSongs:
 
 class TestCountSslWhitespaceIssues:
     def test_no_issues(self) -> None:
-        data = [{"name": "Song", "artist": "Art"}]
+        data = [{"title": "Song", "artist": "Art"}]
         assert count_ssl_whitespace_issues(data) == 0
 
     def test_leading_space(self) -> None:
-        data = [{"name": " Song", "artist": "Art"}]
+        data = [{"title": " Song", "artist": "Art"}]
         assert count_ssl_whitespace_issues(data) == 1
 
     def test_trailing_space(self) -> None:
-        data = [{"name": "Song ", "artist": "Art"}]
+        data = [{"title": "Song ", "artist": "Art"}]
         assert count_ssl_whitespace_issues(data) == 1
 
     def test_double_internal_space(self) -> None:
-        data = [{"name": "Song  A", "artist": "Art"}]
+        data = [{"title": "Song  A", "artist": "Art"}]
         assert count_ssl_whitespace_issues(data) == 1
 
     def test_counts_once_per_entry(self) -> None:
         # Both name and artist dirty → still counts 1
-        data = [{"name": " Song ", "artist": " Art "}]
+        data = [{"title": " Song ", "artist": " Art "}]
         assert count_ssl_whitespace_issues(data) == 1
 
 
@@ -126,14 +126,14 @@ class TestCountSslWhitespaceIssues:
 class TestComputeDiff:
     def test_exact_match_same_artist(self) -> None:
         mp = [{"id": "1", "title": "Song A", "originalArtist": "Art"}]
-        ssl = [{"name": "Song A", "artist": "Art"}]
+        ssl = [{"title": "Song A", "artist": "Art"}]
         report = compute_diff(mp, ssl)
         assert report.exact_matches == 1
         assert len(report.diffs) == 0
 
     def test_artist_differs(self) -> None:
         mp = [{"id": "1", "title": "Song A", "originalArtist": "Old Art"}]
-        ssl = [{"name": "Song A", "artist": "New Art"}]
+        ssl = [{"title": "Song A", "artist": "New Art"}]
         report = compute_diff(mp, ssl)
         assert len(report.diffs) == 1
         assert report.diffs[0].mp_artist == "Old Art"
@@ -141,7 +141,7 @@ class TestComputeDiff:
 
     def test_normalised_title_match(self) -> None:
         mp = [{"id": "1", "title": "  SONG A  ", "originalArtist": "Old"}]
-        ssl = [{"name": "song a", "artist": "New"}]
+        ssl = [{"title": "song a", "artist": "New"}]
         report = compute_diff(mp, ssl)
         assert len(report.diffs) == 1
         assert report.diffs[0].match_type == "normalized"
@@ -154,7 +154,7 @@ class TestComputeDiff:
 
     def test_ssl_only(self) -> None:
         mp: list[dict] = []
-        ssl = [{"name": "SSL Only", "artist": "Art"}]
+        ssl = [{"title": "SSL Only", "artist": "Art"}]
         report = compute_diff(mp, ssl)
         assert report.ssl_only == 1
 
@@ -163,7 +163,7 @@ class TestComputeDiff:
             {"id": "1", "title": "Song", "originalArtist": "Old"},
             {"id": "2", "title": "Song", "originalArtist": "Old"},
         ]
-        ssl = [{"name": "Song", "artist": "New"}]
+        ssl = [{"title": "Song", "artist": "New"}]
         report = compute_diff(mp, ssl)
         assert len(report.diffs) == 2
 
@@ -181,7 +181,7 @@ class TestComputeDiff:
 class TestComputeNormalizePlan:
     def test_simple_rename(self) -> None:
         mp = [{"id": "1", "title": "Song", "originalArtist": "Old"}]
-        ssl = [{"name": "Song", "artist": "New"}]
+        ssl = [{"title": "Song", "artist": "New"}]
         plan = compute_normalize_plan(mp, ssl)
         assert len(plan.changes) == 1
         assert plan.changes[0].old_artist == "Old"
@@ -189,15 +189,15 @@ class TestComputeNormalizePlan:
 
     def test_no_changes_when_same(self) -> None:
         mp = [{"id": "1", "title": "Song", "originalArtist": "Art"}]
-        ssl = [{"name": "Song", "artist": "Art"}]
+        ssl = [{"title": "Song", "artist": "Art"}]
         plan = compute_normalize_plan(mp, ssl)
         assert len(plan.changes) == 0
 
     def test_ambiguous_skip(self) -> None:
         mp = [{"id": "1", "title": "Song", "originalArtist": "Old"}]
         ssl = [
-            {"name": "Song", "artist": "A"},
-            {"name": "Song", "artist": "B"},
+            {"title": "Song", "artist": "A"},
+            {"title": "Song", "artist": "B"},
         ]
         plan = compute_normalize_plan(mp, ssl)
         assert len(plan.changes) == 0
@@ -209,8 +209,8 @@ class TestComputeNormalizePlan:
             {"id": "2", "title": "Song", "originalArtist": "Old"},
         ]
         ssl = [
-            {"name": "Song", "artist": "A"},
-            {"name": "Song", "artist": "B"},
+            {"title": "Song", "artist": "A"},
+            {"title": "Song", "artist": "B"},
         ]
         plan = compute_normalize_plan(mp, ssl)
         # Only one ambiguous entry even though two MP songs share the title
@@ -226,8 +226,8 @@ class TestComputeNormalizePlan:
         """Multiple SSL entries with the same artist should be used."""
         mp = [{"id": "1", "title": "Song", "originalArtist": "Old"}]
         ssl = [
-            {"name": "Song", "artist": "Correct"},
-            {"name": "Song", "artist": "Correct"},
+            {"title": "Song", "artist": "Correct"},
+            {"title": "Song", "artist": "Correct"},
         ]
         plan = compute_normalize_plan(mp, ssl)
         assert len(plan.changes) == 1
@@ -235,14 +235,14 @@ class TestComputeNormalizePlan:
 
     def test_empty_mp_artist_gets_filled(self) -> None:
         mp = [{"id": "1", "title": "Song", "originalArtist": ""}]
-        ssl = [{"name": "Song", "artist": "New"}]
+        ssl = [{"title": "Song", "artist": "New"}]
         plan = compute_normalize_plan(mp, ssl)
         assert len(plan.changes) == 1
         assert plan.changes[0].new_artist == "New"
 
     def test_normalised_matching(self) -> None:
         mp = [{"id": "1", "title": "  Song A  ", "originalArtist": "Old"}]
-        ssl = [{"name": "song a", "artist": "New"}]
+        ssl = [{"title": "song a", "artist": "New"}]
         plan = compute_normalize_plan(mp, ssl)
         assert len(plan.changes) == 1
 
