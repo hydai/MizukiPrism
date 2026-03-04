@@ -325,12 +325,18 @@ def compute_import_plan(
         s["videoId"]: s for s in merged_streams if "videoId" in s
     }
 
-    # Build lookup: (title, originalArtist) → song dict
-    existing_song_lookup: dict[tuple[str, str], dict] = {
-        (s.get("title", ""), s.get("originalArtist", "")): s
-        for s in merged_songs
-        if s.get("title")
-    }
+    # Build lookup: (normalized_title, normalized_artist) → song dict
+    # Use setdefault to keep the first (canonical) entry and avoid
+    # overwrites that caused duplicate accumulation across imports.
+    from mizukilens.merge import normalize_artist, normalize_title
+
+    existing_song_lookup: dict[tuple[str, str], dict] = {}
+    for s in merged_songs:
+        title = s.get("title", "")
+        if not title:
+            continue
+        key = (normalize_title(title), normalize_artist(s.get("originalArtist", "")))
+        existing_song_lookup.setdefault(key, s)
 
     # --- Step 1: Map export streams to MizukiPrism streams ---
     mlens_stream_to_prism: dict[str, dict] = {}  # mlens video_id → prism stream dict
@@ -388,8 +394,8 @@ def compute_import_plan(
         name: str = export_song.get("name", "")
         artist: str = export_song.get("artist", "")
 
-        # Match against existing by title + originalArtist
-        match_key = (name, artist)
+        # Match against existing by normalized title + artist
+        match_key = (normalize_title(name), normalize_artist(artist))
         if match_key in existing_song_lookup:
             mlens_song_to_prism[mlens_song_id] = existing_song_lookup[match_key]
         else:
