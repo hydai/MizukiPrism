@@ -512,3 +512,156 @@ class TestExtractFromTextCLI:
         assert result.exit_code == 0
         assert "3 曲" in result.output
         assert "完了" in result.output
+
+
+# ---------------------------------------------------------------------------
+# SSL commands
+# ---------------------------------------------------------------------------
+
+class TestSSLCLI:
+    """Integration tests for ``mizukilens ssl diff`` and ``ssl normalize``."""
+
+    @staticmethod
+    def _setup_mp_and_ssl(
+        tmp_path: Path,
+    ) -> tuple[Path, Path]:
+        """Create minimal MP songs.json and SSL dump for testing."""
+        import json
+
+        # Create MP project structure
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        songs_path = data_dir / "songs.json"
+        mp_songs = [
+            {"id": "s1", "title": "Song A", "originalArtist": "Old Art"},
+            {"id": "s2", "title": "Song B", "originalArtist": "Same Art"},
+            {"id": "s3", "title": "Song C", "originalArtist": ""},
+        ]
+        songs_path.write_text(json.dumps(mp_songs, ensure_ascii=False), encoding="utf-8")
+
+        # Create SSL dump
+        ssl_path = tmp_path / "ssl_songs.json"
+        ssl_songs = [
+            {"name": "Song A", "artist": "New Art"},
+            {"name": "Song B", "artist": "Same Art"},
+            {"name": "Song C", "artist": "Fill Art"},
+        ]
+        ssl_path.write_text(json.dumps(ssl_songs, ensure_ascii=False), encoding="utf-8")
+
+        return songs_path, ssl_path
+
+    def test_diff_table_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        songs_path, ssl_path = self._setup_mp_and_ssl(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        runner = CliRunner()
+        result = runner.invoke(main, ["ssl", "diff", str(ssl_path)])
+        assert result.exit_code == 0
+        assert "Old Art" in result.output
+        assert "New Art" in result.output
+        assert "Summary" in result.output
+
+    def test_diff_json_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        import json
+
+        songs_path, ssl_path = self._setup_mp_and_ssl(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        runner = CliRunner()
+        result = runner.invoke(main, ["ssl", "diff", str(ssl_path), "--format", "json"])
+        assert result.exit_code == 0
+        # Extract JSON array from output (starts at first '[')
+        json_start = result.output.index("[")
+        json_end = result.output.rindex("]") + 1
+        data = json.loads(result.output[json_start:json_end])
+        assert isinstance(data, list)
+        assert len(data) >= 1
+
+    def test_normalize_dry_run(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        import json
+
+        songs_path, ssl_path = self._setup_mp_and_ssl(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        runner = CliRunner()
+        result = runner.invoke(main, ["ssl", "normalize", str(ssl_path)])
+        assert result.exit_code == 0
+        assert "Dry run" in result.output
+        # Verify no file was modified
+        songs = json.loads(songs_path.read_text())
+        assert songs[0]["originalArtist"] == "Old Art"
+
+    def test_normalize_apply(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        import json
+
+        songs_path, ssl_path = self._setup_mp_and_ssl(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        runner = CliRunner()
+        result = runner.invoke(main, ["ssl", "normalize", str(ssl_path), "--apply", "-y"])
+        assert result.exit_code == 0
+        assert "Done!" in result.output
+
+        # Verify changes applied
+        songs = json.loads(songs_path.read_text())
+        assert songs[0]["originalArtist"] == "New Art"
+        assert songs[1]["originalArtist"] == "Same Art"  # unchanged
+        assert songs[2]["originalArtist"] == "Fill Art"
+
+    def test_normalize_apply_creates_backup(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        songs_path, ssl_path = self._setup_mp_and_ssl(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        runner = CliRunner()
+        runner.invoke(main, ["ssl", "normalize", str(ssl_path), "--apply", "-y"])
+        backup = songs_path.with_suffix(".json.bak")
+        assert backup.exists()
+
+    def test_diff_missing_ssl_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.chdir(tmp_path)
+        runner = CliRunner()
+        result = runner.invoke(main, ["ssl", "diff", "/nonexistent.json"])
+        assert result.exit_code != 0
+
+    def test_normalize_no_changes(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        import json
+
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        songs_path = data_dir / "songs.json"
+        songs_path.write_text(json.dumps([
+            {"id": "1", "title": "Song", "originalArtist": "Art"},
+        ]))
+
+        ssl_path = tmp_path / "ssl.json"
+        ssl_path.write_text(json.dumps([
+            {"name": "Song", "artist": "Art"},
+        ]))
+
+        monkeypatch.chdir(tmp_path)
+        runner = CliRunner()
+        result = runner.invoke(main, ["ssl", "normalize", str(ssl_path)])
+        assert result.exit_code == 0
+        assert "No artist changes needed" in result.output
+
+    def test_normalize_shows_ambiguous_warning(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        import json
+
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        songs_path = data_dir / "songs.json"
+        songs_path.write_text(json.dumps([
+            {"id": "1", "title": "Song", "originalArtist": "Old"},
+        ]))
+
+        ssl_path = tmp_path / "ssl.json"
+        ssl_path.write_text(json.dumps([
+            {"name": "Song", "artist": "A"},
+            {"name": "Song", "artist": "B"},
+        ]))
+
+        monkeypatch.chdir(tmp_path)
+        runner = CliRunner()
+        result = runner.invoke(main, ["ssl", "normalize", str(ssl_path)])
+        assert result.exit_code == 0
+        assert "ambiguous" in result.output.lower()

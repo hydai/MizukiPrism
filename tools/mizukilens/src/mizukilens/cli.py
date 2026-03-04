@@ -2315,3 +2315,233 @@ def db_status_cmd() -> None:
             tbl.add_row(category, "total", str(cat_stats))
 
     console.print(tbl)
+
+
+# ---------------------------------------------------------------------------
+# ssl  (StreamerSongList artist normalization)
+# ---------------------------------------------------------------------------
+
+@main.group("ssl")
+def ssl_group() -> None:
+    """Normalize artist names using StreamerSongList data.
+
+    \b
+    Subcommands:
+      diff       — show artist discrepancies between MP and SSL
+      normalize  — update MP artists to match SSL
+    """
+
+
+@ssl_group.command("diff")
+@click.argument("ssl_dump", type=click.Path(exists=True))
+@click.option(
+    "--format", "fmt", type=click.Choice(["table", "json", "csv"]),
+    default="table", help="Output format.",
+)
+@click.option(
+    "--match-type", type=click.Choice(["exact", "normalized", "all"]),
+    default="all", help="Filter by title match type.",
+)
+def ssl_diff_cmd(ssl_dump: str, fmt: str, match_type: str) -> None:
+    """Show artist discrepancies between MizukiPrism and SSL.
+
+    \b
+    SSL_DUMP is the path to a StreamerSongList JSON export file.
+
+    \b
+    Examples:
+      mizukilens ssl diff songs.json
+      mizukilens ssl diff songs.json --format json
+      mizukilens ssl diff songs.json --match-type exact
+    """
+    import json
+    import sys
+
+    from rich import box
+    from rich.table import Table
+
+    from mizukilens.ssl import compute_diff, load_ssl_songs
+
+    # Load MP songs
+    prism_root = _find_prism_root_from_cwd()
+    if prism_root is None:
+        console.print(
+            "[red]Error:[/red] Could not locate MizukiPrism project root "
+            "(expected data/songs.json). Run from inside the MizukiPrism directory."
+        )
+        sys.exit(1)
+
+    songs_path = prism_root / "data" / "songs.json"
+    try:
+        mp_songs: list[dict] = json.loads(songs_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        console.print(f"[red]Error reading MP songs:[/red] {exc}")
+        sys.exit(1)
+
+    # Load SSL songs
+    try:
+        ssl_songs = load_ssl_songs(ssl_dump)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        console.print(f"[red]Error reading SSL dump:[/red] {exc}")
+        sys.exit(1)
+
+    console.print(f"[cyan]Loaded {len(mp_songs)} MP songs, {len(ssl_songs)} SSL songs.[/cyan]")
+
+    report = compute_diff(mp_songs, ssl_songs)
+
+    # Filter by match type
+    diffs = report.diffs
+    if match_type != "all":
+        diffs = [d for d in diffs if d.match_type == match_type]
+
+    # Output
+    if fmt == "json":
+        out = [
+            {
+                "mp_song_id": d.mp_song_id,
+                "title": d.title,
+                "ssl_title": d.ssl_title,
+                "mp_artist": d.mp_artist,
+                "ssl_artist": d.ssl_artist,
+                "match_type": d.match_type,
+            }
+            for d in diffs
+        ]
+        click.echo(json.dumps(out, ensure_ascii=False, indent=2))
+    elif fmt == "csv":
+        click.echo("mp_song_id,title,mp_artist,ssl_artist,match_type")
+        for d in diffs:
+            # Simple CSV escaping
+            row = [d.mp_song_id, d.title, d.mp_artist, d.ssl_artist, d.match_type]
+            click.echo(",".join(f'"{v}"' for v in row))
+    else:
+        if diffs:
+            tbl = Table(title="Artist Discrepancies", box=box.ROUNDED, show_lines=False)
+            tbl.add_column("Title", max_width=40)
+            tbl.add_column("MP Artist", style="red")
+            tbl.add_column("SSL Artist", style="green")
+            tbl.add_column("Match", style="dim")
+            for d in diffs:
+                tbl.add_row(d.title, d.mp_artist, d.ssl_artist, d.match_type)
+            console.print(tbl)
+        else:
+            console.print("[dim]No artist discrepancies found.[/dim]")
+
+    # Summary
+    console.print(
+        f"\n[bold]Summary:[/bold] {len(diffs)} discrepancies, "
+        f"{report.exact_matches} matching, "
+        f"{report.mp_only} MP-only, {report.ssl_only} SSL-only"
+    )
+
+
+@ssl_group.command("normalize")
+@click.argument("ssl_dump", type=click.Path(exists=True))
+@click.option("--apply", "do_apply", is_flag=True, help="Apply changes (default is dry-run).")
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt.")
+def ssl_normalize_cmd(ssl_dump: str, do_apply: bool, yes: bool) -> None:
+    """Normalize MP artists to match SSL data.
+
+    \b
+    SSL_DUMP is the path to a StreamerSongList JSON export file.
+
+    \b
+    Without --apply, shows a dry-run preview. With --apply, backs up
+    songs.json and writes the updated file.
+
+    \b
+    Examples:
+      mizukilens ssl normalize songs.json            # dry-run
+      mizukilens ssl normalize songs.json --apply     # write changes
+      mizukilens ssl normalize songs.json --apply -y  # skip prompt
+    """
+    import json
+    import shutil
+    import sys
+
+    from rich import box
+    from rich.table import Table
+
+    from mizukilens.ssl import (
+        apply_normalize_plan,
+        compute_normalize_plan,
+        load_ssl_songs,
+    )
+
+    # Load MP songs
+    prism_root = _find_prism_root_from_cwd()
+    if prism_root is None:
+        console.print(
+            "[red]Error:[/red] Could not locate MizukiPrism project root "
+            "(expected data/songs.json). Run from inside the MizukiPrism directory."
+        )
+        sys.exit(1)
+
+    songs_path = prism_root / "data" / "songs.json"
+    try:
+        songs_text = songs_path.read_text(encoding="utf-8")
+        songs: list[dict] = json.loads(songs_text)
+    except (OSError, json.JSONDecodeError) as exc:
+        console.print(f"[red]Error reading MP songs:[/red] {exc}")
+        sys.exit(1)
+
+    # Load SSL songs
+    try:
+        ssl_songs = load_ssl_songs(ssl_dump)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        console.print(f"[red]Error reading SSL dump:[/red] {exc}")
+        sys.exit(1)
+
+    console.print(f"[cyan]Loaded {len(songs)} MP songs, {len(ssl_songs)} SSL songs.[/cyan]")
+
+    plan = compute_normalize_plan(songs, ssl_songs)
+
+    if not plan.changes:
+        console.print("[dim]No artist changes needed — MP already matches SSL.[/dim]")
+        if plan.skipped_ambiguous:
+            console.print(f"[yellow]⚠ {len(plan.skipped_ambiguous)} titles skipped (ambiguous SSL data).[/yellow]")
+        return
+
+    # Show changes
+    tbl = Table(
+        title=f"{'Planned' if not do_apply else 'Applying'} Artist Changes ({len(plan.changes)})",
+        box=box.ROUNDED, show_lines=False,
+    )
+    tbl.add_column("Title", max_width=40)
+    tbl.add_column("Old Artist", style="red")
+    tbl.add_column("New Artist", style="green")
+    for c in plan.changes:
+        tbl.add_row(c.title, c.old_artist, c.new_artist)
+    console.print(tbl)
+
+    if plan.skipped_ambiguous:
+        console.print(f"\n[yellow]⚠ {len(plan.skipped_ambiguous)} titles skipped (ambiguous):[/yellow]")
+        for title, artists in plan.skipped_ambiguous:
+            console.print(f"  {title}: {', '.join(artists)}")
+
+    console.print(f"\n[bold]Summary:[/bold] {len(plan.changes)} changes, "
+                  f"{len(plan.skipped_ambiguous)} ambiguous, "
+                  f"{plan.skipped_no_match} no match")
+
+    if not do_apply:
+        console.print("[dim]Dry run — no changes written. Use --apply to write.[/dim]")
+        return
+
+    # Confirm
+    if not yes:
+        if not click.confirm(f"Apply {len(plan.changes)} artist changes to songs.json?"):
+            console.print("[dim]Aborted.[/dim]")
+            return
+
+    # Backup and write
+    backup_path = songs_path.with_suffix(".json.bak")
+    shutil.copy2(songs_path, backup_path)
+    console.print(f"[dim]Backup saved to {backup_path}[/dim]")
+
+    count = apply_normalize_plan(songs, plan)
+
+    songs_path.write_text(
+        json.dumps(songs, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    console.print(f"[bold green]Done![/bold green] Updated {count} songs in {songs_path}.")
