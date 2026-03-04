@@ -665,3 +665,64 @@ class TestSSLCLI:
         result = runner.invoke(main, ["ssl", "normalize", str(ssl_path)])
         assert result.exit_code == 0
         assert "ambiguous" in result.output.lower()
+
+    def test_normalize_interactive_accept(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Accepting entries interactively applies only accepted changes."""
+        import json
+
+        songs_path, ssl_path = self._setup_mp_and_ssl(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        # Two changes: Song A (Old Art→New Art), Song C (""→Fill Art)
+        # Accept first (y), skip second (n)
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            ["ssl", "normalize", str(ssl_path), "--apply"],
+            input="y\nn\n",
+        )
+        assert result.exit_code == 0
+        assert "Done!" in result.output
+
+        songs = json.loads(songs_path.read_text())
+        assert songs[0]["originalArtist"] == "New Art"  # accepted
+        assert songs[2]["originalArtist"] == ""  # skipped
+
+    def test_normalize_interactive_all(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Pressing 'a' accepts all remaining entries."""
+        import json
+
+        songs_path, ssl_path = self._setup_mp_and_ssl(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            ["ssl", "normalize", str(ssl_path), "--apply"],
+            input="a\n",
+        )
+        assert result.exit_code == 0
+        assert "Done!" in result.output
+
+        songs = json.loads(songs_path.read_text())
+        assert songs[0]["originalArtist"] == "New Art"
+        assert songs[2]["originalArtist"] == "Fill Art"
+
+    def test_normalize_interactive_quit(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Pressing 'q' stops and applies nothing."""
+        import json
+
+        songs_path, ssl_path = self._setup_mp_and_ssl(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            ["ssl", "normalize", str(ssl_path), "--apply"],
+            input="q\n",
+        )
+        assert result.exit_code == 0
+        assert "No changes approved" in result.output
+
+        songs = json.loads(songs_path.read_text())
+        assert songs[0]["originalArtist"] == "Old Art"  # unchanged

@@ -2527,11 +2527,39 @@ def ssl_normalize_cmd(ssl_dump: str, do_apply: bool, yes: bool) -> None:
         console.print("[dim]Dry run — no changes written. Use --apply to write.[/dim]")
         return
 
-    # Confirm
+    # Per-entry confirmation (unless -y)
     if not yes:
-        if not click.confirm(f"Apply {len(plan.changes)} artist changes to songs.json?"):
-            console.print("[dim]Aborted.[/dim]")
+        approved = []
+        skipped = 0
+        console.print("\n[bold]Review each change:[/bold]  [dim](y)es / (n)o / (a)ll remaining / (q)uit[/dim]\n")
+        accept_all = False
+        for i, c in enumerate(plan.changes, 1):
+            if accept_all:
+                approved.append(c)
+                continue
+            console.print(
+                f"  ({i}/{len(plan.changes)}) [bold]{c.title}[/bold]\n"
+                f"           [red]{c.old_artist}[/red] → [green]{c.new_artist}[/green]"
+            )
+            choice = click.prompt("  Apply?", type=str, default="y").strip().lower()
+            if choice in ("y", "yes"):
+                approved.append(c)
+            elif choice in ("a", "all"):
+                approved.append(c)
+                accept_all = True
+            elif choice in ("q", "quit"):
+                console.print("[dim]Stopped.[/dim]")
+                break
+            else:
+                skipped += 1
+
+        if not approved:
+            console.print("[dim]No changes approved — nothing to write.[/dim]")
             return
+
+        if skipped:
+            console.print(f"\n[dim]Skipped {skipped} change(s).[/dim]")
+        plan.changes = approved
 
     # Backup and write
     backup_path = songs_path.with_suffix(".json.bak")
