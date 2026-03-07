@@ -1,9 +1,10 @@
 'use client';
 
 import { memo } from 'react';
-import { Play, Disc3, Plus, ExternalLink } from 'lucide-react';
+import { Play, Disc3, Plus, ExternalLink, Heart } from 'lucide-react';
 import AlbumArt from './AlbumArt';
 import AddToPlaylistDropdown from './AddToPlaylistDropdown';
+import { useLikedSongs } from '../contexts/LikedSongsContext';
 
 interface FlattenedSong {
   id: string;
@@ -41,6 +42,8 @@ const formatTime = (seconds: number): string => {
 };
 
 function TimelineRowInner({ song, index, isCurrentlyPlaying, isUnavailable, onPlay, onAddToQueue, onAddToPlaylistSuccess }: TimelineRowProps) {
+  const { isLiked, toggleLike } = useLikedSongs();
+  const liked = isLiked(song.performanceId);
   const track = {
     id: song.performanceId,
     songId: song.id,
@@ -199,6 +202,32 @@ function TimelineRowInner({ song, index, isCurrentlyPlaying, isUnavailable, onPl
         className="flex items-center justify-end gap-1.5"
         style={{ color: 'var(--text-secondary)' }}
       >
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleLike({
+              performanceId: song.performanceId,
+              songTitle: song.title,
+              originalArtist: song.originalArtist,
+              videoId: song.videoId,
+              timestamp: song.timestamp,
+              endTimestamp: song.endTimestamp,
+              albumArtUrl: song.albumArtUrl,
+            });
+          }}
+          className="lg:opacity-0 lg:group-hover:opacity-100 transition-all transform hover:scale-110"
+          style={{
+            background: 'var(--bg-surface)',
+            padding: 'var(--space-2)',
+            borderRadius: 'var(--radius-circle)',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+            color: 'var(--accent-pink)',
+          }}
+          title={liked ? '取消喜愛' : '喜愛'}
+          data-testid="like-button"
+        >
+          <Heart className="w-4 h-4" style={{ fill: liked ? 'var(--accent-pink)' : 'none' }} />
+        </button>
         <button
           onClick={() => onAddToQueue(track)}
           className="lg:opacity-0 lg:group-hover:opacity-100 transition-all transform hover:scale-110"

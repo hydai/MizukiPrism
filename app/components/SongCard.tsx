@@ -1,8 +1,9 @@
 'use client';
 
 import { memo } from 'react';
-import { Disc3, ChevronDown, ChevronRight, Play, Plus, ExternalLink } from 'lucide-react';
+import { Disc3, ChevronDown, ChevronRight, Play, Plus, ExternalLink, Heart } from 'lucide-react';
 import AddToPlaylistDropdown from './AddToPlaylistDropdown';
+import { useLikedSongs } from '../contexts/LikedSongsContext';
 
 interface Performance {
   id: string;
@@ -41,6 +42,7 @@ const formatTime = (seconds: number): string => {
 };
 
 function SongCardInner({ song, isExpanded, onToggleExpand, onPlay, onAddToQueue, onAddToPlaylistSuccess, unavailableVideoIds }: SongCardProps) {
+  const { isLiked, toggleLike } = useLikedSongs();
   const sortedPerformances = isExpanded
     ? [...song.performances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     : [];
@@ -252,6 +254,31 @@ function SongCardInner({ song, isExpanded, onToggleExpand, onPlay, onAddToQueue,
                 className="flex items-center justify-end gap-1.5"
                 style={{ color: 'var(--text-secondary)' }}
               >
+                <button
+                  onClick={() => {
+                    toggleLike({
+                      performanceId: perf.id,
+                      songTitle: song.title,
+                      originalArtist: song.originalArtist,
+                      videoId: perf.videoId,
+                      timestamp: perf.timestamp,
+                      endTimestamp: perf.endTimestamp ?? undefined,
+                      albumArtUrl: song.albumArtUrl,
+                    });
+                  }}
+                  className="opacity-0 group-hover/version:opacity-100 transition-all transform hover:scale-110"
+                  style={{
+                    background: 'var(--bg-surface)',
+                    padding: 'var(--space-2)',
+                    borderRadius: 'var(--radius-circle)',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                    color: 'var(--accent-pink)',
+                  }}
+                  title={isLiked(perf.id) ? '取消喜愛' : '喜愛'}
+                  data-testid="like-button"
+                >
+                  <Heart className="w-4 h-4" style={{ fill: isLiked(perf.id) ? 'var(--accent-pink)' : 'none' }} />
+                </button>
                 <button
                   onClick={() => onAddToQueue({
                     id: perf.id,
