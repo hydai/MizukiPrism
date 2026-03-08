@@ -182,6 +182,10 @@ def fetch_cmd(fetch_all: bool, recent: int | None, after: str | None,
         console.print(
             f"[dim]キーワードに一致しない動画をスキップ: {result.skipped} 件[/dim]"
         )
+    if result.new > 0:
+        console.print(
+            "\n[dim]次のステップ → [bold]mizukilens extract --all[/bold] でタイムスタンプを抽出[/dim]"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -429,6 +433,7 @@ def extract_cmd(stream_id: str | None, extract_all: bool, from_text: str | None)
                     console.print(
                         f"[yellow]警告:[/yellow] 疑わしいタイムスタンプが {len(result.suspicious_timestamps)} 件あります（12時間超）。"
                     )
+                console.print("[dim]次のステップ → [bold]mizukilens review[/bold] で審核[/dim]")
             else:
                 console.print(
                     f"[yellow]待機中:[/yellow] テキストファイルからタイムスタンプを抽出できませんでした。"
@@ -453,6 +458,7 @@ def extract_cmd(stream_id: str | None, extract_all: bool, from_text: str | None)
                     console.print(
                         f"[yellow]警告:[/yellow] 疑わしいタイムスタンプが {len(result.suspicious_timestamps)} 件あります（12時間超）。"
                     )
+                console.print("[dim]次のステップ → [bold]mizukilens review[/bold] で審核[/dim]")
             else:
                 console.print(
                     f"[yellow]待機中:[/yellow] ストリーム {stream_id} のタイムスタンプを自動抽出できませんでした。"
@@ -499,6 +505,8 @@ def extract_cmd(stream_id: str | None, extract_all: bool, from_text: str | None)
                 f"[bold green]完了![/bold green]  "
                 f"抽出成功: {extracted_count} 件、待処理: {pending_count} 件"
             )
+            if extracted_count > 0:
+                console.print("[dim]次のステップ → [bold]mizukilens review[/bold] で審核[/dim]")
     finally:
         conn.close()
 
@@ -540,6 +548,18 @@ def review_group(ctx: click.Context, show_all: bool) -> None:
 
     conn = open_db()
     try:
+        if not show_all:
+            from mizukilens.cache import get_status_counts
+            counts = get_status_counts(conn)
+            reviewable = sum(counts.get(s, 0) for s in ("extracted", "pending", "approved", "exported"))
+            discovered = counts.get("discovered", 0)
+            if reviewable == 0 and discovered > 0:
+                console.print(
+                    f"[yellow]審核対象のストリームがありません。[/yellow]\n"
+                    f"[dim]discovered 状態のストリームが {discovered} 件あります。"
+                    f"\n→ まず [bold]mizukilens extract --all[/bold] を実行してください。[/dim]"
+                )
+                return
         launch_review_tui(conn, show_all=show_all)
     finally:
         conn.close()
@@ -1188,6 +1208,24 @@ def status_cmd(detail: bool) -> None:
         tbl.add_section()
         tbl.add_row("[bold]Total[/bold]", f"[bold]{total}[/bold]")
         console.print(tbl)
+
+        hints = []
+        discovered = counts.get("discovered", 0)
+        extracted = counts.get("extracted", 0)
+        pending = counts.get("pending", 0)
+        approved = counts.get("approved", 0)
+
+        if discovered > 0:
+            hints.append(f"discovered {discovered} 件 → [bold]mizukilens extract --all[/bold]")
+        if extracted > 0 or pending > 0:
+            hints.append(f"審核待ち {extracted + pending} 件 → [bold]mizukilens review[/bold]")
+        if approved > 0:
+            hints.append(f"approved {approved} 件 → [bold]mizukilens eximport[/bold]")
+
+        if hints:
+            console.print()
+            for hint in hints:
+                console.print(f"  [dim]{hint}[/dim]")
 
         if detail:
             streams = list_streams(conn)
