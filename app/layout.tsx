@@ -4,7 +4,7 @@ import PlayerWrapper from "./components/PlayerWrapper";
 
 export const metadata: Metadata = {
   title: "MizukiPrism - Official Song Archive",
-  description: "清楚系歌勢 V-Streamer,帶給你如夢似幻的歌聲。",
+  description: "歌勢Vtuber，一隻愛吃的薩摩...北極狐，牛奶和義大利麵是她最愛的食物！",
 };
 
 export const viewport: Viewport = {
