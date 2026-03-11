@@ -538,11 +538,12 @@ export default function Home() {
           borderBottom: '1px solid var(--border-glass)',
         }}
       >
-        <span
-          style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)' }}
+        <a
+          href="https://prism.oshi.tw"
+          style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none' }}
         >
           {streamerData.name}
-        </span>
+        </a>
       </div>
 
       {/* Main Content */}
