@@ -48,7 +48,7 @@ export default function ProgressBar({
         ref={barRef}
         style={{
           height: `${height}px`,
-          background: '#E2E8F0',
+          background: 'var(--border-default)',
           borderRadius: '16px 16px 0 0',
           overflow: 'hidden',
           touchAction: 'none',

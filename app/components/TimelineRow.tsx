@@ -63,7 +63,7 @@ function TimelineRowInner({ song, index, isCurrentlyPlaying, isUnavailable, onPl
         borderRadius: 'var(--radius-lg)',
         padding: 'var(--space-3) var(--space-4)',
         background: isCurrentlyPlaying
-          ? '#FCE7F320'
+          ? 'var(--bg-accent-pink-muted)'
           : undefined,
       }}
     >

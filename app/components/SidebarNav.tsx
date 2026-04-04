@@ -13,6 +13,7 @@ import {
   Plus,
   ListMusic,
 } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 
 interface SidebarNavProps {
   activePage: 'home' | 'now-playing';
@@ -61,7 +62,7 @@ export default function SidebarNav({
 
   const navItemClass =
     'w-full flex items-center gap-3 px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all';
-  const inactiveNavItemClass = `${navItemClass} hover:bg-white/40`;
+  const inactiveNavItemClass = `${navItemClass} hover:bg-white/40 dark:hover:bg-white/10`;
 
   return (
     <aside
@@ -166,7 +167,7 @@ export default function SidebarNav({
           <button
             onClick={onViewLikedSongs}
             className={likedSongsCount > 0
-              ? "w-full flex items-center justify-between px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40"
+              ? "w-full flex items-center justify-between px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40 dark:hover:bg-white/10"
               : inactiveNavItemClass}
             style={inactiveStyle}
             data-testid="view-liked-songs-button"
@@ -189,7 +190,7 @@ export default function SidebarNav({
           <button
             onClick={onViewRecentlyPlayed}
             className={recentlyPlayedCount > 0
-              ? "w-full flex items-center justify-between px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40"
+              ? "w-full flex items-center justify-between px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40 dark:hover:bg-white/10"
               : inactiveNavItemClass}
             style={inactiveStyle}
             data-testid="view-recently-played-button"
@@ -225,7 +226,7 @@ export default function SidebarNav({
           {onViewPlaylists && playlistCount > 0 && (
             <button
               onClick={onViewPlaylists}
-              className="w-full flex items-center justify-between px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40"
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-radius-lg font-medium text-sm transition-all hover:bg-white/40 dark:hover:bg-white/10"
               style={inactiveStyle}
               data-testid="view-playlists-button"
             >
@@ -252,7 +253,10 @@ export default function SidebarNav({
         className="flex-shrink-0 px-3 py-3 border-t"
         style={{ borderTop: '1px solid var(--border-glass)' }}
       >
-        <p className="text-xs mt-2 text-center" style={{ color: 'var(--text-muted)' }}>
+        <div className="flex items-center justify-center mb-2">
+          <ThemeToggle />
+        </div>
+        <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
           Made with <Heart className="w-3 h-3 inline text-pink-400 fill-current" /> for 浠Mizuki
         </p>
       </div>

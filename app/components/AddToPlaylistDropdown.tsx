@@ -63,7 +63,8 @@ export default function AddToPlaylistDropdown({ version, onSuccess }: AddToPlayl
 
       {showDropdown && (
         <div
-          className="absolute right-0 mt-2 w-56 bg-white backdrop-blur-md border border-[--border-default] rounded-lg shadow-xl z-30 overflow-hidden"
+          className="absolute right-0 mt-2 w-56 backdrop-blur-md border border-[--border-default] rounded-lg shadow-xl z-30 overflow-hidden"
+          style={{ background: 'var(--bg-surface)' }}
           data-testid="playlist-dropdown"
           onClick={(e) => e.stopPropagation()}
         >
@@ -95,8 +96,8 @@ export default function AddToPlaylistDropdown({ version, onSuccess }: AddToPlayl
           )}
 
           {error && (
-            <div className="p-3 bg-red-50 border-t border-red-200">
-              <p className="text-red-600 text-xs" data-testid="add-error-message">
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800/30">
+              <p className="text-red-600 dark:text-red-400 text-xs" data-testid="add-error-message">
                 {error}
               </p>
             </div>

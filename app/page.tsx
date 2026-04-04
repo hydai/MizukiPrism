@@ -18,6 +18,7 @@ import SidebarNav from './components/SidebarNav';
 import TimelineRow from './components/TimelineRow';
 import SongCard from './components/SongCard';
 import MobileSearchRow from './components/MobileSearchRow';
+import ThemeToggle from './components/ThemeToggle';
 
 interface Performance {
   id: string;
@@ -380,7 +381,7 @@ export default function Home() {
           <span className="font-bold text-sm">{apiLoadError}</span>
         </div>
       )}
-      <div className="flex h-screen bg-gradient-to-br from-[#fff0f5] via-[#f0f8ff] to-[#e6e6fa] text-slate-600 font-sans selection:bg-pink-200 selection:text-pink-900 overflow-hidden" style={{ background: 'linear-gradient(135deg, var(--bg-page-start) 0%, var(--bg-page-mid) 50%, var(--bg-page-end) 100%)' }}>
+      <div className="flex h-screen font-sans selection:bg-pink-200 selection:text-pink-900 dark:selection:bg-pink-800 dark:selection:text-pink-100 overflow-hidden" style={{ color: 'var(--text-secondary)', background: 'linear-gradient(135deg, var(--bg-page-start) 0%, var(--bg-page-mid) 50%, var(--bg-page-end) 100%)' }}>
 
       {/* Sidebar */}
       <SidebarNav
@@ -528,7 +529,7 @@ export default function Home() {
       {/* Mobile TopBar — 56px + safe area, fixed top, mobile only */}
       <div
         data-testid="mobile-topbar"
-        className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-center"
+        className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between"
         style={{
           height: '56px',
           padding: 'var(--safe-area-top) 20px 0 20px',
@@ -538,20 +539,22 @@ export default function Home() {
           borderBottom: '1px solid var(--border-glass)',
         }}
       >
+        <div style={{ width: 32 }} />
         <a
           href="https://prism.oshi.tw"
           style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none' }}
         >
           {streamerData.name}
         </a>
+        <ThemeToggle />
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 lg:m-3 lg:rounded-3xl overflow-hidden relative shadow-2xl shadow-indigo-100/50 bg-white/40 backdrop-blur-md border border-white/60 flex flex-col" style={{ background: 'var(--bg-surface-glass)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-3xl)' }}>
+      <main className="flex-1 lg:m-3 lg:rounded-3xl overflow-hidden relative shadow-2xl shadow-indigo-100/50 dark:shadow-indigo-900/20 flex flex-col" style={{ background: 'var(--bg-surface-glass)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-3xl)' }}>
 
         {/* Decorative glows */}
-        <div className="absolute -top-20 -right-20 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute top-40 -left-20 w-72 h-72 bg-blue-300/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute -top-20 -right-20 w-96 h-96 bg-pink-300/20 dark:bg-pink-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute top-40 -left-20 w-72 h-72 bg-blue-300/20 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
         {/* Scrollable area */}
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar relative z-10 pt-14 lg:pt-0">
@@ -609,7 +612,7 @@ export default function Home() {
             <div
               className="flex items-center gap-1.5"
               style={{
-                background: '#FDF2F8',
+                background: 'var(--bg-accent-pink)',
                 borderRadius: 'var(--radius-pill)',
                 padding: '4px 12px 4px 8px',
                 color: 'var(--accent-pink)',
@@ -916,12 +919,12 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Bottom gradient overlay: white fading to transparent from bottom up */}
+            {/* Bottom gradient overlay: surface color fading to transparent from bottom up */}
             <div
               className="absolute bottom-0 left-0 right-0 pointer-events-none"
               style={{
                 height: '60px',
-                background: 'linear-gradient(to top, rgba(255,255,255,0.6) 0%, transparent 100%)',
+                background: 'linear-gradient(to top, var(--bg-surface-frosted) 0%, transparent 100%)',
               }}
             />
           </header>
@@ -988,7 +991,7 @@ export default function Home() {
               data-testid="mobile-follow-button"
               className="flex items-center justify-center flex-shrink-0 font-semibold transition-all hover:opacity-80"
               style={{
-                border: '1px solid #E2E8F0',
+                border: '1px solid var(--border-default)',
                 borderRadius: '20px',
                 padding: '8px 24px',
                 color: 'var(--text-secondary)',
@@ -1027,8 +1030,8 @@ export default function Home() {
                 fontSize: 'var(--font-size-sm)',
                 ...(selectedYears.size === 0
                   ? {
-                      background: '#FDF2F8',
-                      border: '1px solid #FBCFE8',
+                      background: 'var(--bg-accent-pink)',
+                      border: '1px solid var(--border-accent-pink)',
                       color: 'var(--accent-pink)',
                     }
                   : {
