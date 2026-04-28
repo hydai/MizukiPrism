@@ -108,7 +108,7 @@ app.get('/api/songs', async (c) => {
 });
 
 app.get('/api/songs/:id', async (c) => {
-  const song = await getSongById(c.env.DB, c.req.param('id'));
+  const song = await getSongById(c.env.DB, c.req.param('id')!);
   if (!song) return c.json({ error: 'Song not found' }, 404);
   return c.json(song);
 });
@@ -148,7 +148,7 @@ app.post('/api/songs', async (c) => {
 });
 
 app.put('/api/songs/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
   const user = c.get('user');
 
   const existing = await getSongById(c.env.DB, id);
@@ -176,7 +176,7 @@ app.put('/api/songs/:id', async (c) => {
 });
 
 app.patch('/api/songs/:id/status', requireCurator, async (c) => {
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
   const body = await c.req.json<StatusUpdateBody>();
 
   if (!VALID_STATUSES.has(body.status)) {
@@ -231,7 +231,7 @@ app.post('/api/performances', async (c) => {
 });
 
 app.patch('/api/performances/:id/status', requireCurator, async (c) => {
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
   const body = await c.req.json<StatusUpdateBody>();
 
   if (!VALID_STATUSES.has(body.status)) {
@@ -287,7 +287,7 @@ app.post('/api/streams', async (c) => {
 });
 
 app.patch('/api/streams/:id/status', requireCurator, async (c) => {
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
   const body = await c.req.json<StatusUpdateBody>();
 
   if (!VALID_STATUSES.has(body.status)) {
@@ -309,13 +309,13 @@ app.patch('/api/streams/:id/status', requireCurator, async (c) => {
 // --- Stamp editor ---
 
 app.get('/api/streams/:streamId/performances', async (c) => {
-  const streamId = c.req.param('streamId');
+  const streamId = c.req.param('streamId')!;
   const performances = await listPerformancesForStream(c.env.DB, streamId);
   return c.json({ data: performances, total: performances.length });
 });
 
 app.post('/api/streams/:streamId/performances', async (c) => {
-  const streamId = c.req.param('streamId');
+  const streamId = c.req.param('streamId')!;
   const body = await c.req.json<CreateStampPerformanceBody>();
   if (!body.title || !body.originalArtist || body.timestamp === undefined) {
     return c.json({ error: 'title, originalArtist, and timestamp are required' }, 400);
@@ -343,7 +343,7 @@ app.post('/api/streams/:streamId/performances', async (c) => {
 });
 
 app.patch('/api/performances/:id/timestamps', async (c) => {
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
   const body = await c.req.json<UpdateTimestampsBody>();
   const updated = await updatePerformanceTimestamps(c.env.DB, id, {
     timestamp: body.timestamp,
@@ -354,7 +354,7 @@ app.patch('/api/performances/:id/timestamps', async (c) => {
 });
 
 app.patch('/api/performances/:id/details', async (c) => {
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
   const body = await c.req.json<UpdateSongDetailsBody>();
   const updated = await updatePerformanceSongDetails(c.env.DB, id, {
     title: body.title,
@@ -365,7 +365,7 @@ app.patch('/api/performances/:id/details', async (c) => {
 });
 
 app.delete('/api/performances/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
   const deleted = await deletePerformanceAndOrphanSong(c.env.DB, id);
   if (!deleted) return c.json({ error: 'Performance not found' }, 404);
   return c.json({ ok: true });
@@ -388,7 +388,7 @@ app.get('/api/stamp/stats', async (c) => {
 // --- Stream detail ---
 
 app.get('/api/streams/:streamId/detail', async (c) => {
-  const streamId = c.req.param('streamId');
+  const streamId = c.req.param('streamId')!;
   const detail = await getStreamDetail(c.env.DB, streamId);
   if (!detail) return c.json({ error: 'Stream not found' }, 404);
   return c.json(detail);
@@ -397,7 +397,7 @@ app.get('/api/streams/:streamId/detail', async (c) => {
 // --- Performance note update ---
 
 app.patch('/api/performances/:id/note', async (c) => {
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
   const body = await c.req.json<{ note: string }>();
   if (body.note === undefined) {
     return c.json({ error: 'note is required' }, 400);
@@ -410,7 +410,7 @@ app.patch('/api/performances/:id/note', async (c) => {
 // --- Stamp: paste import ---
 
 app.post('/api/streams/:streamId/paste-import', async (c) => {
-  const streamId = c.req.param('streamId');
+  const streamId = c.req.param('streamId')!;
   const body = await c.req.json<PasteImportBody>();
   if (!body.text || !body.text.trim()) {
     return c.json({ error: 'text is required' }, 400);
@@ -461,7 +461,7 @@ app.post('/api/streams/:streamId/paste-import', async (c) => {
 // --- Stamp: clear all end timestamps ---
 
 app.delete('/api/streams/:streamId/end-timestamps', async (c) => {
-  const streamId = c.req.param('streamId');
+  const streamId = c.req.param('streamId')!;
   const cleared = await clearAllEndTimestamps(c.env.DB, streamId);
   return c.json({ ok: true, cleared });
 });
@@ -469,7 +469,7 @@ app.delete('/api/streams/:streamId/end-timestamps', async (c) => {
 // --- Stamp: fetch duration from iTunes ---
 
 app.post('/api/performances/:id/fetch-duration', async (c) => {
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
   const perf = await getPerformanceWithSong(c.env.DB, id);
   if (!perf) return c.json({ error: 'Performance not found' }, 404);
 
