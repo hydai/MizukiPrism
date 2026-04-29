@@ -23,7 +23,6 @@ export interface FlattenedSong extends CatalogSong {
   endTimestamp?: number;
   note: string;
   searchString: string;
-  albumArtUrl?: string;
   year?: number;
 }
 
