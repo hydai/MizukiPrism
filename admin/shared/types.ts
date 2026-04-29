@@ -1,5 +1,6 @@
 // Shared types between Workers API and Admin UI
 // Derived from lib/types.ts (fan site) with admin-specific additions
+import type { StreamCredit as CatalogStreamCredit } from '../../shared/types';
 
 export type Status = 'pending' | 'approved' | 'rejected' | 'excluded' | 'extracted';
 
@@ -75,11 +76,7 @@ export interface Performance {
   createdAt: string;
 }
 
-export interface StreamCredit {
-  author?: string;
-  authorUrl?: string;
-  commentUrl?: string;
-}
+export type StreamCredit = CatalogStreamCredit;
 
 export interface Stream {
   id: string;
