@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Song, Stream } from './types';
+import type { Song, Stream } from './types';
 
 const songsPath = path.join(process.cwd(), 'data', 'songs.json');
 const streamsPath = path.join(process.cwd(), 'data', 'streams.json');

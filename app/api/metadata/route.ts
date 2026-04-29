@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { SongMetadata, ArtistInfo } from '@/lib/types';
+import type { SongMetadata, ArtistInfo } from '@/lib/types';
 
 export const dynamic = 'force-static';
 
