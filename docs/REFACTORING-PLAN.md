@@ -25,8 +25,7 @@ Cloudflare/D1 admin.
 
 Scope:
 - Decide the Cloudflare Worker admin is the canonical curator surface.
-- Mark the Next.js `/admin` and `/api/*/manage` paths as legacy dev-only, or
-  remove them once replacement coverage exists.
+- Remove the Next.js `/admin` and `/api/*/manage` legacy write surface.
 - Move remaining useful static-data edit flows to MizukiLens or the Worker
   admin.
 - Update docs and E2E coverage to stop depending on static-export-incompatible
