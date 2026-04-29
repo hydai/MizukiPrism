@@ -18,7 +18,7 @@ Fan-facing song catalog and player for VTuber 浠Mizuki's karaoke livestream arc
 app/
 ├── components/        React components (22 total: AlbumArt, MiniPlayer, NowPlayingModal, QueuePanel, PlaylistPanel, SidebarNav, MobileSearchRow, VolumeControl, BottomSheet, ...)
 ├── contexts/          React contexts (PlayerContext, PlaylistContext, FanAuthContext, LikedSongsContext, RecentlyPlayedContext)
-├── api/               Next.js API routes (songs, streams, metadata, versions, auth)
+├── api/               Static route handlers for songs, streams, and metadata
 ├── page.tsx           Main song catalog page (~1900 lines)
 lib/
 ├── types.ts           Data models (Song, Performance, Stream, SongMetadata, ArtistInfo)
@@ -120,6 +120,7 @@ npx wrangler d1 execute mizukiprism-staging --file=schema.sql  # Init DB
 ## Architecture Notes
 
 - **Static deployment**: All data is in JSON files committed to git. No runtime database. Fan-facing site is read-only.
+- **Admin boundary**: Curator write workflows live in `admin/` (Cloudflare Workers + D1 + Vite UI), not in the static Next.js app.
 - **Client-side merge**: Frontend fetches `songs.json` + `song-metadata.json` separately, merges in browser by songId.
 - **Metadata lifecycle**: CLI fetches from iTunes → writes JSON → commit → deploy → fans see it. `manual` status entries are never auto-overwritten unless `--force`.
 - **AlbumArt** component is reusable across 5 UI positions (song list, mini player desktop/mobile, now playing modal, queue panel).

@@ -108,6 +108,10 @@ cd tools/mizukilens
 
 ## Admin Dashboard
 
+The fan-facing Next.js app is deployed as a static GitHub Pages site and does
+not host curator write APIs. Curator workflows live in the Cloudflare Worker
+admin system under `admin/`.
+
 The curator admin system runs on Cloudflare Workers with a D1 database:
 
 ```bash
