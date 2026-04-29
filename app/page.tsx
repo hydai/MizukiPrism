@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff, House, Radio } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
+import { useCatalogData, type CatalogSong as Song, type FlattenedSong } from './hooks/useCatalogData';
 import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
 import { useLikedSongs } from './contexts/LikedSongsContext';
@@ -20,46 +21,11 @@ import SongCard from './components/SongCard';
 import MobileSearchRow from './components/MobileSearchRow';
 import ThemeToggle from './components/ThemeToggle';
 
-interface Performance {
-  id: string;
-  streamId?: string;
-  date: string;
-  streamTitle: string;
-  videoId: string;
-  timestamp: number;
-  endTimestamp?: number | null;
-  note: string;
-}
-
-interface Song {
-  id: string;
-  title: string;
-  originalArtist: string;
-  tags: string[];
-  performances: Performance[];
-  albumArtUrl?: string;
-}
-
-interface FlattenedSong extends Song {
-  performanceId: string;
-  streamId?: string;
-  date: string;
-  streamTitle: string;
-  videoId: string;
-  timestamp: number;
-  endTimestamp?: number;
-  note: string;
-  searchString: string;
-  albumArtUrl?: string;
-  year?: number;
-}
-
 type ViewMode = 'timeline' | 'grouped';
 
 export default function Home() {
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [streams, setStreams] = useState<{id:string;title:string;date:string;videoId:string}[]>([]);
   const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
   const [selectedYears, setSelectedYears] = useState<Set<number>>(new Set());
@@ -72,64 +38,7 @@ export default function Home() {
   const [showRecentlyPlayedPanel, setShowRecentlyPlayedPanel] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [mobileTab, setMobileTab] = useState<'home' | 'search' | 'library' | 'streams'>('home');
-  const [songs, setSongs] = useState<Song[]>([]);
-  const [loadError, setLoadError] = useState(false);
-  // Map from songId to albumArtUrl — populated from /api/metadata
-  const albumArtMapRef = useRef<Map<string, string>>(new Map());
-
-  // Fetch songs from API — extracted so the retry button can call it again
-  const fetchSongs = () => {
-    fetch('/api/songs')
-      .then(res => {
-        if (!res.ok) throw new Error('API error');
-        return res.json();
-      })
-      .then((data: Song[]) => {
-        // Merge albumArtUrl from metadata map into songs
-        const merged = data.map(song => ({
-          ...song,
-          albumArtUrl: albumArtMapRef.current.get(song.id),
-        }));
-        setSongs(merged);
-        setLoadError(false);
-      })
-      .catch(() => {
-        setLoadError(true);
-      });
-  };
-
-  // Fetch metadata on mount and populate albumArtMap, then fetch songs
-  useEffect(() => {
-    fetch('/api/metadata')
-      .then(res => (res.ok ? res.json() : { songMetadata: [], artistInfo: [] }))
-      .then((data: { songMetadata: { songId: string; albumArtUrl?: string; albumArtUrls?: { small: string } }[] }) => {
-        const map = new Map<string, string>();
-        for (const entry of data.songMetadata) {
-          const url = entry.albumArtUrl ?? entry.albumArtUrls?.small;
-          if (url) {
-            map.set(entry.songId, url);
-          }
-        }
-        albumArtMapRef.current = map;
-      })
-      .catch(() => {
-        // metadata fetch failed — continue without art
-      })
-      .finally(() => {
-        fetchSongs();
-      });
-
-    fetch('/api/streams')
-      .then(res => res.ok ? res.json() : [])
-      .then((data: {id:string;title:string;date:string;videoId:string}[]) => {
-        data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setStreams(data);
-      })
-      .catch(() => {
-        // streams fetch failed — continue without stream list
-      });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { streams, songs, loadError, fetchSongs } = useCatalogData();
 
   const { currentTrack, playTrack, addToQueue, apiLoadError, unavailableVideoIds, timestampWarning, clearTimestampWarning, skipNotification, clearSkipNotification, shuffleOn, toggleShuffle } = usePlayer();
   const currentTrackId = currentTrack?.id ?? null;
