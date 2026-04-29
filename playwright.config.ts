@@ -19,9 +19,11 @@ export default defineConfig({
     },
   ],
 
-  // webServer: {
-  //   command: 'npm run dev',
-  //   url: 'http://localhost:3001',
-  //   reuseExistingServer: true,
-  // },
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: true,
+    stdout: 'pipe',
+    stderr: 'pipe',
+  },
 });
