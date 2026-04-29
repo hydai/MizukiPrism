@@ -98,6 +98,20 @@ function validateNullableOptionalStringFields(
   validateOptionalStringFields(value, path, fields, errors);
 }
 
+function validateRequiredNullableOptionalStringFields(
+  record: Record<string, unknown>,
+  key: string,
+  path: string,
+  fields: readonly string[],
+  errors: string[],
+): void {
+  if (!(key in record) || record[key] === undefined) {
+    push(errors, `${path}.${key}`, 'an object with optional string fields or null');
+    return;
+  }
+  validateNullableOptionalStringFields(record[key], `${path}.${key}`, fields, errors);
+}
+
 function validateArray<T>(
   value: unknown,
   path: string,
@@ -190,9 +204,10 @@ function validateSongMetadataEntry(value: unknown, path: string, errors: string[
     push(errors, `${path}.matchConfidence`, 'one of exact, fuzzy, manual, or null');
   }
   expectNullableString(value.albumArtUrl, `${path}.albumArtUrl`, errors);
-  validateNullableOptionalStringFields(
-    value.albumArtUrls,
-    `${path}.albumArtUrls`,
+  validateRequiredNullableOptionalStringFields(
+    value,
+    'albumArtUrls',
+    path,
     ['small', 'medium', 'big', 'xl'] satisfies (keyof AlbumArtUrls)[],
     errors,
   );
