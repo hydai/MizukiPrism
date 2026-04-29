@@ -48,7 +48,7 @@ export function splitArtist(songInfo: string): [string, string] {
   }
 
   // Try " - " (em-dash and en-dash too)
-  const dashMatch = songInfo.match(/\s+-\s+/);
+  const dashMatch = songInfo.match(/\s+[-–—]\s+/);
   if (dashMatch) {
     const name = songInfo.slice(0, dashMatch.index!).trim();
     const artist = songInfo.slice(dashMatch.index! + dashMatch[0].length).trim();
