@@ -69,3 +69,24 @@ const nullableMetadata = validateSongMetadataData([
 ]);
 
 assert.equal(nullableMetadata.ok, true);
+
+const missingRequiredMetadataField = validateSongMetadataData([
+  {
+    songId: 'song-1',
+    fetchStatus: 'no_match',
+    matchConfidence: null,
+    albumArtUrl: null,
+    albumTitle: null,
+    deezerTrackId: null,
+    deezerArtistId: null,
+    trackDuration: null,
+    fetchedAt: '2026-02-25T16:22:42.362305+00:00',
+    lastError: null,
+  },
+]);
+
+assert.equal(missingRequiredMetadataField.ok, false);
+assert.ok(
+  missingRequiredMetadataField.errors.some((error) => error.includes('songMetadata[0].albumArtUrls')),
+  'song metadata without albumArtUrls should fail the runtime contract',
+);
