@@ -10,7 +10,7 @@
     "lint": "eslint app lib middleware.ts next.config.ts tailwind.config.ts playwright.config.ts",
     "install:admin": "npm install --prefix admin",
     "install:admin-ui": "npm install --prefix admin/ui",
-    "install:python": "cd tools/mizukilens && python3 -m venv .venv && .venv/bin/pip install -e .",
+    "install:python": "cd tools/mizukilens && python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'",
     "install:all": "npm run install:admin && npm run install:admin-ui && npm run install:python",
     "typecheck:admin": "npm run typecheck --prefix admin",
     "build:admin-ui": "npm run build --prefix admin/ui",
