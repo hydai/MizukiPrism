@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Trash2, ChevronUp, ChevronDown, Clock } from 'lucide-react';
+import { parseTimestamp, secondsToFullTimestamp } from '@/lib/parse';
 
 export interface AuroraSong {
   id: string;
@@ -11,18 +12,8 @@ export interface AuroraSong {
   endSeconds: number | null;
 }
 
-function toHMS(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
 function parseHMS(value: string): number | null {
-  const m = value.trim().match(/^(?:(\d{1,2}):)?(\d{1,2}):(\d{2})$/);
-  if (!m) return null;
-  const h = m[1] ? parseInt(m[1], 10) : 0;
-  return h * 3600 + parseInt(m[2]!, 10) * 60 + parseInt(m[3]!, 10);
+  return parseTimestamp(value);
 }
 
 interface InlineCellProps {
@@ -129,7 +120,7 @@ export default function SongListEditor({ songs, selectedIndex, onSelect, onUpdat
           {/* Timestamps */}
           <div className="flex items-center gap-1 shrink-0 font-mono text-[12px]">
             <InlineCell
-              value={toHMS(song.startSeconds)}
+              value={secondsToFullTimestamp(song.startSeconds)}
               onClick={() => onSeekTo(song.startSeconds)}
               onCommit={(v) => {
                 const sec = parseHMS(v);
@@ -139,7 +130,7 @@ export default function SongListEditor({ songs, selectedIndex, onSelect, onUpdat
             />
             <span className="text-[var(--text-tertiary)]">~</span>
             <InlineCell
-              value={song.endSeconds !== null ? toHMS(song.endSeconds) : '--:--:--'}
+              value={song.endSeconds !== null ? secondsToFullTimestamp(song.endSeconds) : '--:--:--'}
               onClick={() => { if (song.endSeconds !== null) onSeekTo(song.endSeconds); }}
               onCommit={(v) => {
                 if (v === '--:--:--' || v === '') {

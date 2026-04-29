@@ -1,3 +1,8 @@
+import {
+  parseTimestamp,
+  secondsToFullTimestamp,
+} from '../shared/parse';
+
 export function validateYoutubeUrl(url: string): boolean {
   return /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|live\/)|youtu\.be\/)[a-zA-Z0-9_-]+/.test(url);
 }
@@ -7,18 +12,12 @@ export function validateTimestamp(ts: string): boolean {
 }
 
 export function timestampToSeconds(ts: string): number {
-  const parts = ts.split(':').map(Number);
-  if (parts.length === 3) {
-    return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  }
-  return 0;
+  if (!validateTimestamp(ts)) return 0;
+  return parseTimestamp(ts) ?? 0;
 }
 
 export function secondsToTimestamp(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return secondsToFullTimestamp(seconds);
 }
 
 export function extractVideoId(youtubeUrl: string): string | null {
