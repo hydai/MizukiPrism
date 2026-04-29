@@ -7,7 +7,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint app lib middleware.ts next.config.ts tailwind.config.ts playwright.config.ts"
+    "lint": "eslint app lib middleware.ts next.config.ts tailwind.config.ts playwright.config.ts",
+    "typecheck:admin": "npm run typecheck --prefix admin",
+    "build:admin-ui": "npm run build --prefix admin/ui",
+    "test:python": "cd tools/mizukilens && .venv/bin/python3 -m pytest tests -q",
+    "test:e2e": "playwright test",
+    "check": "npm run lint && npm run build && npm run typecheck:admin && npm run build:admin-ui && npm run test:python"
   },
   "keywords": [],
   "author": "",
