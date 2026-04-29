@@ -1,5 +1,5 @@
 // Shared types between Workers API and Admin UI
-// Derived from lib/types.ts (fan site) with admin-specific additions
+// Uses the root shared contract layer as the source of truth, with admin-specific additions here
 import type { StreamCredit as CatalogStreamCredit } from '../../shared/types';
 
 export type Status = 'pending' | 'approved' | 'rejected' | 'excluded' | 'extracted';
