@@ -14,6 +14,7 @@ Scope:
 - Document the planned PR stack.
 
 Validation:
+- Fresh checkout setup: `npm install && npm run install:all`
 - `npm run check`
 - `npm run test:e2e` when browser coverage is needed.
 
