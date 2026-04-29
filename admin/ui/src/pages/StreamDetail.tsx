@@ -5,18 +5,9 @@ import { api } from '../api/client';
 import StatusBadge from '../components/StatusBadge';
 import { YouTubePlayer } from '../components/YouTubePlayer';
 import type { YouTubePlayerHandle } from '../components/YouTubePlayer';
-import { parseTextToSongs, formatSongList } from '../../../shared/parse';
+import { parseTextToSongs, formatSongList, secondsToTimestamp } from '../../../shared/parse';
 
-// --- Helpers ---
-
-function formatTimestamp(sec: number): string {
-  const total = Math.floor(sec);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
+const formatTimestamp = secondsToTimestamp;
 
 // --- Toast ---
 

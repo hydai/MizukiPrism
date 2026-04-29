@@ -38,6 +38,13 @@ export function secondsToTimestamp(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+export function secondsToFullTimestamp(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 export function splitArtist(songInfo: string): [string, string] {
   // Try " / " variants
   const slashMatch = songInfo.match(/\s*\/\s+|\s+\/\s*/);
@@ -125,21 +132,14 @@ export function parseSongLine(line: string): RawSong | null {
   return result;
 }
 
-function toHMS(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
 export function formatSongList(
   performances: { title: string; originalArtist: string; timestamp: number; endTimestamp: number | null }[],
 ): string {
   return performances
     .map((p, i) => {
       const num = String(i + 1).padStart(2, '0');
-      const start = toHMS(p.timestamp);
-      const end = p.endTimestamp !== null ? toHMS(p.endTimestamp) : '--:--:--';
+      const start = secondsToFullTimestamp(p.timestamp);
+      const end = p.endTimestamp !== null ? secondsToFullTimestamp(p.endTimestamp) : '--:--:--';
       const artist = p.originalArtist ? ` / ${p.originalArtist}` : '';
       return `${num}. ${start} ~ ${end} ${p.title}${artist}`;
     })

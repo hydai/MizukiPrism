@@ -2,14 +2,7 @@
 
 import { useState } from 'react';
 import { X, FileText, Plus, Replace } from 'lucide-react';
-import { parseTextToSongs, type ParsedSong } from '@/lib/parse';
-
-function toHMS(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
+import { parseTextToSongs, secondsToFullTimestamp, type ParsedSong } from '@/lib/parse';
 
 interface Props {
   open: boolean;
@@ -111,8 +104,8 @@ export default function PasteImportModal({ open, onClose, onImport }: Props) {
                         <td className="px-3 py-1 font-mono text-[var(--text-tertiary)]">{String(i + 1).padStart(2, '0')}</td>
                         <td className="px-3 py-1 text-[var(--text-primary)]">{s.songName}</td>
                         <td className="px-3 py-1 text-[var(--text-secondary)]">{s.artist || '—'}</td>
-                        <td className="px-3 py-1 font-mono text-emerald-600">{toHMS(s.startSeconds)}</td>
-                        <td className="px-3 py-1 font-mono text-orange-500">{s.endSeconds !== null ? toHMS(s.endSeconds) : '--:--:--'}</td>
+                        <td className="px-3 py-1 font-mono text-emerald-600">{secondsToFullTimestamp(s.startSeconds)}</td>
+                        <td className="px-3 py-1 font-mono text-orange-500">{s.endSeconds !== null ? secondsToFullTimestamp(s.endSeconds) : '--:--:--'}</td>
                       </tr>
                     ))}
                   </tbody>
