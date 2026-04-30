@@ -1,7 +1,7 @@
 import type {
-  AlbumArtUrls,
   Performance as SharedPerformance,
   Song as SharedSong,
+  SongMetadata as SharedSongMetadata,
   Stream as SharedStream,
 } from '../../shared/types';
 
@@ -26,11 +26,7 @@ export interface FlattenedSong extends CatalogSong {
   year?: number;
 }
 
-export interface CatalogMetadataEntry {
-  songId: string;
-  albumArtUrl?: string | null;
-  albumArtUrls?: AlbumArtUrls | null;
-}
+export type CatalogMetadataEntry = Pick<SharedSongMetadata, 'songId' | 'albumArtUrl' | 'albumArtUrls'>;
 
 export interface CatalogMetadataResponse {
   songMetadata: CatalogMetadataEntry[];
