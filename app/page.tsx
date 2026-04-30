@@ -5,6 +5,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff, House, Radio } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { useCatalogData } from './hooks/useCatalogData';
+import { useCatalogPanelState } from './hooks/useCatalogPanelState';
 import { useCatalogToastState } from './hooks/useCatalogToastState';
 import { useCatalogViewState } from './hooks/useCatalogViewState';
 import {
@@ -41,10 +42,20 @@ import ThemeToggle from './components/ThemeToggle';
 
 export default function Home() {
   const [expandedSongs, setExpandedSongs] = useState<Set<string>>(new Set());
-  const [showPlaylistPanel, setShowPlaylistPanel] = useState(false);
-  const [showLikedSongsPanel, setShowLikedSongsPanel] = useState(false);
-  const [showRecentlyPlayedPanel, setShowRecentlyPlayedPanel] = useState(false);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const {
+    showPlaylistPanel,
+    showLikedSongsPanel,
+    showRecentlyPlayedPanel,
+    showCreateDialog,
+    openPlaylistPanel,
+    closePlaylistPanel,
+    openLikedSongsPanel,
+    closeLikedSongsPanel,
+    openRecentlyPlayedPanel,
+    closeRecentlyPlayedPanel,
+    openCreateDialog,
+    closeCreateDialog,
+  } = useCatalogPanelState();
   const {
     searchInput,
     setSearchInput,
@@ -216,12 +227,12 @@ export default function Home() {
         activePage="home"
         isHomeActive={!hasActiveFilters}
         onHomeClick={clearAllFilters}
-        onCreatePlaylist={() => setShowCreateDialog(true)}
-        onViewPlaylists={() => setShowPlaylistPanel(true)}
+        onCreatePlaylist={openCreateDialog}
+        onViewPlaylists={openPlaylistPanel}
         playlistCount={playlists.length}
-        onViewLikedSongs={() => setShowLikedSongsPanel(true)}
+        onViewLikedSongs={openLikedSongsPanel}
         likedSongsCount={likedCount}
-        onViewRecentlyPlayed={() => setShowRecentlyPlayedPanel(true)}
+        onViewRecentlyPlayed={openRecentlyPlayedPanel}
         recentlyPlayedCount={recentCount}
         searchSlot={
           <div className="px-3 pb-3 flex-shrink-0">
@@ -1397,7 +1408,7 @@ export default function Home() {
 
                 {/* Liked Songs */}
                 <button
-                  onClick={() => setShowLikedSongsPanel(true)}
+                  onClick={openLikedSongsPanel}
                   className="w-full flex items-center justify-between px-4 py-3 rounded-radius-lg font-medium text-sm transition-all mb-2"
                   style={{
                     background: 'var(--bg-surface-glass)',
@@ -1423,7 +1434,7 @@ export default function Home() {
 
                 {/* Recently Played */}
                 <button
-                  onClick={() => setShowRecentlyPlayedPanel(true)}
+                  onClick={openRecentlyPlayedPanel}
                   className="w-full flex items-center justify-between px-4 py-3 rounded-radius-lg font-medium text-sm transition-all mb-2"
                   style={{
                     background: 'var(--bg-surface-glass)',
@@ -1449,7 +1460,7 @@ export default function Home() {
 
                 {/* Create Playlist */}
                 <button
-                  onClick={() => setShowCreateDialog(true)}
+                  onClick={openCreateDialog}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-radius-lg font-medium text-sm transition-all"
                   style={{
                     background: 'var(--bg-surface-glass)',
@@ -1466,7 +1477,7 @@ export default function Home() {
               {playlists.length > 0 ? (
                 <div>
                   <button
-                    onClick={() => setShowPlaylistPanel(true)}
+                    onClick={openPlaylistPanel}
                     className="w-full flex items-center justify-between px-4 py-3 rounded-radius-lg font-medium text-sm transition-all mb-2"
                     style={{
                       background: 'var(--bg-surface-glass)',
@@ -1702,23 +1713,23 @@ export default function Home() {
       {/* Playlist UI */}
       <PlaylistPanel
         show={showPlaylistPanel}
-        onClose={() => setShowPlaylistPanel(false)}
+        onClose={closePlaylistPanel}
         songsData={songs}
         onToast={showToastMessage}
       />
       <LikedSongsPanel
         show={showLikedSongsPanel}
-        onClose={() => setShowLikedSongsPanel(false)}
+        onClose={closeLikedSongsPanel}
         onToast={showToastMessage}
       />
       <RecentlyPlayedPanel
         show={showRecentlyPlayedPanel}
-        onClose={() => setShowRecentlyPlayedPanel(false)}
+        onClose={closeRecentlyPlayedPanel}
         onToast={showToastMessage}
       />
       <CreatePlaylistDialog
         show={showCreateDialog}
-        onClose={() => setShowCreateDialog(false)}
+        onClose={closeCreateDialog}
         onSuccess={() => {
           showToastMessage('播放清單已建立');
         }}
