@@ -60,5 +60,8 @@ export function mergeAlbumArtIntoSongs(
 }
 
 export function sortStreamsByDateDesc<T extends Pick<CatalogStream, 'date'>>(streams: T[]): T[] {
-  return [...streams].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  return streams
+    .map((stream) => ({ stream, timestamp: Date.parse(stream.date) }))
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .map(({ stream }) => stream);
 }
