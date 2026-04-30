@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff, House, Radio } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { useCatalogData } from './hooks/useCatalogData';
+import { useCatalogToastState } from './hooks/useCatalogToastState';
 import { useCatalogViewState } from './hooks/useCatalogViewState';
 import {
   buildCatalogArtistList,
@@ -40,8 +41,6 @@ import ThemeToggle from './components/ThemeToggle';
 
 export default function Home() {
   const [expandedSongs, setExpandedSongs] = useState<Set<string>>(new Set());
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
   const [showPlaylistPanel, setShowPlaylistPanel] = useState(false);
   const [showLikedSongsPanel, setShowLikedSongsPanel] = useState(false);
   const [showRecentlyPlayedPanel, setShowRecentlyPlayedPanel] = useState(false);
@@ -74,12 +73,24 @@ export default function Home() {
   const { playlists, storageError, clearStorageError } = usePlaylist();
   const { likedCount } = useLikedSongs();
   const { recentCount } = useRecentlyPlayed();
+  const {
+    showToast,
+    toastMessage,
+    showToastMessage,
+    hideToast,
+  } = useCatalogToastState({
+    storageError,
+    clearStorageError,
+    timestampWarning,
+    clearTimestampWarning,
+    skipNotification,
+    clearSkipNotification,
+  });
 
   const handleAddToQueue = useCallback((track: Track) => {
     addToQueue(track);
-    setToastMessage('已加入播放佇列');
-    setShowToast(true);
-  }, [addToQueue]);
+    showToastMessage('已加入播放佇列');
+  }, [addToQueue, showToastMessage]);
 
   const handlePlayAll = () => {
     const tracks = viewMode === 'timeline'
@@ -93,36 +104,8 @@ export default function Home() {
   };
 
   const handleAddToPlaylistSuccess = useCallback(() => {
-    setToastMessage('已加入播放清單');
-    setShowToast(true);
-  }, []);
-
-  // Show storage error toast
-  useEffect(() => {
-    if (storageError) {
-      setToastMessage(storageError);
-      setShowToast(true);
-      clearStorageError();
-    }
-  }, [storageError, clearStorageError]);
-
-  // Show timestamp warning toast
-  useEffect(() => {
-    if (timestampWarning) {
-      setToastMessage(timestampWarning);
-      setShowToast(true);
-      clearTimestampWarning();
-    }
-  }, [timestampWarning, clearTimestampWarning]);
-
-  // Show skip notification toast (deleted version skipped or playlist ended)
-  useEffect(() => {
-    if (skipNotification) {
-      setToastMessage(skipNotification);
-      setShowToast(true);
-      clearSkipNotification();
-    }
-  }, [skipNotification, clearSkipNotification]);
+    showToastMessage('已加入播放清單');
+  }, [showToastMessage]);
 
   const toggleSongExpansion = useCallback((songId: string) => {
     setExpandedSongs(prev => {
@@ -216,7 +199,7 @@ export default function Home() {
 
   return (
     <>
-      <Toast message={toastMessage} show={showToast} onHide={() => setShowToast(false)} />
+      <Toast message={toastMessage} show={showToast} onHide={hideToast} />
       {/* API Load Error Banner */}
       {apiLoadError && (
         <div
@@ -1721,24 +1704,23 @@ export default function Home() {
         show={showPlaylistPanel}
         onClose={() => setShowPlaylistPanel(false)}
         songsData={songs}
-        onToast={(msg) => { setToastMessage(msg); setShowToast(true); }}
+        onToast={showToastMessage}
       />
       <LikedSongsPanel
         show={showLikedSongsPanel}
         onClose={() => setShowLikedSongsPanel(false)}
-        onToast={(msg) => { setToastMessage(msg); setShowToast(true); }}
+        onToast={showToastMessage}
       />
       <RecentlyPlayedPanel
         show={showRecentlyPlayedPanel}
         onClose={() => setShowRecentlyPlayedPanel(false)}
-        onToast={(msg) => { setToastMessage(msg); setShowToast(true); }}
+        onToast={showToastMessage}
       />
       <CreatePlaylistDialog
         show={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onSuccess={() => {
-          setToastMessage('播放清單已建立');
-          setShowToast(true);
+          showToastMessage('播放清單已建立');
         }}
       />
     </>
