@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 
 interface MobileHeroProps {
@@ -10,6 +11,8 @@ interface MobileHeroProps {
 }
 
 export default function MobileHero({ name, description, avatarUrl, songCount }: MobileHeroProps) {
+  const [avatarError, setAvatarError] = useState(false);
+
   return (
     <header
       data-testid="mobile-hero"
@@ -39,19 +42,25 @@ export default function MobileHero({ name, description, avatarUrl, songCount }: 
             overflow: 'hidden',
           }}
         >
-          <img
-            src={avatarUrl}
-            alt={name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={(e) => {
-              const target = e.currentTarget as HTMLImageElement;
-              target.style.display = 'none';
-              const parent = target.parentElement;
-              if (parent) {
-                parent.style.background = 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))';
-              }
-            }}
-          />
+          {avatarError ? (
+            <div
+              role="img"
+              aria-label={name}
+              style={{
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
+              }}
+            />
+          ) : (
+            /* eslint-disable-next-line @next/next/no-img-element -- Keep the existing external avatar fallback behavior. */
+            <img
+              src={avatarUrl}
+              alt={name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={() => setAvatarError(true)}
+            />
+          )}
         </div>
       </div>
 
