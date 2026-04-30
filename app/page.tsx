@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff, House, Radio } from 'lucide-react';
+import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { useCatalogData } from './hooks/useCatalogData';
 import { useCatalogDerivedData } from './hooks/useCatalogDerivedData';
@@ -24,6 +24,7 @@ import SidebarNav from './components/SidebarNav';
 import TimelineRow from './components/TimelineRow';
 import SongCard from './components/SongCard';
 import MobileSearchRow from './components/MobileSearchRow';
+import MobileBottomNav from './components/MobileBottomNav';
 import ThemeToggle from './components/ThemeToggle';
 
 export default function Home() {
@@ -1521,119 +1522,7 @@ export default function Home() {
       </main>
       </div>
 
-      {/* Mobile BottomNav — 64px + safe area, fixed bottom, mobile only */}
-      <nav
-        data-testid="mobile-bottom-nav"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-[70] flex items-start justify-around"
-        style={{
-          padding: '8px 0 calc(16px + var(--safe-area-bottom)) 0',
-          background: 'var(--bg-surface-frosted)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          borderTop: '1px solid var(--border-glass)',
-        }}
-      >
-        {/* Home */}
-        <button
-          data-testid="bottom-nav-home"
-          onClick={() => setMobileTab('home')}
-          className="flex flex-col items-center justify-start"
-          style={{ gap: '4px', flex: 1 }}
-        >
-          <House
-            style={{
-              width: '22px',
-              height: '22px',
-              color: mobileTab === 'home' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
-            }}
-          />
-          <span
-            style={{
-              fontSize: '10px',
-              fontWeight: mobileTab === 'home' ? 700 : 500,
-              color: mobileTab === 'home' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
-            }}
-          >
-            Home
-          </span>
-        </button>
-
-        {/* Search */}
-        <button
-          data-testid="bottom-nav-search"
-          onClick={() => setMobileTab('search')}
-          className="flex flex-col items-center justify-start"
-          style={{ gap: '4px', flex: 1 }}
-        >
-          <Search
-            style={{
-              width: '22px',
-              height: '22px',
-              color: mobileTab === 'search' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
-            }}
-          />
-          <span
-            style={{
-              fontSize: '10px',
-              fontWeight: mobileTab === 'search' ? 700 : 500,
-              color: mobileTab === 'search' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
-            }}
-          >
-            Search
-          </span>
-        </button>
-
-        {/* Streams */}
-        <button
-          data-testid="bottom-nav-streams"
-          onClick={() => setMobileTab('streams')}
-          className="flex flex-col items-center justify-start"
-          style={{ gap: '4px', flex: 1 }}
-        >
-          <Radio
-            style={{
-              width: '22px',
-              height: '22px',
-              color: mobileTab === 'streams' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
-            }}
-          />
-          <span
-            style={{
-              fontSize: '10px',
-              fontWeight: mobileTab === 'streams' ? 700 : 500,
-              color: mobileTab === 'streams' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
-            }}
-          >
-            歌枠
-          </span>
-        </button>
-
-        {/* Library */}
-        <button
-          data-testid="bottom-nav-library"
-          onClick={() => setMobileTab('library')}
-          className="flex flex-col items-center justify-start"
-          style={{ gap: '4px', flex: 1 }}
-        >
-          <ListMusic
-            style={{
-              width: '22px',
-              height: '22px',
-              color: mobileTab === 'library' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
-            }}
-          />
-          <span
-            style={{
-              fontSize: '10px',
-              fontWeight: mobileTab === 'library' ? 700 : 500,
-              color: mobileTab === 'library' ? 'var(--accent-pink)' : 'var(--text-tertiary)',
-            }}
-          >
-            Library
-          </span>
-        </button>
-
-      </nav>
+      <MobileBottomNav activeTab={mobileTab} onTabChange={setMobileTab} />
 
       {/* Playlist UI */}
       <PlaylistPanel
