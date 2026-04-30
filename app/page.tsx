@@ -1,24 +1,14 @@
 'use client';
 
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff, House, Radio } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { useCatalogData } from './hooks/useCatalogData';
+import { useCatalogDerivedData } from './hooks/useCatalogDerivedData';
 import { useCatalogPanelState } from './hooks/useCatalogPanelState';
 import { useCatalogToastState } from './hooks/useCatalogToastState';
 import { useCatalogViewState } from './hooks/useCatalogViewState';
-import {
-  buildCatalogArtistList,
-  buildCatalogYears,
-  filterCatalogStreamsByYears,
-  filterFlattenedCatalogSongs,
-  filterGroupedCatalogSongs,
-  flattenCatalogSongs,
-  sortCatalogSongsByTitle,
-  type CatalogSong as Song,
-  type FlattenedSong,
-} from './lib/catalogData';
 import {
   buildGroupedPlaybackTracks,
   buildTimelinePlaybackTracks,
@@ -130,46 +120,20 @@ export default function Home() {
     });
   }, []);
 
-  const allArtists = useMemo(() => {
-    return buildCatalogArtistList(songs);
-  }, [songs]);
-
-  const availableYears = useMemo(() => {
-    return buildCatalogYears(streams);
-  }, [streams]);
-
-  const filteredStreams = useMemo(() => {
-    return filterCatalogStreamsByYears(streams, selectedYears);
-  }, [streams, selectedYears]);
-
-  // Flatten + sort: expensive, only recomputes when song data changes
-  const allFlattenedSongs: FlattenedSong[] = useMemo(() => {
-    return flattenCatalogSongs(songs);
-  }, [songs]);
-
-  // Filter: cheap, runs against pre-flattened array
-  const flattenedSongs: FlattenedSong[] = useMemo(() => {
-    return filterFlattenedCatalogSongs(allFlattenedSongs, {
-      searchTerm: debouncedSearch,
-      selectedStreamId,
-      selectedArtist,
-      selectedYears,
-    });
-  }, [allFlattenedSongs, debouncedSearch, selectedStreamId, selectedArtist, selectedYears]);
-
-  // Grouped songs: separate sort (expensive) from filter (cheap)
-  const allGroupedSongs: Song[] = useMemo(() => {
-    return sortCatalogSongsByTitle(songs);
-  }, [songs]);
-
-  const groupedSongs: Song[] = useMemo(() => {
-    return filterGroupedCatalogSongs(allGroupedSongs, {
-      searchTerm: debouncedSearch,
-      selectedStreamId,
-      selectedArtist,
-      selectedYears,
-    });
-  }, [allGroupedSongs, debouncedSearch, selectedStreamId, selectedArtist, selectedYears]);
+  const {
+    allArtists,
+    availableYears,
+    filteredStreams,
+    flattenedSongs,
+    groupedSongs,
+  } = useCatalogDerivedData({
+    streams,
+    songs,
+    searchTerm: debouncedSearch,
+    selectedStreamId,
+    selectedArtist,
+    selectedYears,
+  });
 
   // Virtual scrolling refs and virtualizers
   const scrollContainerRef = useRef<HTMLDivElement>(null);

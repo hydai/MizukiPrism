@@ -28,12 +28,20 @@ async function waitForSearch(page: import('@playwright/test').Page) {
   await page.waitForTimeout(250);
 }
 
+async function waitForCatalogResults(page: import('@playwright/test').Page) {
+  await expect.poll(
+    () => getLogicalPerformanceCount(page),
+    { timeout: 10000 },
+  ).toBeGreaterThan(0);
+}
+
 test.describe('CORE-003: Search & Filter', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto(BASE_URL);
     // Ensure we start in timeline view
     await page.click('[data-testid="view-toggle-timeline"]');
+    await waitForCatalogResults(page);
   });
 
   test('AC1: Search by song name filters results instantly (min 1 char, case-insensitive, fuzzy)', async ({ page }) => {
