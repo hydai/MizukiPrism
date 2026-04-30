@@ -16,7 +16,12 @@ import {
   type CatalogSong as Song,
   type FlattenedSong,
 } from './lib/catalogData';
-import { usePlayer } from './contexts/PlayerContext';
+import {
+  buildGroupedPlaybackTracks,
+  buildTimelinePlaybackTracks,
+  filterPlayableTracks,
+} from './lib/catalogPlayback';
+import { usePlayer, type Track } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
 import { useLikedSongs } from './contexts/LikedSongsContext';
 import { useRecentlyPlayed } from './contexts/RecentlyPlayedContext';
@@ -57,35 +62,21 @@ export default function Home() {
   const { likedCount } = useLikedSongs();
   const { recentCount } = useRecentlyPlayed();
 
-  const handleAddToQueue = useCallback((track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number; endTimestamp?: number; albumArtUrl?: string }) => {
+  const handleAddToQueue = useCallback((track: Track) => {
     addToQueue(track);
     setToastMessage('已加入播放佇列');
     setShowToast(true);
   }, [addToQueue]);
 
   const handlePlayAll = () => {
-    type TrackInfo = { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number; endTimestamp?: number; albumArtUrl?: string };
-    let tracks: TrackInfo[];
-    if (viewMode === 'timeline') {
-      tracks = flattenedSongs.map(s => ({
-        id: s.performanceId, songId: s.id, title: s.title,
-        originalArtist: s.originalArtist, videoId: s.videoId,
-        timestamp: s.timestamp, endTimestamp: s.endTimestamp, albumArtUrl: s.albumArtUrl,
-      }));
-    } else {
-      tracks = groupedSongs.flatMap(song => {
-        if (!song.performances.length) return [];
-        const latest = [...song.performances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-        return [{ id: latest.id, songId: song.id, title: song.title,
-          originalArtist: song.originalArtist, videoId: latest.videoId,
-          timestamp: latest.timestamp, endTimestamp: latest.endTimestamp ?? undefined, albumArtUrl: song.albumArtUrl,
-        }];
-      });
-    }
-    const available = tracks.filter(t => !unavailableVideoIds.has(t.videoId));
-    if (available.length === 0) return;
-    playTrack(available[0]);
-    available.slice(1).forEach(t => addToQueue(t));
+    const tracks = viewMode === 'timeline'
+      ? buildTimelinePlaybackTracks(flattenedSongs)
+      : buildGroupedPlaybackTracks(groupedSongs);
+    const available = filterPlayableTracks(tracks, unavailableVideoIds);
+    const firstTrack = available[0];
+    if (!firstTrack) return;
+    playTrack(firstTrack);
+    available.slice(1).forEach((track) => addToQueue(track));
   };
 
   const handleAddToPlaylistSuccess = useCallback(() => {
