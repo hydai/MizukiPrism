@@ -87,12 +87,13 @@ test.describe('PLAY-003: Playlist Management with Local Storage', () => {
     await page.waitForTimeout(300);
 
     // Click on the playlist to view versions
-    await page.locator('[data-testid="playlist-panel"]').getByText('測試清單').click();
+    const playlistPanel = page.locator('[data-testid="playlist-panel"]');
+    await playlistPanel.getByText('測試清單').click();
     await page.waitForTimeout(300);
 
     // Verify version appears in the list
-    await expect(page.locator('[data-testid="playlist-versions"]')).toBeVisible();
-    const versionItems = page.locator('[data-testid="playlist-version-item"]');
+    await expect(playlistPanel.locator('[data-testid="playlist-versions"]')).toBeVisible();
+    const versionItems = playlistPanel.locator('[data-testid="playlist-version-item"]');
     await expect(versionItems).toHaveCount(1);
 
     // Take screenshot
