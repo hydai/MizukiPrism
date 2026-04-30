@@ -34,7 +34,7 @@ export function useCatalogData() {
     return mountedRef.current && !signal?.aborted;
   }, []);
 
-  const fetchSongs = useCallback((signal?: AbortSignal) => {
+  const fetchSongsWithSignal = useCallback((signal?: AbortSignal) => {
     fetch('/api/songs', { signal })
       .then((res) => {
         if (!res.ok) throw new Error('API error');
@@ -50,6 +50,10 @@ export function useCatalogData() {
         setLoadError(true);
       });
   }, [canCommit]);
+
+  const fetchSongs = useCallback(() => {
+    fetchSongsWithSignal();
+  }, [fetchSongsWithSignal]);
 
   useEffect(() => {
     return () => {
@@ -73,7 +77,7 @@ export function useCatalogData() {
       })
       .finally(() => {
         if (!signal.aborted) {
-          fetchSongs(signal);
+          fetchSongsWithSignal(signal);
         }
       });
 
@@ -91,7 +95,7 @@ export function useCatalogData() {
     return () => {
       controller.abort();
     };
-  }, [canCommit, fetchSongs]);
+  }, [canCommit, fetchSongsWithSignal]);
 
   return {
     streams,
