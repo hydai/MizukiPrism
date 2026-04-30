@@ -3,6 +3,9 @@ import path from 'path';
 import fs from 'fs';
 
 const BASE_URL = 'http://localhost:3000';
+const TOTAL_PERFORMANCE_COUNT_TEST_ID = 'total-performance-count';
+const TOTAL_PERFORMANCE_COUNT_SELECTOR = `[data-testid="${TOTAL_PERFORMANCE_COUNT_TEST_ID}"]`;
+const TOTAL_SONG_CARD_COUNT_TEST_ID = 'total-song-card-count';
 
 const screenshotsDir = path.join(process.cwd(), '.screenshots');
 
@@ -10,17 +13,22 @@ function screenshotPath(name: string): string {
   return path.join(screenshotsDir, `core-003-${name}.png`);
 }
 
+function parseLogicalCount(text: string | null | undefined): number {
+  const digits = text?.replace(/[^\d]/g, '') ?? '';
+  return digits ? Number(digits) : 0;
+}
+
 /** Read the logical total from the hidden sr-only element (not capped by virtual scrolling) */
 async function getLogicalPerformanceCount(page: import('@playwright/test').Page): Promise<number> {
-  const el = page.getByTestId('total-performance-count');
+  const el = page.getByTestId(TOTAL_PERFORMANCE_COUNT_TEST_ID);
   const text = await el.textContent();
-  return Number(text);
+  return parseLogicalCount(text);
 }
 
 async function getLogicalSongCardCount(page: import('@playwright/test').Page): Promise<number> {
-  const el = page.getByTestId('total-song-card-count');
+  const el = page.getByTestId(TOTAL_SONG_CARD_COUNT_TEST_ID);
   const text = await el.textContent();
-  return Number(text);
+  return parseLogicalCount(text);
 }
 
 /** Wait for debounced search to take effect */
@@ -29,13 +37,15 @@ async function waitForSearch(page: import('@playwright/test').Page) {
 }
 
 async function readLogicalPerformanceCountNow(page: import('@playwright/test').Page): Promise<number> {
-  return page.evaluate(() => {
-    const el = document.querySelector('[data-testid="total-performance-count"]');
-    return Number(el?.textContent ?? 0);
-  });
+  return page.evaluate((selector) => {
+    const el = document.querySelector(selector);
+    const digits = el?.textContent?.replace(/[^\d]/g, '') ?? '';
+    return digits ? Number(digits) : 0;
+  }, TOTAL_PERFORMANCE_COUNT_SELECTOR);
 }
 
 async function waitForCatalogResults(page: import('@playwright/test').Page) {
+  await expect(page.getByTestId(TOTAL_PERFORMANCE_COUNT_TEST_ID)).toBeAttached({ timeout: 10000 });
   await expect.poll(
     () => readLogicalPerformanceCountNow(page),
     { timeout: 10000 },
