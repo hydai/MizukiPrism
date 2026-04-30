@@ -25,6 +25,7 @@ import TimelineRow from './components/TimelineRow';
 import SongCard from './components/SongCard';
 import MobileSearchRow from './components/MobileSearchRow';
 import MobileBottomNav from './components/MobileBottomNav';
+import MobileStreamsTab from './components/MobileStreamsTab';
 import ThemeToggle from './components/ThemeToggle';
 
 export default function Home() {
@@ -1433,89 +1434,16 @@ export default function Home() {
             </div>
           )}
 
-          {/* Mobile Streams Tab content — only visible on mobile when Streams tab is active */}
           {mobileTab === 'streams' && (
-            <div
-              className="lg:hidden flex-1 px-4 pt-4 pb-32"
-              data-testid="mobile-streams-tab"
-            >
-              <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>歌枠回放</h2>
-
-              {/* Year filter chips */}
-              <div className="flex gap-1.5 mb-4 overflow-x-auto" data-testid="mobile-streams-year-filter">
-                {availableYears.map(year => (
-                  <button
-                    key={year}
-                    data-testid="mobile-streams-year-chip"
-                    onClick={() => toggleYear(year)}
-                    className="font-medium text-sm transition-all flex-shrink-0"
-                    style={{
-                      borderRadius: 'var(--radius-pill)',
-                      padding: '4px 12px',
-                      ...(selectedYears.has(year)
-                        ? { background: 'var(--bg-accent-pink)', color: 'var(--accent-pink)' }
-                        : { background: 'var(--bg-surface-glass)', border: '1px solid var(--border-glass)', color: 'var(--text-secondary)' }),
-                    }}
-                  >
-                    {year}
-                  </button>
-                ))}
-                {selectedYears.size > 0 && (
-                  <button
-                    onClick={clearYears}
-                    className="font-medium text-xs transition-all flex-shrink-0"
-                    style={{
-                      borderRadius: 'var(--radius-pill)',
-                      padding: '4px 10px',
-                      color: 'var(--text-tertiary)',
-                    }}
-                  >
-                    清除
-                  </button>
-                )}
-              </div>
-
-              {/* All songs button */}
-              <button
-                onClick={showAllStreamsOnHome}
-                className="w-full text-left px-4 py-3 rounded-radius-lg text-sm font-medium transition-all mb-2"
-                style={{
-                  background: 'var(--bg-surface-glass)',
-                  border: '1px solid var(--border-glass)',
-                  color: 'var(--text-secondary)',
-                  borderRadius: 'var(--radius-lg)',
-                }}
-                data-testid="mobile-streams-all-songs"
-              >
-                全部歌曲
-              </button>
-
-              {/* Stream list */}
-              {filteredStreams.length === 0 ? (
-                <div className="py-16 text-center" style={{ color: 'var(--text-tertiary)' }}>
-                  <p className="text-base" style={{ color: 'var(--text-secondary)' }}>沒有符合條件的歌枠</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {filteredStreams.map(stream => (
-                    <button
-                      key={stream.id}
-                      data-testid="mobile-stream-card"
-                      onClick={() => showStreamOnHome(stream.id)}
-                      className="w-full text-left px-4 py-3 rounded-radius-lg transition-all"
-                      style={{
-                        background: 'var(--bg-surface-glass)',
-                        border: '1px solid var(--border-glass)',
-                        borderRadius: 'var(--radius-lg)',
-                      }}
-                    >
-                      <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{stream.title}</div>
-                      <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{stream.date}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <MobileStreamsTab
+              availableYears={availableYears}
+              selectedYears={selectedYears}
+              filteredStreams={filteredStreams}
+              onToggleYear={toggleYear}
+              onClearYears={clearYears}
+              onShowAllStreams={showAllStreamsOnHome}
+              onShowStream={showStreamOnHome}
+            />
           )}
 
         </div>
