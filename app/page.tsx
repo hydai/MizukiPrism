@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useState, useCallback } from 'react';
 import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff, House, Radio } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { useCatalogData } from './hooks/useCatalogData';
@@ -9,6 +8,7 @@ import { useCatalogDerivedData } from './hooks/useCatalogDerivedData';
 import { useCatalogPanelState } from './hooks/useCatalogPanelState';
 import { useCatalogPlaybackActions } from './hooks/useCatalogPlaybackActions';
 import { useCatalogToastState } from './hooks/useCatalogToastState';
+import { useCatalogVirtualizers } from './hooks/useCatalogVirtualizers';
 import { useCatalogViewState } from './hooks/useCatalogViewState';
 import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
@@ -124,39 +124,19 @@ export default function Home() {
     showToastMessage,
   });
 
-  // Virtual scrolling refs and virtualizers
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const timelineListRef = useRef<HTMLDivElement>(null);
-  const groupedListRef = useRef<HTMLDivElement>(null);
-  const mobileSearchListRef = useRef<HTMLDivElement>(null);
-
-  // Only activate the virtualizer for the current view to avoid scroll conflicts
-  const isTimelineActive = viewMode === 'timeline' && mobileTab === 'home';
-  const isGroupedActive = viewMode === 'grouped' && mobileTab === 'home';
-  const isMobileSearchActive = mobileTab === 'search';
-
-  const timelineVirtualizer = useVirtualizer({
-    count: isTimelineActive ? flattenedSongs.length : 0,
-    getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => 56,
-    overscan: 15,
-    scrollMargin: timelineListRef.current?.offsetTop ?? 0,
-  });
-
-  const groupedVirtualizer = useVirtualizer({
-    count: isGroupedActive ? groupedSongs.length : 0,
-    getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => 96,
-    overscan: 10,
-    scrollMargin: groupedListRef.current?.offsetTop ?? 0,
-  });
-
-  const mobileSearchVirtualizer = useVirtualizer({
-    count: isMobileSearchActive ? flattenedSongs.length : 0,
-    getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => 64,
-    overscan: 15,
-    scrollMargin: mobileSearchListRef.current?.offsetTop ?? 0,
+  const {
+    scrollContainerRef,
+    timelineListRef,
+    groupedListRef,
+    mobileSearchListRef,
+    timelineVirtualizer,
+    groupedVirtualizer,
+    mobileSearchVirtualizer,
+  } = useCatalogVirtualizers({
+    viewMode,
+    mobileTab,
+    flattenedSongCount: flattenedSongs.length,
+    groupedSongCount: groupedSongs.length,
   });
 
   const gradientText = "bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500";
