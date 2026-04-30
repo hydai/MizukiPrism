@@ -4,7 +4,6 @@ import fs from 'fs';
 
 const BASE_URL = 'http://localhost:3000';
 const TOTAL_PERFORMANCE_COUNT_TEST_ID = 'total-performance-count';
-const TOTAL_PERFORMANCE_COUNT_SELECTOR = `[data-testid="${TOTAL_PERFORMANCE_COUNT_TEST_ID}"]`;
 const TOTAL_SONG_CARD_COUNT_TEST_ID = 'total-song-card-count';
 
 const screenshotsDir = path.join(process.cwd(), '.screenshots');
@@ -37,11 +36,8 @@ async function waitForSearch(page: import('@playwright/test').Page) {
 }
 
 async function readLogicalPerformanceCountNow(page: import('@playwright/test').Page): Promise<number> {
-  return page.evaluate((selector) => {
-    const el = document.querySelector(selector);
-    const digits = el?.textContent?.replace(/[^\d]/g, '') ?? '';
-    return digits ? Number(digits) : 0;
-  }, TOTAL_PERFORMANCE_COUNT_SELECTOR);
+  const text = await page.getByTestId(TOTAL_PERFORMANCE_COUNT_TEST_ID).textContent({ timeout: 0 });
+  return parseLogicalCount(text);
 }
 
 async function waitForCatalogResults(page: import('@playwright/test').Page) {
