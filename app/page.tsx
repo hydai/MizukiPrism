@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff } from 'lucide-react';
+import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, Clock, Disc3, ChevronDown, ChevronRight, ListPlus, X, SlidersHorizontal, WifiOff } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { useCatalogData } from './hooks/useCatalogData';
 import { useCatalogDerivedData } from './hooks/useCatalogDerivedData';
@@ -25,6 +25,7 @@ import TimelineRow from './components/TimelineRow';
 import SongCard from './components/SongCard';
 import MobileSearchRow from './components/MobileSearchRow';
 import MobileBottomNav from './components/MobileBottomNav';
+import MobileLibraryTab from './components/MobileLibraryTab';
 import MobileStreamsTab from './components/MobileStreamsTab';
 import ThemeToggle from './components/ThemeToggle';
 
@@ -1324,114 +1325,16 @@ export default function Home() {
             </div>
           )}
 
-          {/* Mobile Library Tab content — only visible on mobile when Library tab is active */}
           {mobileTab === 'library' && (
-            <div
-              className="lg:hidden flex-1 px-4 pt-4 pb-32"
-              data-testid="mobile-library-tab"
-            >
-              <div className="mb-4">
-                <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>你的音樂庫</h2>
-
-                {/* Liked Songs */}
-                <button
-                  onClick={openLikedSongsPanel}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-radius-lg font-medium text-sm transition-all mb-2"
-                  style={{
-                    background: 'var(--bg-surface-glass)',
-                    border: '1px solid var(--border-glass)',
-                    color: 'var(--text-secondary)',
-                    borderRadius: 'var(--radius-lg)',
-                  }}
-                  data-testid="mobile-liked-songs-button"
-                >
-                  <span className="flex items-center gap-3">
-                    <Heart className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-pink)' }} />
-                    喜愛的歌曲
-                  </span>
-                  {likedCount > 0 && (
-                    <span
-                      className="text-xs px-2 py-0.5 rounded-full font-medium"
-                      style={{ background: 'var(--bg-accent-pink-muted)', color: 'var(--accent-pink)' }}
-                    >
-                      {likedCount}
-                    </span>
-                  )}
-                </button>
-
-                {/* Recently Played */}
-                <button
-                  onClick={openRecentlyPlayedPanel}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-radius-lg font-medium text-sm transition-all mb-2"
-                  style={{
-                    background: 'var(--bg-surface-glass)',
-                    border: '1px solid var(--border-glass)',
-                    color: 'var(--text-secondary)',
-                    borderRadius: 'var(--radius-lg)',
-                  }}
-                  data-testid="mobile-recently-played-button"
-                >
-                  <span className="flex items-center gap-3">
-                    <Clock className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-pink)' }} />
-                    最近播放
-                  </span>
-                  {recentCount > 0 && (
-                    <span
-                      className="text-xs px-2 py-0.5 rounded-full font-medium"
-                      style={{ background: 'var(--bg-accent-pink-muted)', color: 'var(--accent-pink)' }}
-                    >
-                      {recentCount}
-                    </span>
-                  )}
-                </button>
-
-                {/* Create Playlist */}
-                <button
-                  onClick={openCreateDialog}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-radius-lg font-medium text-sm transition-all"
-                  style={{
-                    background: 'var(--bg-surface-glass)',
-                    border: '1px solid var(--border-glass)',
-                    color: 'var(--text-secondary)',
-                    borderRadius: 'var(--radius-lg)',
-                  }}
-                  data-testid="mobile-create-playlist-button"
-                >
-                  <Plus className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-pink)' }} />
-                  建立新播放清單
-                </button>
-              </div>
-              {playlists.length > 0 ? (
-                <div>
-                  <button
-                    onClick={openPlaylistPanel}
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-radius-lg font-medium text-sm transition-all mb-2"
-                    style={{
-                      background: 'var(--bg-surface-glass)',
-                      border: '1px solid var(--border-glass)',
-                      color: 'var(--text-secondary)',
-                      borderRadius: 'var(--radius-lg)',
-                    }}
-                    data-testid="mobile-view-playlists-button"
-                  >
-                    <span className="flex items-center gap-3">
-                      <ListMusic className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-pink)' }} />
-                      查看播放清單
-                    </span>
-                    <span
-                      className="text-xs px-2 py-0.5 rounded-full font-medium"
-                      style={{ background: 'var(--bg-accent-pink-muted)', color: 'var(--accent-pink)' }}
-                    >
-                      {playlists.length}
-                    </span>
-                  </button>
-                </div>
-              ) : (
-                <div className="py-16 text-center" style={{ color: 'var(--text-tertiary)' }}>
-                  <p className="text-base" style={{ color: 'var(--text-secondary)' }}>尚無播放清單，立即建立一個吧！</p>
-                </div>
-              )}
-            </div>
+            <MobileLibraryTab
+              likedCount={likedCount}
+              recentCount={recentCount}
+              playlistCount={playlists.length}
+              onOpenLikedSongs={openLikedSongsPanel}
+              onOpenRecentlyPlayed={openRecentlyPlayedPanel}
+              onOpenCreatePlaylist={openCreateDialog}
+              onOpenPlaylists={openPlaylistPanel}
+            />
           )}
 
           {mobileTab === 'streams' && (
