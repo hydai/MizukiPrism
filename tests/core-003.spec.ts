@@ -28,9 +28,16 @@ async function waitForSearch(page: import('@playwright/test').Page) {
   await page.waitForTimeout(250);
 }
 
+async function readLogicalPerformanceCountNow(page: import('@playwright/test').Page): Promise<number> {
+  return page.evaluate(() => {
+    const el = document.querySelector('[data-testid="total-performance-count"]');
+    return Number(el?.textContent ?? 0);
+  });
+}
+
 async function waitForCatalogResults(page: import('@playwright/test').Page) {
   await expect.poll(
-    () => getLogicalPerformanceCount(page),
+    () => readLogicalPerformanceCountNow(page),
     { timeout: 10000 },
   ).toBeGreaterThan(0);
 }
