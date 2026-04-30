@@ -39,6 +39,10 @@ export interface CatalogFilterState {
   selectedYears: ReadonlySet<number>;
 }
 
+function getCatalogDateYear(date: string): number {
+  return Number(date.slice(0, 4));
+}
+
 export function buildAlbumArtMap(metadata: CatalogMetadataEntry[]): Map<string, string> {
   const map = new Map<string, string>();
 
@@ -77,7 +81,7 @@ export function buildCatalogArtistList(songs: CatalogSong[]): string[] {
 
 export function buildCatalogYears(streams: Pick<CatalogStream, 'date'>[]): number[] {
   const years = new Set<number>();
-  streams.forEach((stream) => years.add(new Date(stream.date).getFullYear()));
+  streams.forEach((stream) => years.add(getCatalogDateYear(stream.date)));
   return Array.from(years).sort((a, b) => b - a);
 }
 
@@ -86,7 +90,7 @@ export function filterCatalogStreamsByYears<T extends Pick<CatalogStream, 'date'
   selectedYears: ReadonlySet<number>,
 ): T[] {
   if (selectedYears.size === 0) return streams;
-  return streams.filter((stream) => selectedYears.has(new Date(stream.date).getFullYear()));
+  return streams.filter((stream) => selectedYears.has(getCatalogDateYear(stream.date)));
 }
 
 export function flattenCatalogSongs(songs: CatalogSong[]): FlattenedSong[] {
@@ -105,15 +109,13 @@ export function flattenCatalogSongs(songs: CatalogSong[]): FlattenedSong[] {
         endTimestamp: performance.endTimestamp ?? undefined,
         note: performance.note,
         searchString: `${song.title} ${song.originalArtist} ${performance.streamTitle}`.toLowerCase(),
-        year: new Date(performance.date).getFullYear(),
+        year: getCatalogDateYear(performance.date),
       });
     });
   });
 
-  return result
-    .map((song) => ({ song, dateTimestamp: Date.parse(song.date) }))
-    .sort((a, b) => b.dateTimestamp - a.dateTimestamp)
-    .map(({ song }) => song);
+  result.sort((a, b) => b.date.localeCompare(a.date));
+  return result;
 }
 
 export function filterFlattenedCatalogSongs(
@@ -148,7 +150,7 @@ export function filterGroupedCatalogSongs(
       : true;
     const matchesArtist = filters.selectedArtist ? song.originalArtist === filters.selectedArtist : true;
     const matchesYear = filters.selectedYears.size > 0
-      ? song.performances.some((performance) => filters.selectedYears.has(new Date(performance.date).getFullYear()))
+      ? song.performances.some((performance) => filters.selectedYears.has(getCatalogDateYear(performance.date)))
       : true;
     return matchesSearch && matchesStream && matchesArtist && matchesYear;
   });
