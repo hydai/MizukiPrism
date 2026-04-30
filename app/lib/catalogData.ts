@@ -15,7 +15,7 @@ export type CatalogStream = Pick<SharedStream, 'id' | 'title' | 'date' | 'videoI
 
 export interface FlattenedSong extends CatalogSong {
   performanceId: string;
-  streamId?: string;
+  streamId: string;
   date: string;
   streamTitle: string;
   videoId: string;
@@ -23,7 +23,7 @@ export interface FlattenedSong extends CatalogSong {
   endTimestamp?: number;
   note: string;
   searchString: string;
-  year?: number;
+  year: number;
 }
 
 export type CatalogMetadataEntry = Pick<SharedSongMetadata, 'songId' | 'albumArtUrl' | 'albumArtUrls'>;

@@ -216,7 +216,7 @@ export default function Home() {
       const matchesSearch = !lowerTerm || song.searchString.includes(lowerTerm);
       const matchesStream = selectedStreamId ? song.streamId === selectedStreamId : true;
       const matchesArtist = selectedArtist ? song.originalArtist === selectedArtist : true;
-      const matchesYear = selectedYears.size > 0 ? selectedYears.has(song.year!) : true;
+      const matchesYear = selectedYears.size > 0 ? selectedYears.has(song.year) : true;
       return matchesSearch && matchesStream && matchesArtist && matchesYear;
     });
   }, [allFlattenedSongs, debouncedSearch, selectedStreamId, selectedArtist, selectedYears]);
