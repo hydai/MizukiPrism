@@ -7,14 +7,10 @@ import streamerData from '@/data/streamer.json';
 import { useCatalogData } from './hooks/useCatalogData';
 import { useCatalogDerivedData } from './hooks/useCatalogDerivedData';
 import { useCatalogPanelState } from './hooks/useCatalogPanelState';
+import { useCatalogPlaybackActions } from './hooks/useCatalogPlaybackActions';
 import { useCatalogToastState } from './hooks/useCatalogToastState';
 import { useCatalogViewState } from './hooks/useCatalogViewState';
-import {
-  buildGroupedPlaybackTracks,
-  buildTimelinePlaybackTracks,
-  filterPlayableTracks,
-} from './lib/catalogPlayback';
-import { usePlayer, type Track } from './contexts/PlayerContext';
+import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
 import { useLikedSongs } from './contexts/LikedSongsContext';
 import { useRecentlyPlayed } from './contexts/RecentlyPlayedContext';
@@ -88,26 +84,6 @@ export default function Home() {
     clearSkipNotification,
   });
 
-  const handleAddToQueue = useCallback((track: Track) => {
-    addToQueue(track);
-    showToastMessage('已加入播放佇列');
-  }, [addToQueue, showToastMessage]);
-
-  const handlePlayAll = () => {
-    const tracks = viewMode === 'timeline'
-      ? buildTimelinePlaybackTracks(flattenedSongs)
-      : buildGroupedPlaybackTracks(groupedSongs);
-    const available = filterPlayableTracks(tracks, unavailableVideoIds);
-    const firstTrack = available[0];
-    if (!firstTrack) return;
-    playTrack(firstTrack);
-    available.slice(1).forEach((track) => addToQueue(track));
-  };
-
-  const handleAddToPlaylistSuccess = useCallback(() => {
-    showToastMessage('已加入播放清單');
-  }, [showToastMessage]);
-
   const toggleSongExpansion = useCallback((songId: string) => {
     setExpandedSongs(prev => {
       const newSet = new Set(prev);
@@ -133,6 +109,19 @@ export default function Home() {
     selectedStreamId,
     selectedArtist,
     selectedYears,
+  });
+  const {
+    handleAddToQueue,
+    handlePlayAll,
+    handleAddToPlaylistSuccess,
+  } = useCatalogPlaybackActions({
+    viewMode,
+    flattenedSongs,
+    groupedSongs,
+    unavailableVideoIds,
+    playTrack,
+    addToQueue,
+    showToastMessage,
   });
 
   // Virtual scrolling refs and virtualizers
