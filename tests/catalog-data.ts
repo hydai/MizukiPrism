@@ -13,6 +13,13 @@ import {
   type CatalogSong,
   type CatalogStream,
 } from '../app/lib/catalogData';
+import {
+  buildGroupedPlaybackTracks,
+  buildTimelinePlaybackTracks,
+  filterPlayableTracks,
+  latestPerformanceForSong,
+  trackFromFlattenedSong,
+} from '../app/lib/catalogPlayback';
 
 const albumArtBySongId = buildAlbumArtMap([
   {
@@ -195,4 +202,41 @@ assert.deepEqual(
     selectedYears: new Set([2024]),
   }).map((song) => song.id),
   ['song-a'],
+);
+
+const firstFlattenedTrack = trackFromFlattenedSong(flattenedSongs[0]!);
+
+assert.deepEqual(firstFlattenedTrack, {
+  id: 'perf-new',
+  songId: 'song-a',
+  title: 'Alpha Song',
+  originalArtist: 'Artist A',
+  videoId: 'new-video',
+  timestamp: 60,
+  endTimestamp: 90,
+  albumArtUrl: undefined,
+});
+
+const timelineTracks = buildTimelinePlaybackTracks(flattenedSongs);
+
+assert.deepEqual(
+  timelineTracks.map((track) => track.id),
+  ['perf-new', 'perf-middle', 'perf-old'],
+);
+assert.deepEqual(
+  filterPlayableTracks(timelineTracks, new Set(['new-video'])).map((track) => track.id),
+  ['perf-middle', 'perf-old'],
+);
+
+const latestAlphaPerformance = latestPerformanceForSong(songsWithPerformances[1]!);
+
+assert.equal(latestAlphaPerformance?.id, 'perf-new');
+
+assert.deepEqual(
+  buildGroupedPlaybackTracks(sortedCatalogSongs).map((track) => track.id),
+  ['perf-new', 'perf-old'],
+);
+assert.deepEqual(
+  buildGroupedPlaybackTracks(songs).map((track) => track.id),
+  [],
 );
