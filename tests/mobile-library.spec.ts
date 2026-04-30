@@ -22,6 +22,7 @@ test.describe('Mobile Library Tab', () => {
     await page.getByTestId('mobile-liked-songs-button').click();
     await expect(page.getByTestId('liked-songs-panel-mobile')).toBeVisible();
     await page.getByTestId('liked-songs-panel-backdrop').click();
+    await expect(page.getByTestId('liked-songs-panel-mobile')).toBeHidden();
 
     await page.getByTestId('mobile-recently-played-button').click();
     await expect(page.getByTestId('recently-played-panel-mobile')).toBeVisible();
