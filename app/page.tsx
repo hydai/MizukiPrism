@@ -5,6 +5,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff, House, Radio } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { useCatalogData } from './hooks/useCatalogData';
+import { useCatalogViewState } from './hooks/useCatalogViewState';
 import {
   buildCatalogArtistList,
   buildCatalogYears,
@@ -37,15 +38,7 @@ import SongCard from './components/SongCard';
 import MobileSearchRow from './components/MobileSearchRow';
 import ThemeToggle from './components/ThemeToggle';
 
-type ViewMode = 'timeline' | 'grouped';
-
 export default function Home() {
-  const [searchInput, setSearchInput] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
-  const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
-  const [selectedYears, setSelectedYears] = useState<Set<number>>(new Set());
-  const [viewMode, setViewMode] = useState<ViewMode>('timeline');
   const [expandedSongs, setExpandedSongs] = useState<Set<string>>(new Set());
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -53,7 +46,27 @@ export default function Home() {
   const [showLikedSongsPanel, setShowLikedSongsPanel] = useState(false);
   const [showRecentlyPlayedPanel, setShowRecentlyPlayedPanel] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [mobileTab, setMobileTab] = useState<'home' | 'search' | 'library' | 'streams'>('home');
+  const {
+    searchInput,
+    setSearchInput,
+    debouncedSearch,
+    selectedStreamId,
+    selectedArtist,
+    setSelectedArtist,
+    selectedYears,
+    viewMode,
+    setViewMode,
+    mobileTab,
+    setMobileTab,
+    toggleYear,
+    clearYears,
+    clearAllFilters,
+    toggleStreamFilter,
+    clearStreamFilter,
+    showAllStreamsOnHome,
+    showStreamOnHome,
+    hasActiveFilters,
+  } = useCatalogViewState();
   const { streams, songs, loadError, fetchSongs } = useCatalogData();
 
   const { currentTrack, playTrack, addToQueue, apiLoadError, unavailableVideoIds, timestampWarning, clearTimestampWarning, skipNotification, clearSkipNotification, shuffleOn, toggleShuffle } = usePlayer();
@@ -111,29 +124,6 @@ export default function Home() {
     }
   }, [skipNotification, clearSkipNotification]);
 
-  // Load view preference from sessionStorage
-  useEffect(() => {
-    const savedView = sessionStorage.getItem('mizukiprism-view-mode');
-    if (savedView === 'timeline' || savedView === 'grouped') {
-      setViewMode(savedView);
-    }
-  }, []);
-
-  // Save view preference to sessionStorage
-  useEffect(() => {
-    sessionStorage.setItem('mizukiprism-view-mode', viewMode);
-  }, [viewMode]);
-
-  // Debounce search input — 150ms delay before triggering filter
-  useEffect(() => {
-    if (searchInput === '') {
-      setDebouncedSearch('');
-      return;
-    }
-    const timer = setTimeout(() => setDebouncedSearch(searchInput), 150);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-
   const toggleSongExpansion = useCallback((songId: string) => {
     setExpandedSongs(prev => {
       const newSet = new Set(prev);
@@ -157,30 +147,6 @@ export default function Home() {
   const filteredStreams = useMemo(() => {
     return filterCatalogStreamsByYears(streams, selectedYears);
   }, [streams, selectedYears]);
-
-  const toggleYear = (year: number) => {
-    setSelectedYears(prev => {
-      const next = new Set(prev);
-      if (next.has(year)) next.delete(year); else next.add(year);
-      return next;
-    });
-    setSelectedStreamId(null);
-  };
-
-  const clearYears = () => {
-    setSelectedYears(new Set());
-    setSelectedStreamId(null);
-  };
-
-  const hasActiveFilters = searchInput !== '' || selectedStreamId !== null || selectedArtist !== null || selectedYears.size > 0;
-
-  const clearAllFilters = () => {
-    setSearchInput('');
-    setDebouncedSearch('');
-    setSelectedStreamId(null);
-    setSelectedArtist(null);
-    setSelectedYears(new Set());
-  };
 
   // Flatten + sort: expensive, only recomputes when song data changes
   const allFlattenedSongs: FlattenedSong[] = useMemo(() => {
@@ -376,7 +342,7 @@ export default function Home() {
             歌枠回放{selectedYears.size > 0 && ` (${Array.from(selectedYears).sort().join(', ')})`}
           </div>
           <button
-            onClick={() => setSelectedStreamId(null)}
+            onClick={clearStreamFilter}
             className="w-full text-left px-3 py-2 rounded-radius-lg text-sm font-medium transition-all"
             style={
               selectedStreamId === null
@@ -390,7 +356,7 @@ export default function Home() {
             <button
               key={stream.id}
               data-testid="stream-filter-button"
-              onClick={() => setSelectedStreamId(stream.id === selectedStreamId ? null : stream.id)}
+              onClick={() => toggleStreamFilter(stream.id)}
               className="w-full text-left px-3 py-2 rounded-radius-lg text-sm font-medium transition-all hover:bg-white/40"
               style={
                 selectedStreamId === stream.id
@@ -1591,7 +1557,7 @@ export default function Home() {
 
               {/* All songs button */}
               <button
-                onClick={() => { setSelectedStreamId(null); setMobileTab('home'); }}
+                onClick={showAllStreamsOnHome}
                 className="w-full text-left px-4 py-3 rounded-radius-lg text-sm font-medium transition-all mb-2"
                 style={{
                   background: 'var(--bg-surface-glass)',
@@ -1615,7 +1581,7 @@ export default function Home() {
                     <button
                       key={stream.id}
                       data-testid="mobile-stream-card"
-                      onClick={() => { setSelectedStreamId(stream.id); setMobileTab('home'); }}
+                      onClick={() => showStreamOnHome(stream.id)}
                       className="w-full text-left px-4 py-3 rounded-radius-lg transition-all"
                       style={{
                         background: 'var(--bg-surface-glass)',
