@@ -82,6 +82,10 @@ assert.deepEqual(
   filterCatalogStreamsByYears(streams, new Set([2023])).map((stream) => stream.id),
   ['middle'],
 );
+assert.deepEqual(
+  filterCatalogStreamsByYears(streams, new Set([2024])).map((stream) => stream.id),
+  ['new'],
+);
 assert.strictEqual(filterCatalogStreamsByYears(streams, new Set()), streams);
 
 const songsWithPerformances: CatalogSong[] = [
@@ -186,9 +190,9 @@ assert.deepEqual(
 assert.deepEqual(
   filterGroupedCatalogSongs(sortedCatalogSongs, {
     searchTerm: 'alpha',
-    selectedStreamId: 'middle',
+    selectedStreamId: 'new',
     selectedArtist: 'Artist A',
-    selectedYears: new Set([2023]),
+    selectedYears: new Set([2024]),
   }).map((song) => song.id),
   ['song-a'],
 );
