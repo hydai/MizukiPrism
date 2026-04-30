@@ -1178,7 +1178,7 @@ export default function Home() {
                 </p>
                 <button
                   data-testid="retry-button"
-                  onClick={() => fetchSongs()}
+                  onClick={fetchSongs}
                   className="font-semibold transition-all hover:opacity-90"
                   style={{
                     background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
