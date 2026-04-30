@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
 import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff, House, Radio } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { useCatalogData } from './hooks/useCatalogData';
 import { useCatalogDerivedData } from './hooks/useCatalogDerivedData';
 import { useCatalogPanelState } from './hooks/useCatalogPanelState';
 import { useCatalogPlaybackActions } from './hooks/useCatalogPlaybackActions';
+import { useCatalogSongExpansion } from './hooks/useCatalogSongExpansion';
 import { useCatalogToastState } from './hooks/useCatalogToastState';
 import { useCatalogVirtualizers } from './hooks/useCatalogVirtualizers';
 import { useCatalogViewState } from './hooks/useCatalogViewState';
@@ -27,7 +27,6 @@ import MobileSearchRow from './components/MobileSearchRow';
 import ThemeToggle from './components/ThemeToggle';
 
 export default function Home() {
-  const [expandedSongs, setExpandedSongs] = useState<Set<string>>(new Set());
   const {
     showPlaylistPanel,
     showLikedSongsPanel,
@@ -84,17 +83,10 @@ export default function Home() {
     clearSkipNotification,
   });
 
-  const toggleSongExpansion = useCallback((songId: string) => {
-    setExpandedSongs(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(songId)) {
-        newSet.delete(songId);
-      } else {
-        newSet.add(songId);
-      }
-      return newSet;
-    });
-  }, []);
+  const {
+    isSongExpanded,
+    toggleSongExpansion,
+  } = useCatalogSongExpansion();
 
   const {
     allArtists,
@@ -1214,7 +1206,7 @@ export default function Home() {
                         >
                           <SongCard
                             song={song}
-                            isExpanded={expandedSongs.has(song.id)}
+                            isExpanded={isSongExpanded(song.id)}
                             onToggleExpand={toggleSongExpansion}
                             onPlay={playTrack}
                             onAddToQueue={handleAddToQueue}
