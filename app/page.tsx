@@ -4,7 +4,18 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Search, Play, Shuffle, ExternalLink, Mic2, Youtube, Twitter, Facebook, Instagram, Twitch, Sparkles, ListMusic, Clock, Heart, Disc3, ChevronDown, ChevronRight, Plus, ListPlus, X, SlidersHorizontal, WifiOff, House, Radio } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
-import { useCatalogData, type CatalogSong as Song, type FlattenedSong } from './hooks/useCatalogData';
+import { useCatalogData } from './hooks/useCatalogData';
+import {
+  buildCatalogArtistList,
+  buildCatalogYears,
+  filterCatalogStreamsByYears,
+  filterFlattenedCatalogSongs,
+  filterGroupedCatalogSongs,
+  flattenCatalogSongs,
+  sortCatalogSongsByTitle,
+  type CatalogSong as Song,
+  type FlattenedSong,
+} from './lib/catalogData';
 import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
 import { useLikedSongs } from './contexts/LikedSongsContext';
@@ -145,20 +156,15 @@ export default function Home() {
   }, []);
 
   const allArtists = useMemo(() => {
-    const artists = new Set<string>();
-    songs.forEach(song => artists.add(song.originalArtist));
-    return Array.from(artists).sort((a, b) => a.localeCompare(b, 'zh-TW'));
+    return buildCatalogArtistList(songs);
   }, [songs]);
 
   const availableYears = useMemo(() => {
-    const years = new Set<number>();
-    streams.forEach(s => years.add(new Date(s.date).getFullYear()));
-    return Array.from(years).sort((a, b) => b - a);
+    return buildCatalogYears(streams);
   }, [streams]);
 
   const filteredStreams = useMemo(() => {
-    if (selectedYears.size === 0) return streams;
-    return streams.filter(s => selectedYears.has(new Date(s.date).getFullYear()));
+    return filterCatalogStreamsByYears(streams, selectedYears);
   }, [streams, selectedYears]);
 
   const toggleYear = (year: number) => {
@@ -187,57 +193,30 @@ export default function Home() {
 
   // Flatten + sort: expensive, only recomputes when song data changes
   const allFlattenedSongs: FlattenedSong[] = useMemo(() => {
-    const result: FlattenedSong[] = [];
-    songs.forEach(song => {
-      song.performances.forEach(perf => {
-        result.push({
-          ...song,
-          performanceId: perf.id,
-          streamId: perf.streamId,
-          date: perf.date,
-          streamTitle: perf.streamTitle,
-          videoId: perf.videoId,
-          timestamp: perf.timestamp,
-          endTimestamp: perf.endTimestamp ?? undefined,
-          note: perf.note,
-          searchString: `${song.title} ${song.originalArtist} ${perf.streamTitle}`.toLowerCase(),
-          year: new Date(perf.date).getFullYear(),
-        });
-      });
-    });
-    result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    return result;
+    return flattenCatalogSongs(songs);
   }, [songs]);
 
   // Filter: cheap, runs against pre-flattened array
   const flattenedSongs: FlattenedSong[] = useMemo(() => {
-    const lowerTerm = debouncedSearch.toLowerCase();
-    return allFlattenedSongs.filter(song => {
-      const matchesSearch = !lowerTerm || song.searchString.includes(lowerTerm);
-      const matchesStream = selectedStreamId ? song.streamId === selectedStreamId : true;
-      const matchesArtist = selectedArtist ? song.originalArtist === selectedArtist : true;
-      const matchesYear = selectedYears.size > 0 ? selectedYears.has(song.year) : true;
-      return matchesSearch && matchesStream && matchesArtist && matchesYear;
+    return filterFlattenedCatalogSongs(allFlattenedSongs, {
+      searchTerm: debouncedSearch,
+      selectedStreamId,
+      selectedArtist,
+      selectedYears,
     });
   }, [allFlattenedSongs, debouncedSearch, selectedStreamId, selectedArtist, selectedYears]);
 
   // Grouped songs: separate sort (expensive) from filter (cheap)
   const allGroupedSongs: Song[] = useMemo(() => {
-    return [...songs].sort((a, b) => a.title.localeCompare(b.title, 'zh-TW'));
+    return sortCatalogSongsByTitle(songs);
   }, [songs]);
 
   const groupedSongs: Song[] = useMemo(() => {
-    const lowerTerm = debouncedSearch.toLowerCase();
-    return allGroupedSongs.filter(song => {
-      const matchesSearch = !lowerTerm || `${song.title} ${song.originalArtist}`.toLowerCase().includes(lowerTerm);
-      const matchesStream = selectedStreamId
-        ? song.performances.some(p => p.streamId === selectedStreamId)
-        : true;
-      const matchesArtist = selectedArtist ? song.originalArtist === selectedArtist : true;
-      const matchesYear = selectedYears.size > 0
-        ? song.performances.some(perf => selectedYears.has(new Date(perf.date).getFullYear()))
-        : true;
-      return matchesSearch && matchesStream && matchesArtist && matchesYear;
+    return filterGroupedCatalogSongs(allGroupedSongs, {
+      searchTerm: debouncedSearch,
+      selectedStreamId,
+      selectedArtist,
+      selectedYears,
     });
   }, [allGroupedSongs, debouncedSearch, selectedStreamId, selectedArtist, selectedYears]);
 

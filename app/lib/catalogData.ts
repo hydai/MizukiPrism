@@ -32,6 +32,13 @@ export interface CatalogMetadataResponse {
   songMetadata: CatalogMetadataEntry[];
 }
 
+export interface CatalogFilterState {
+  searchTerm: string;
+  selectedStreamId: string | null;
+  selectedArtist: string | null;
+  selectedYears: ReadonlySet<number>;
+}
+
 export function buildAlbumArtMap(metadata: CatalogMetadataEntry[]): Map<string, string> {
   const map = new Map<string, string>();
 
@@ -60,4 +67,89 @@ export function sortStreamsByDateDesc<T extends Pick<CatalogStream, 'date'>>(str
     .map((stream) => ({ stream, timestamp: Date.parse(stream.date) }))
     .sort((a, b) => b.timestamp - a.timestamp)
     .map(({ stream }) => stream);
+}
+
+export function buildCatalogArtistList(songs: CatalogSong[]): string[] {
+  const artists = new Set<string>();
+  songs.forEach((song) => artists.add(song.originalArtist));
+  return Array.from(artists).sort((a, b) => a.localeCompare(b, 'zh-TW'));
+}
+
+export function buildCatalogYears(streams: Pick<CatalogStream, 'date'>[]): number[] {
+  const years = new Set<number>();
+  streams.forEach((stream) => years.add(new Date(stream.date).getFullYear()));
+  return Array.from(years).sort((a, b) => b - a);
+}
+
+export function filterCatalogStreamsByYears<T extends Pick<CatalogStream, 'date'>>(
+  streams: T[],
+  selectedYears: ReadonlySet<number>,
+): T[] {
+  if (selectedYears.size === 0) return streams;
+  return streams.filter((stream) => selectedYears.has(new Date(stream.date).getFullYear()));
+}
+
+export function flattenCatalogSongs(songs: CatalogSong[]): FlattenedSong[] {
+  const result: FlattenedSong[] = [];
+
+  songs.forEach((song) => {
+    song.performances.forEach((performance) => {
+      result.push({
+        ...song,
+        performanceId: performance.id,
+        streamId: performance.streamId,
+        date: performance.date,
+        streamTitle: performance.streamTitle,
+        videoId: performance.videoId,
+        timestamp: performance.timestamp,
+        endTimestamp: performance.endTimestamp ?? undefined,
+        note: performance.note,
+        searchString: `${song.title} ${song.originalArtist} ${performance.streamTitle}`.toLowerCase(),
+        year: new Date(performance.date).getFullYear(),
+      });
+    });
+  });
+
+  return result
+    .map((song) => ({ song, dateTimestamp: Date.parse(song.date) }))
+    .sort((a, b) => b.dateTimestamp - a.dateTimestamp)
+    .map(({ song }) => song);
+}
+
+export function filterFlattenedCatalogSongs(
+  songs: FlattenedSong[],
+  filters: CatalogFilterState,
+): FlattenedSong[] {
+  const lowerTerm = filters.searchTerm.toLowerCase();
+
+  return songs.filter((song) => {
+    const matchesSearch = !lowerTerm || song.searchString.includes(lowerTerm);
+    const matchesStream = filters.selectedStreamId ? song.streamId === filters.selectedStreamId : true;
+    const matchesArtist = filters.selectedArtist ? song.originalArtist === filters.selectedArtist : true;
+    const matchesYear = filters.selectedYears.size > 0 ? filters.selectedYears.has(song.year) : true;
+    return matchesSearch && matchesStream && matchesArtist && matchesYear;
+  });
+}
+
+export function sortCatalogSongsByTitle(songs: CatalogSong[]): CatalogSong[] {
+  return [...songs].sort((a, b) => a.title.localeCompare(b.title, 'zh-TW'));
+}
+
+export function filterGroupedCatalogSongs(
+  songs: CatalogSong[],
+  filters: CatalogFilterState,
+): CatalogSong[] {
+  const lowerTerm = filters.searchTerm.toLowerCase();
+
+  return songs.filter((song) => {
+    const matchesSearch = !lowerTerm || `${song.title} ${song.originalArtist}`.toLowerCase().includes(lowerTerm);
+    const matchesStream = filters.selectedStreamId
+      ? song.performances.some((performance) => performance.streamId === filters.selectedStreamId)
+      : true;
+    const matchesArtist = filters.selectedArtist ? song.originalArtist === filters.selectedArtist : true;
+    const matchesYear = filters.selectedYears.size > 0
+      ? song.performances.some((performance) => filters.selectedYears.has(new Date(performance.date).getFullYear()))
+      : true;
+    return matchesSearch && matchesStream && matchesArtist && matchesYear;
+  });
 }
