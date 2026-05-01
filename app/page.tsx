@@ -21,7 +21,6 @@ import RecentlyPlayedPanel from './components/RecentlyPlayedPanel';
 import CreatePlaylistDialog from './components/CreatePlaylistDialog';
 import AlbumArt from './components/AlbumArt';
 import SidebarNav from './components/SidebarNav';
-import TimelineRow from './components/TimelineRow';
 import SongCard from './components/SongCard';
 import DesktopActionBar from './components/DesktopActionBar';
 import DesktopHero from './components/DesktopHero';
@@ -35,6 +34,7 @@ import MobileYearFilterScroll from './components/MobileYearFilterScroll';
 import SongEmptyState from './components/SongEmptyState';
 import SongLoadErrorState from './components/SongLoadErrorState';
 import ThemeToggle from './components/ThemeToggle';
+import TimelineSongList from './components/TimelineSongList';
 import TimelineTableHeader from './components/TimelineTableHeader';
 
 export default function Home() {
@@ -389,53 +389,19 @@ export default function Home() {
               <>
                 <TimelineTableHeader />
 
-                <div className="mt-1">
-                  {flattenedSongs.length === 0 ? (
-                    <SongEmptyState
-                      isCatalogEmpty={songs.length === 0 && !hasActiveFilters}
-                      hasActiveFilters={hasActiveFilters}
-                      onClearFilters={clearAllFilters}
-                    />
-                  ) : (
-                    <div
-                      ref={timelineListRef}
-                      style={{
-                        height: `${timelineVirtualizer.getTotalSize()}px`,
-                        width: '100%',
-                        position: 'relative',
-                      }}
-                    >
-                      {timelineVirtualizer.getVirtualItems().map(virtualItem => {
-                        const song = flattenedSongs[virtualItem.index];
-                        return (
-                          <div
-                            key={`${song.id}-${song.performanceId}`}
-                            data-index={virtualItem.index}
-                            ref={timelineVirtualizer.measureElement}
-                            className="hover:z-10 focus-within:z-10"
-                            style={{
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              width: '100%',
-                              transform: `translateY(${virtualItem.start - (timelineVirtualizer.options.scrollMargin ?? 0)}px)`,
-                            }}
-                          >
-                            <TimelineRow
-                              song={song}
-                              index={virtualItem.index}
-                              isCurrentlyPlaying={currentTrackId === song.performanceId}
-                              isUnavailable={unavailableVideoIds.has(song.videoId)}
-                              onPlay={playTrack}
-                              onAddToQueue={handleAddToQueue}
-                              onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                <TimelineSongList
+                  songs={flattenedSongs}
+                  catalogSongCount={songs.length}
+                  hasActiveFilters={hasActiveFilters}
+                  listRef={timelineListRef}
+                  virtualizer={timelineVirtualizer}
+                  currentTrackId={currentTrackId}
+                  unavailableVideoIds={unavailableVideoIds}
+                  onClearFilters={clearAllFilters}
+                  onPlay={playTrack}
+                  onAddToQueue={handleAddToQueue}
+                  onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
+                />
               </>
             ) : (
               /* Grouped View */
