@@ -32,6 +32,7 @@ import MobileLibraryTab from './components/MobileLibraryTab';
 import MobileSearchTab from './components/MobileSearchTab';
 import MobileStreamsTab from './components/MobileStreamsTab';
 import MobileYearFilterScroll from './components/MobileYearFilterScroll';
+import SongEmptyState from './components/SongEmptyState';
 import SongLoadErrorState from './components/SongLoadErrorState';
 import ThemeToggle from './components/ThemeToggle';
 
@@ -431,25 +432,11 @@ export default function Home() {
 
                 <div className="mt-1">
                   {flattenedSongs.length === 0 ? (
-                    songs.length === 0 && !hasActiveFilters ? (
-                      <div className="py-20 text-center" data-testid="empty-catalog" style={{ color: 'var(--text-tertiary)' }}>
-                        <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>目前尚無歌曲資料</p>
-                      </div>
-                    ) : (
-                      <div className="py-20 text-center" data-testid="empty-state" style={{ color: 'var(--text-tertiary)' }}>
-                        <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>找不到符合條件的歌曲</p>
-                        {hasActiveFilters && (
-                          <button
-                            onClick={clearAllFilters}
-                            className="mt-3 text-sm font-medium underline underline-offset-2 transition-colors"
-                            style={{ color: 'var(--accent-pink)' }}
-                            data-testid="clear-filters-empty"
-                          >
-                            清除所有篩選條件
-                          </button>
-                        )}
-                      </div>
-                    )
+                    <SongEmptyState
+                      isCatalogEmpty={songs.length === 0 && !hasActiveFilters}
+                      hasActiveFilters={hasActiveFilters}
+                      onClearFilters={clearAllFilters}
+                    />
                   ) : (
                     <div
                       ref={timelineListRef}
@@ -495,25 +482,11 @@ export default function Home() {
               /* Grouped View */
               <div className="mt-2">
                 {groupedSongs.length === 0 ? (
-                  songs.length === 0 && !hasActiveFilters ? (
-                    <div className="py-20 text-center" data-testid="empty-catalog" style={{ color: 'var(--text-tertiary)' }}>
-                      <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>目前尚無歌曲資料</p>
-                    </div>
-                  ) : (
-                    <div className="py-20 text-center" data-testid="empty-state" style={{ color: 'var(--text-tertiary)' }}>
-                      <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>找不到符合條件的歌曲</p>
-                      {hasActiveFilters && (
-                        <button
-                          onClick={clearAllFilters}
-                          className="mt-3 text-sm font-medium underline underline-offset-2 transition-colors"
-                          style={{ color: 'var(--accent-pink)' }}
-                          data-testid="clear-filters-empty"
-                        >
-                          清除所有篩選條件
-                        </button>
-                      )}
-                    </div>
-                  )
+                  <SongEmptyState
+                    isCatalogEmpty={songs.length === 0 && !hasActiveFilters}
+                    hasActiveFilters={hasActiveFilters}
+                    onClearFilters={clearAllFilters}
+                  />
                 ) : (
                   <div
                     ref={groupedListRef}
