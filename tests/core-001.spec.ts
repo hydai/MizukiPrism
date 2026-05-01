@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import streamerData from '../data/streamer.json';
 
 const BASE_URL = 'http://localhost:3000';
 
@@ -22,22 +23,24 @@ test.describe('CORE-001: Streamer Profile & Song Catalog (Timeline View)', () =>
     await page.goto(BASE_URL);
 
     // Verify profile elements
-    await expect(page.getByRole('heading', { name: '浠Mizuki' })).toBeVisible();
-    await expect(page.getByText('清楚系歌勢 V-Streamer,帶給你如夢似幻的歌聲。')).toBeVisible();
-    await expect(page.getByText(/\d+ 首歌曲/)).toBeVisible();
+    const profile = page.getByTestId('desktop-hero');
+    await expect(profile).toBeVisible();
+    await expect(profile.getByRole('heading', { name: streamerData.name })).toBeVisible();
+    await expect(profile.getByText(streamerData.description)).toBeVisible();
+    await expect(profile.getByText(/\d+ 首歌曲/)).toBeVisible();
 
     // Verify social links are visible
-    const youtubeLink = page.locator('a[href*="youtube"]').first();
-    const twitterLink = page.locator('a[href*="twitter"]').first();
+    const youtubeLink = profile.getByRole('link', { name: 'YouTube' });
+    const twitterLink = profile.getByRole('link', { name: 'X' });
     await expect(youtubeLink).toBeVisible();
     await expect(twitterLink).toBeVisible();
   });
 
-  test('AC3: YouTube social link opens in new tab', async ({ page, context }) => {
+  test('AC3: YouTube social link opens in new tab', async ({ page }) => {
     await page.goto(BASE_URL);
 
     // Find YouTube link in social section (not the Follow button)
-    const youtubeLink = page.locator('a[href*="youtube"]').first();
+    const youtubeLink = page.getByTestId('desktop-hero').getByRole('link', { name: 'YouTube' });
 
     // Verify it has target="_blank"
     await expect(youtubeLink).toHaveAttribute('target', '_blank');
