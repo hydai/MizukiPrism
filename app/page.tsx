@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Clock, ChevronDown, SlidersHorizontal, WifiOff } from 'lucide-react';
+import { Search, Clock, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import streamerData from '@/data/streamer.json';
 import { useCatalogData } from './hooks/useCatalogData';
 import { useCatalogDerivedData } from './hooks/useCatalogDerivedData';
@@ -32,6 +32,7 @@ import MobileLibraryTab from './components/MobileLibraryTab';
 import MobileSearchTab from './components/MobileSearchTab';
 import MobileStreamsTab from './components/MobileStreamsTab';
 import MobileYearFilterScroll from './components/MobileYearFilterScroll';
+import SongLoadErrorState from './components/SongLoadErrorState';
 import ThemeToggle from './components/ThemeToggle';
 
 export default function Home() {
@@ -380,39 +381,7 @@ export default function Home() {
             <span data-testid="total-performance-count" className="sr-only">{flattenedSongs.length}</span>
             <span data-testid="total-song-card-count" className="sr-only">{groupedSongs.length}</span>
             {loadError ? (
-              /* Song API Load Error State */
-              <div
-                data-testid="song-load-error"
-                className="flex flex-col items-center justify-center py-32 gap-6"
-                style={{ color: 'var(--text-secondary)' }}
-              >
-                <div
-                  className="flex items-center justify-center w-16 h-16 rounded-full"
-                  style={{ background: 'var(--bg-accent-pink-muted)' }}
-                >
-                  <WifiOff className="w-8 h-8" style={{ color: 'var(--accent-pink)' }} />
-                </div>
-                <p
-                  className="text-center font-medium max-w-sm"
-                  style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-base)', lineHeight: 1.6 }}
-                >
-                  無法載入歌曲資料，請檢查網路連線後重新整理頁面
-                </p>
-                <button
-                  data-testid="retry-button"
-                  onClick={fetchSongs}
-                  className="font-semibold transition-all hover:opacity-90"
-                  style={{
-                    background: 'linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light))',
-                    borderRadius: 'var(--radius-pill)',
-                    fontSize: 'var(--font-size-sm)',
-                    padding: 'var(--space-3) var(--space-6)',
-                    color: 'var(--text-on-accent)',
-                  }}
-                >
-                  重新整理
-                </button>
-              </div>
+              <SongLoadErrorState onRetry={fetchSongs} />
             ) : viewMode === 'timeline' ? (
               /* Timeline View */
               <>
