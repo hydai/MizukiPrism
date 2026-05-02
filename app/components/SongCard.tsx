@@ -4,35 +4,17 @@ import { memo } from 'react';
 import { Disc3, ChevronDown, ChevronRight, Play, Plus, ExternalLink, Heart } from 'lucide-react';
 import AddToPlaylistDropdown from './AddToPlaylistDropdown';
 import { useLikedSongs } from '../contexts/LikedSongsContext';
-
-interface Performance {
-  id: string;
-  streamId?: string;
-  date: string;
-  streamTitle: string;
-  videoId: string;
-  timestamp: number;
-  endTimestamp?: number | null;
-  note: string;
-}
-
-interface Song {
-  id: string;
-  title: string;
-  originalArtist: string;
-  tags: string[];
-  performances: Performance[];
-  albumArtUrl?: string;
-}
+import type { Track } from '../contexts/PlayerContext';
+import type { CatalogSong } from '../lib/catalogData';
 
 interface SongCardProps {
-  song: Song;
+  song: CatalogSong;
   isExpanded: boolean;
   onToggleExpand: (songId: string) => void;
-  onPlay: (track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number; endTimestamp?: number; albumArtUrl?: string }) => void;
-  onAddToQueue: (track: { id: string; songId: string; title: string; originalArtist: string; videoId: string; timestamp: number; endTimestamp?: number; albumArtUrl?: string }) => void;
+  onPlay: (track: Track) => void;
+  onAddToQueue: (track: Track) => void;
   onAddToPlaylistSuccess: () => void;
-  unavailableVideoIds: Set<string>;
+  unavailableVideoIds: ReadonlySet<string>;
 }
 
 const formatTime = (seconds: number): string => {
