@@ -233,34 +233,36 @@ export default function Home() {
           {/* End home tab content wrapper */}
           </div>
 
-          <CatalogMobileTabs
-            activeTab={mobileTab}
-            searchInput={searchInput}
-            selectedArtist={selectedArtist}
-            allArtists={allArtists}
-            flattenedSongs={flattenedSongs}
-            searchListRef={mobileSearchListRef}
-            searchVirtualizer={mobileSearchVirtualizer}
-            currentTrackId={currentTrackId}
-            unavailableVideoIds={unavailableVideoIds}
-            likedCount={likedCount}
-            recentCount={recentCount}
-            playlistCount={playlists.length}
-            availableYears={availableYears}
-            selectedYears={selectedYears}
-            filteredStreams={filteredStreams}
-            onSearchInputChange={setSearchInput}
-            onSelectedArtistChange={setSelectedArtist}
-            onPlay={playTrack}
-            onOpenLikedSongs={openLikedSongsPanel}
-            onOpenRecentlyPlayed={openRecentlyPlayedPanel}
-            onOpenCreatePlaylist={openCreateDialog}
-            onOpenPlaylists={openPlaylistPanel}
-            onToggleYear={toggleYear}
-            onClearYears={clearYears}
-            onShowAllStreams={showAllStreamsOnHome}
-            onShowStream={showStreamOnHome}
-          />
+          {mobileTab !== 'home' && (
+            <CatalogMobileTabs
+              activeTab={mobileTab}
+              searchInput={searchInput}
+              selectedArtist={selectedArtist}
+              allArtists={allArtists}
+              flattenedSongs={flattenedSongs}
+              searchListRef={mobileSearchListRef}
+              searchVirtualizer={mobileSearchVirtualizer}
+              currentTrackId={currentTrackId}
+              unavailableVideoIds={unavailableVideoIds}
+              likedCount={likedCount}
+              recentCount={recentCount}
+              playlistCount={playlists.length}
+              availableYears={availableYears}
+              selectedYears={selectedYears}
+              filteredStreams={filteredStreams}
+              onSearchInputChange={setSearchInput}
+              onSelectedArtistChange={setSelectedArtist}
+              onPlay={playTrack}
+              onOpenLikedSongs={openLikedSongsPanel}
+              onOpenRecentlyPlayed={openRecentlyPlayedPanel}
+              onOpenCreatePlaylist={openCreateDialog}
+              onOpenPlaylists={openPlaylistPanel}
+              onToggleYear={toggleYear}
+              onClearYears={clearYears}
+              onShowAllStreams={showAllStreamsOnHome}
+              onShowStream={showStreamOnHome}
+            />
+          )}
 
       </CatalogShell>
 
