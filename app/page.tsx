@@ -14,6 +14,7 @@ import { usePlaylist } from './contexts/PlaylistContext';
 import { useLikedSongs } from './contexts/LikedSongsContext';
 import { useRecentlyPlayed } from './contexts/RecentlyPlayedContext';
 import Toast from './components/Toast';
+import CatalogMobileTabs from './components/CatalogMobileTabs';
 import CatalogPanels from './components/CatalogPanels';
 import CatalogSidebar from './components/CatalogSidebar';
 import CatalogShell from './components/CatalogShell';
@@ -22,9 +23,6 @@ import DesktopActionBar from './components/DesktopActionBar';
 import DesktopHero from './components/DesktopHero';
 import MobileActionBar from './components/MobileActionBar';
 import MobileHero from './components/MobileHero';
-import MobileLibraryTab from './components/MobileLibraryTab';
-import MobileSearchTab from './components/MobileSearchTab';
-import MobileStreamsTab from './components/MobileStreamsTab';
 import MobileYearFilterScroll from './components/MobileYearFilterScroll';
 
 export default function Home() {
@@ -235,45 +233,34 @@ export default function Home() {
           {/* End home tab content wrapper */}
           </div>
 
-          {mobileTab === 'search' && (
-            <MobileSearchTab
-              searchInput={searchInput}
-              selectedArtist={selectedArtist}
-              allArtists={allArtists}
-              flattenedSongs={flattenedSongs}
-              listRef={mobileSearchListRef}
-              virtualizer={mobileSearchVirtualizer}
-              currentTrackId={currentTrackId}
-              unavailableVideoIds={unavailableVideoIds}
-              onSearchInputChange={setSearchInput}
-              onSelectedArtistChange={setSelectedArtist}
-              onPlay={playTrack}
-            />
-          )}
-
-          {mobileTab === 'library' && (
-            <MobileLibraryTab
-              likedCount={likedCount}
-              recentCount={recentCount}
-              playlistCount={playlists.length}
-              onOpenLikedSongs={openLikedSongsPanel}
-              onOpenRecentlyPlayed={openRecentlyPlayedPanel}
-              onOpenCreatePlaylist={openCreateDialog}
-              onOpenPlaylists={openPlaylistPanel}
-            />
-          )}
-
-          {mobileTab === 'streams' && (
-            <MobileStreamsTab
-              availableYears={availableYears}
-              selectedYears={selectedYears}
-              filteredStreams={filteredStreams}
-              onToggleYear={toggleYear}
-              onClearYears={clearYears}
-              onShowAllStreams={showAllStreamsOnHome}
-              onShowStream={showStreamOnHome}
-            />
-          )}
+          <CatalogMobileTabs
+            activeTab={mobileTab}
+            searchInput={searchInput}
+            selectedArtist={selectedArtist}
+            allArtists={allArtists}
+            flattenedSongs={flattenedSongs}
+            searchListRef={mobileSearchListRef}
+            searchVirtualizer={mobileSearchVirtualizer}
+            currentTrackId={currentTrackId}
+            unavailableVideoIds={unavailableVideoIds}
+            likedCount={likedCount}
+            recentCount={recentCount}
+            playlistCount={playlists.length}
+            availableYears={availableYears}
+            selectedYears={selectedYears}
+            filteredStreams={filteredStreams}
+            onSearchInputChange={setSearchInput}
+            onSelectedArtistChange={setSelectedArtist}
+            onPlay={playTrack}
+            onOpenLikedSongs={openLikedSongsPanel}
+            onOpenRecentlyPlayed={openRecentlyPlayedPanel}
+            onOpenCreatePlaylist={openCreateDialog}
+            onOpenPlaylists={openPlaylistPanel}
+            onToggleYear={toggleYear}
+            onClearYears={clearYears}
+            onShowAllStreams={showAllStreamsOnHome}
+            onShowStream={showStreamOnHome}
+          />
 
       </CatalogShell>
 
