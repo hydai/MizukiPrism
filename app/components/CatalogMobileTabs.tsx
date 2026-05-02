@@ -9,8 +9,10 @@ import MobileLibraryTab from './MobileLibraryTab';
 import MobileSearchTab from './MobileSearchTab';
 import MobileStreamsTab from './MobileStreamsTab';
 
+type CatalogMobileContentTab = Exclude<CatalogMobileTab, 'home'>;
+
 interface CatalogMobileTabsProps {
-  activeTab: CatalogMobileTab;
+  activeTab: CatalogMobileContentTab;
   searchInput: string;
   selectedArtist: string | null;
   allArtists: readonly string[];
