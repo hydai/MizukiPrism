@@ -21,9 +21,9 @@ import RecentlyPlayedPanel from './components/RecentlyPlayedPanel';
 import CreatePlaylistDialog from './components/CreatePlaylistDialog';
 import AlbumArt from './components/AlbumArt';
 import SidebarNav from './components/SidebarNav';
-import SongCard from './components/SongCard';
 import DesktopActionBar from './components/DesktopActionBar';
 import DesktopHero from './components/DesktopHero';
+import GroupedSongList from './components/GroupedSongList';
 import MobileActionBar from './components/MobileActionBar';
 import MobileBottomNav from './components/MobileBottomNav';
 import MobileHero from './components/MobileHero';
@@ -31,7 +31,6 @@ import MobileLibraryTab from './components/MobileLibraryTab';
 import MobileSearchTab from './components/MobileSearchTab';
 import MobileStreamsTab from './components/MobileStreamsTab';
 import MobileYearFilterScroll from './components/MobileYearFilterScroll';
-import SongEmptyState from './components/SongEmptyState';
 import SongLoadErrorState from './components/SongLoadErrorState';
 import ThemeToggle from './components/ThemeToggle';
 import TimelineSongList from './components/TimelineSongList';
@@ -405,54 +404,20 @@ export default function Home() {
               </>
             ) : (
               /* Grouped View */
-              <div className="mt-2">
-                {groupedSongs.length === 0 ? (
-                  <SongEmptyState
-                    isCatalogEmpty={songs.length === 0 && !hasActiveFilters}
-                    hasActiveFilters={hasActiveFilters}
-                    onClearFilters={clearAllFilters}
-                  />
-                ) : (
-                  <div
-                    ref={groupedListRef}
-                    style={{
-                      height: `${groupedVirtualizer.getTotalSize()}px`,
-                      width: '100%',
-                      position: 'relative',
-                    }}
-                  >
-                    {groupedVirtualizer.getVirtualItems().map(virtualItem => {
-                      const song = groupedSongs[virtualItem.index];
-                      return (
-                        <div
-                          key={song.id}
-                          data-index={virtualItem.index}
-                          ref={groupedVirtualizer.measureElement}
-                          className="hover:z-10 focus-within:z-10"
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            transform: `translateY(${virtualItem.start - (groupedVirtualizer.options.scrollMargin ?? 0)}px)`,
-                            paddingBottom: '12px',
-                          }}
-                        >
-                          <SongCard
-                            song={song}
-                            isExpanded={isSongExpanded(song.id)}
-                            onToggleExpand={toggleSongExpansion}
-                            onPlay={playTrack}
-                            onAddToQueue={handleAddToQueue}
-                            onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
-                            unavailableVideoIds={unavailableVideoIds}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              <GroupedSongList
+                songs={groupedSongs}
+                allCatalogSongCount={songs.length}
+                hasActiveFilters={hasActiveFilters}
+                listRef={groupedListRef}
+                virtualizer={groupedVirtualizer}
+                unavailableVideoIds={unavailableVideoIds}
+                isSongExpanded={isSongExpanded}
+                onToggleExpand={toggleSongExpansion}
+                onClearFilters={clearAllFilters}
+                onPlay={playTrack}
+                onAddToQueue={handleAddToQueue}
+                onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
+              />
             )}
           </div>
           {/* End home tab content wrapper */}
