@@ -30,9 +30,9 @@ import MobileHero from './components/MobileHero';
 import MobileLibraryTab from './components/MobileLibraryTab';
 import MobileSearchTab from './components/MobileSearchTab';
 import MobileStreamsTab from './components/MobileStreamsTab';
+import MobileTopBar from './components/MobileTopBar';
 import MobileYearFilterScroll from './components/MobileYearFilterScroll';
 import SongLoadErrorState from './components/SongLoadErrorState';
-import ThemeToggle from './components/ThemeToggle';
 import TimelineSongList from './components/TimelineSongList';
 import TimelineTableHeader from './components/TimelineTableHeader';
 
@@ -300,28 +300,7 @@ export default function Home() {
         </div>
       </SidebarNav>
 
-      {/* Mobile TopBar — 56px + safe area, fixed top, mobile only */}
-      <div
-        data-testid="mobile-topbar"
-        className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between"
-        style={{
-          height: '56px',
-          padding: 'var(--safe-area-top) 20px 0 20px',
-          background: 'var(--bg-surface-frosted)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          borderBottom: '1px solid var(--border-glass)',
-        }}
-      >
-        <div style={{ width: 32 }} />
-        <a
-          href="https://prism.oshi.tw"
-          style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none' }}
-        >
-          {streamerData.name}
-        </a>
-        <ThemeToggle />
-      </div>
+      <MobileTopBar name={streamerData.name} />
 
       {/* Main Content */}
       <main className="flex-1 lg:m-3 lg:rounded-3xl overflow-hidden relative shadow-2xl shadow-indigo-100/50 dark:shadow-indigo-900/20 flex flex-col" style={{ background: 'var(--bg-surface-glass)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-3xl)' }}>
