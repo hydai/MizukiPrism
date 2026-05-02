@@ -9,7 +9,7 @@ import TimelineRow from './TimelineRow';
 
 interface TimelineSongListProps {
   songs: readonly FlattenedSong[];
-  catalogSongCount: number;
+  allCatalogSongCount: number;
   hasActiveFilters: boolean;
   listRef: RefObject<HTMLDivElement | null>;
   virtualizer: Virtualizer<HTMLDivElement, Element>;
@@ -23,7 +23,7 @@ interface TimelineSongListProps {
 
 export default function TimelineSongList({
   songs,
-  catalogSongCount,
+  allCatalogSongCount,
   hasActiveFilters,
   listRef,
   virtualizer,
@@ -38,7 +38,7 @@ export default function TimelineSongList({
     <div className="mt-1">
       {songs.length === 0 ? (
         <SongEmptyState
-          isCatalogEmpty={catalogSongCount === 0 && !hasActiveFilters}
+          isCatalogEmpty={allCatalogSongCount === 0 && !hasActiveFilters}
           hasActiveFilters={hasActiveFilters}
           onClearFilters={onClearFilters}
         />

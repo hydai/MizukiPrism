@@ -5,25 +5,7 @@ import { Play, Disc3, Plus, ExternalLink, Heart } from 'lucide-react';
 import AlbumArt from './AlbumArt';
 import AddToPlaylistDropdown from './AddToPlaylistDropdown';
 import { useLikedSongs } from '../contexts/LikedSongsContext';
-
-interface FlattenedSong {
-  id: string;
-  performanceId: string;
-  title: string;
-  originalArtist: string;
-  videoId: string;
-  timestamp: number;
-  endTimestamp?: number;
-  note: string;
-  streamTitle: string;
-  date: string;
-  albumArtUrl?: string;
-  tags: string[];
-  performances: unknown[];
-  streamId?: string;
-  searchString: string;
-  year?: number;
-}
+import type { FlattenedSong } from '../lib/catalogData';
 
 interface TimelineRowProps {
   song: FlattenedSong;
@@ -313,4 +295,4 @@ const TimelineRow = memo(TimelineRowInner, (prev, next) => {
 TimelineRow.displayName = 'TimelineRow';
 
 export default TimelineRow;
-export type { FlattenedSong };
+export type { FlattenedSong } from '../lib/catalogData';
