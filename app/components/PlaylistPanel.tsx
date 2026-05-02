@@ -3,7 +3,8 @@
 import { useState, useMemo, useRef } from 'react';
 import { ListMusic, GripVertical, Trash2, Play, Edit2, Download, Upload, ChevronUp, ChevronDown } from 'lucide-react';
 import { usePlaylist, type Playlist } from '../contexts/PlaylistContext';
-import { usePlayer, type Track } from '../contexts/PlayerContext';
+import { usePlayer } from '../contexts/PlayerContext';
+import type { Track } from '../types/player';
 import BottomSheet from './BottomSheet';
 
 interface PlaylistPanelProps {

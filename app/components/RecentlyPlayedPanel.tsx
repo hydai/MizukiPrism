@@ -2,7 +2,8 @@
 
 import { Clock, Play, ListPlus, Trash2 } from 'lucide-react';
 import { useRecentlyPlayed } from '../contexts/RecentlyPlayedContext';
-import { usePlayer, type Track } from '../contexts/PlayerContext';
+import { usePlayer } from '../contexts/PlayerContext';
+import type { Track } from '../types/player';
 import AlbumArt from './AlbumArt';
 import BottomSheet from './BottomSheet';
 

@@ -1,4 +1,4 @@
-import type { Track } from '../contexts/PlayerContext';
+import type { Track } from '../types/player';
 import type { CatalogPerformance, CatalogSong, FlattenedSong } from './catalogData';
 
 export type CatalogPlaybackTrack = Track;
