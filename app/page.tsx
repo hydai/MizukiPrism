@@ -14,11 +14,8 @@ import { usePlaylist } from './contexts/PlaylistContext';
 import { useLikedSongs } from './contexts/LikedSongsContext';
 import { useRecentlyPlayed } from './contexts/RecentlyPlayedContext';
 import Toast from './components/Toast';
-import PlaylistPanel from './components/PlaylistPanel';
-import LikedSongsPanel from './components/LikedSongsPanel';
-import RecentlyPlayedPanel from './components/RecentlyPlayedPanel';
-import CreatePlaylistDialog from './components/CreatePlaylistDialog';
 import AlbumArt from './components/AlbumArt';
+import CatalogPanels from './components/CatalogPanels';
 import CatalogSidebar from './components/CatalogSidebar';
 import DesktopActionBar from './components/DesktopActionBar';
 import DesktopHero from './components/DesktopHero';
@@ -328,29 +325,17 @@ export default function Home() {
 
       <MobileBottomNav activeTab={mobileTab} onTabChange={setMobileTab} />
 
-      {/* Playlist UI */}
-      <PlaylistPanel
-        show={showPlaylistPanel}
-        onClose={closePlaylistPanel}
-        songsData={songs}
+      <CatalogPanels
+        songs={songs}
+        showPlaylistPanel={showPlaylistPanel}
+        showLikedSongsPanel={showLikedSongsPanel}
+        showRecentlyPlayedPanel={showRecentlyPlayedPanel}
+        showCreateDialog={showCreateDialog}
+        onClosePlaylistPanel={closePlaylistPanel}
+        onCloseLikedSongsPanel={closeLikedSongsPanel}
+        onCloseRecentlyPlayedPanel={closeRecentlyPlayedPanel}
+        onCloseCreateDialog={closeCreateDialog}
         onToast={showToastMessage}
-      />
-      <LikedSongsPanel
-        show={showLikedSongsPanel}
-        onClose={closeLikedSongsPanel}
-        onToast={showToastMessage}
-      />
-      <RecentlyPlayedPanel
-        show={showRecentlyPlayedPanel}
-        onClose={closeRecentlyPlayedPanel}
-        onToast={showToastMessage}
-      />
-      <CreatePlaylistDialog
-        show={showCreateDialog}
-        onClose={closeCreateDialog}
-        onSuccess={() => {
-          showToastMessage('播放清單已建立');
-        }}
       />
     </>
   );
