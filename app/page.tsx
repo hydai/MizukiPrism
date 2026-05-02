@@ -14,16 +14,11 @@ import { usePlaylist } from './contexts/PlaylistContext';
 import { useLikedSongs } from './contexts/LikedSongsContext';
 import { useRecentlyPlayed } from './contexts/RecentlyPlayedContext';
 import Toast from './components/Toast';
+import CatalogHomeContent from './components/CatalogHomeContent';
 import CatalogMobileTabs from './components/CatalogMobileTabs';
 import CatalogPanels from './components/CatalogPanels';
 import CatalogSidebar from './components/CatalogSidebar';
 import CatalogShell from './components/CatalogShell';
-import CatalogSongSection from './components/CatalogSongSection';
-import DesktopActionBar from './components/DesktopActionBar';
-import DesktopHero from './components/DesktopHero';
-import MobileActionBar from './components/MobileActionBar';
-import MobileHero from './components/MobileHero';
-import MobileYearFilterScroll from './components/MobileYearFilterScroll';
 
 export default function Home() {
   const {
@@ -165,105 +160,71 @@ export default function Home() {
         }
         onMobileTabChange={setMobileTab}
       >
+        <CatalogHomeContent
+          isMobileHomeActive={mobileTab === 'home'}
+          streamerName={streamerData.name}
+          streamerDescription={streamerData.description}
+          streamerAvatarUrl={streamerData.avatarUrl}
+          streamerSocialLinks={streamerData.socialLinks}
+          loadError={loadError}
+          shuffleOn={shuffleOn}
+          viewMode={viewMode}
+          availableYears={availableYears}
+          selectedYears={selectedYears}
+          flattenedSongs={flattenedSongs}
+          groupedSongs={groupedSongs}
+          allCatalogSongCount={songs.length}
+          hasActiveFilters={hasActiveFilters}
+          timelineListRef={timelineListRef}
+          groupedListRef={groupedListRef}
+          timelineVirtualizer={timelineVirtualizer}
+          groupedVirtualizer={groupedVirtualizer}
+          currentTrackId={currentTrackId}
+          unavailableVideoIds={unavailableVideoIds}
+          isSongExpanded={isSongExpanded}
+          onPlayAll={handlePlayAll}
+          onToggleShuffle={toggleShuffle}
+          onViewModeChange={setViewMode}
+          onClearYears={clearYears}
+          onToggleYear={toggleYear}
+          onRetry={fetchSongs}
+          onToggleExpand={toggleSongExpansion}
+          onClearFilters={clearAllFilters}
+          onPlay={playTrack}
+          onAddToQueue={handleAddToQueue}
+          onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
+        />
 
-          {/* Home tab content wrapper: always visible on desktop, only on home tab on mobile */}
-          <div className={mobileTab !== 'home' ? 'hidden lg:block' : ''}>
-
-          <MobileHero
-            name={streamerData.name}
-            description={streamerData.description}
-            avatarUrl={streamerData.avatarUrl}
-            songCount={flattenedSongs.length}
-          />
-
-          <DesktopHero
-            name={streamerData.name}
-            description={streamerData.description}
-            avatarUrl={streamerData.avatarUrl}
-            songCount={flattenedSongs.length}
-            socialLinks={streamerData.socialLinks}
-          />
-
-          <MobileActionBar
-            youtubeUrl={streamerData.socialLinks.youtube}
-            shuffleOn={shuffleOn}
-            onPlayAll={handlePlayAll}
-            onToggleShuffle={toggleShuffle}
-          />
-
-          <MobileYearFilterScroll
-            availableYears={availableYears}
-            selectedYears={selectedYears}
-            onClearYears={clearYears}
-            onToggleYear={toggleYear}
-          />
-
-          <DesktopActionBar
-            youtubeUrl={streamerData.socialLinks.youtube}
-            viewMode={viewMode}
-            availableYears={availableYears}
-            selectedYears={selectedYears}
-            onPlayAll={handlePlayAll}
-            onViewModeChange={setViewMode}
-            onClearYears={clearYears}
-            onToggleYear={toggleYear}
-          />
-
-          <CatalogSongSection
-            loadError={loadError}
-            viewMode={viewMode}
+        {mobileTab !== 'home' && (
+          <CatalogMobileTabs
+            activeTab={mobileTab}
+            searchInput={searchInput}
+            selectedArtist={selectedArtist}
+            allArtists={allArtists}
             flattenedSongs={flattenedSongs}
-            groupedSongs={groupedSongs}
-            allCatalogSongCount={songs.length}
-            hasActiveFilters={hasActiveFilters}
-            timelineListRef={timelineListRef}
-            groupedListRef={groupedListRef}
-            timelineVirtualizer={timelineVirtualizer}
-            groupedVirtualizer={groupedVirtualizer}
+            searchListRef={mobileSearchListRef}
+            searchVirtualizer={mobileSearchVirtualizer}
             currentTrackId={currentTrackId}
             unavailableVideoIds={unavailableVideoIds}
-            isSongExpanded={isSongExpanded}
-            onRetry={fetchSongs}
-            onToggleExpand={toggleSongExpansion}
-            onClearFilters={clearAllFilters}
+            likedCount={likedCount}
+            recentCount={recentCount}
+            playlistCount={playlists.length}
+            availableYears={availableYears}
+            selectedYears={selectedYears}
+            filteredStreams={filteredStreams}
+            onSearchInputChange={setSearchInput}
+            onSelectedArtistChange={setSelectedArtist}
             onPlay={playTrack}
-            onAddToQueue={handleAddToQueue}
-            onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
+            onOpenLikedSongs={openLikedSongsPanel}
+            onOpenRecentlyPlayed={openRecentlyPlayedPanel}
+            onOpenCreatePlaylist={openCreateDialog}
+            onOpenPlaylists={openPlaylistPanel}
+            onToggleYear={toggleYear}
+            onClearYears={clearYears}
+            onShowAllStreams={showAllStreamsOnHome}
+            onShowStream={showStreamOnHome}
           />
-          {/* End home tab content wrapper */}
-          </div>
-
-          {mobileTab !== 'home' && (
-            <CatalogMobileTabs
-              activeTab={mobileTab}
-              searchInput={searchInput}
-              selectedArtist={selectedArtist}
-              allArtists={allArtists}
-              flattenedSongs={flattenedSongs}
-              searchListRef={mobileSearchListRef}
-              searchVirtualizer={mobileSearchVirtualizer}
-              currentTrackId={currentTrackId}
-              unavailableVideoIds={unavailableVideoIds}
-              likedCount={likedCount}
-              recentCount={recentCount}
-              playlistCount={playlists.length}
-              availableYears={availableYears}
-              selectedYears={selectedYears}
-              filteredStreams={filteredStreams}
-              onSearchInputChange={setSearchInput}
-              onSelectedArtistChange={setSelectedArtist}
-              onPlay={playTrack}
-              onOpenLikedSongs={openLikedSongsPanel}
-              onOpenRecentlyPlayed={openRecentlyPlayedPanel}
-              onOpenCreatePlaylist={openCreateDialog}
-              onOpenPlaylists={openPlaylistPanel}
-              onToggleYear={toggleYear}
-              onClearYears={clearYears}
-              onShowAllStreams={showAllStreamsOnHome}
-              onShowStream={showStreamOnHome}
-            />
-          )}
-
+        )}
       </CatalogShell>
 
       <CatalogPanels
