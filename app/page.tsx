@@ -13,11 +13,7 @@ import { usePlayer } from './contexts/PlayerContext';
 import { usePlaylist } from './contexts/PlaylistContext';
 import { useLikedSongs } from './contexts/LikedSongsContext';
 import { useRecentlyPlayed } from './contexts/RecentlyPlayedContext';
-import Toast from './components/Toast';
-import CatalogMainContent from './components/CatalogMainContent';
-import CatalogPanels from './components/CatalogPanels';
-import CatalogSidebar from './components/CatalogSidebar';
-import CatalogShell from './components/CatalogShell';
+import CatalogPageView from './components/CatalogPageView';
 
 export default function Home() {
   const {
@@ -125,105 +121,75 @@ export default function Home() {
   });
 
   return (
-    <>
-      <Toast message={toastMessage} show={showToast} onHide={hideToast} />
-      <CatalogShell
-        apiLoadError={apiLoadError}
-        streamerName={streamerData.name}
-        activeMobileTab={mobileTab}
-        scrollContainerRef={scrollContainerRef}
-        sidebar={
-          <CatalogSidebar
-            searchInput={searchInput}
-            selectedArtist={selectedArtist}
-            selectedStreamId={selectedStreamId}
-            selectedYears={selectedYears}
-            allArtists={allArtists}
-            availableYears={availableYears}
-            filteredStreams={filteredStreams}
-            hasActiveFilters={hasActiveFilters}
-            playlistCount={playlists.length}
-            likedSongsCount={likedCount}
-            recentlyPlayedCount={recentCount}
-            onSearchInputChange={setSearchInput}
-            onSelectedArtistChange={setSelectedArtist}
-            onClearAllFilters={clearAllFilters}
-            onToggleYear={toggleYear}
-            onClearStreamFilter={clearStreamFilter}
-            onToggleStreamFilter={toggleStreamFilter}
-            onCreatePlaylist={openCreateDialog}
-            onViewPlaylists={openPlaylistPanel}
-            onViewLikedSongs={openLikedSongsPanel}
-            onViewRecentlyPlayed={openRecentlyPlayedPanel}
-          />
-        }
-        onMobileTabChange={setMobileTab}
-      >
-        <CatalogMainContent
-          mobileTab={mobileTab}
-          streamerName={streamerData.name}
-          streamerDescription={streamerData.description}
-          streamerAvatarUrl={streamerData.avatarUrl}
-          streamerSocialLinks={streamerData.socialLinks}
-          loadError={loadError}
-          shuffleOn={shuffleOn}
-          viewMode={viewMode}
-          searchInput={searchInput}
-          selectedArtist={selectedArtist}
-          allArtists={allArtists}
-          availableYears={availableYears}
-          selectedYears={selectedYears}
-          filteredStreams={filteredStreams}
-          flattenedSongs={flattenedSongs}
-          groupedSongs={groupedSongs}
-          allCatalogSongCount={songs.length}
-          hasActiveFilters={hasActiveFilters}
-          timelineListRef={timelineListRef}
-          groupedListRef={groupedListRef}
-          mobileSearchListRef={mobileSearchListRef}
-          timelineVirtualizer={timelineVirtualizer}
-          groupedVirtualizer={groupedVirtualizer}
-          mobileSearchVirtualizer={mobileSearchVirtualizer}
-          currentTrackId={currentTrackId}
-          unavailableVideoIds={unavailableVideoIds}
-          likedCount={likedCount}
-          recentCount={recentCount}
-          playlistCount={playlists.length}
-          isSongExpanded={isSongExpanded}
-          onPlayAll={handlePlayAll}
-          onToggleShuffle={toggleShuffle}
-          onViewModeChange={setViewMode}
-          onSearchInputChange={setSearchInput}
-          onSelectedArtistChange={setSelectedArtist}
-          onClearYears={clearYears}
-          onToggleYear={toggleYear}
-          onRetry={fetchSongs}
-          onToggleExpand={toggleSongExpansion}
-          onClearFilters={clearAllFilters}
-          onPlay={playTrack}
-          onAddToQueue={handleAddToQueue}
-          onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
-          onOpenLikedSongs={openLikedSongsPanel}
-          onOpenRecentlyPlayed={openRecentlyPlayedPanel}
-          onOpenCreatePlaylist={openCreateDialog}
-          onOpenPlaylists={openPlaylistPanel}
-          onShowAllStreams={showAllStreamsOnHome}
-          onShowStream={showStreamOnHome}
-        />
-      </CatalogShell>
-
-      <CatalogPanels
-        songs={songs}
-        showPlaylistPanel={showPlaylistPanel}
-        showLikedSongsPanel={showLikedSongsPanel}
-        showRecentlyPlayedPanel={showRecentlyPlayedPanel}
-        showCreateDialog={showCreateDialog}
-        onClosePlaylistPanel={closePlaylistPanel}
-        onCloseLikedSongsPanel={closeLikedSongsPanel}
-        onCloseRecentlyPlayedPanel={closeRecentlyPlayedPanel}
-        onCloseCreateDialog={closeCreateDialog}
-        onToast={showToastMessage}
-      />
-    </>
+    <CatalogPageView
+      showToast={showToast}
+      toastMessage={toastMessage}
+      apiLoadError={apiLoadError}
+      streamerName={streamerData.name}
+      streamerDescription={streamerData.description}
+      streamerAvatarUrl={streamerData.avatarUrl}
+      streamerSocialLinks={streamerData.socialLinks}
+      mobileTab={mobileTab}
+      searchInput={searchInput}
+      selectedArtist={selectedArtist}
+      selectedStreamId={selectedStreamId}
+      selectedYears={selectedYears}
+      viewMode={viewMode}
+      allArtists={allArtists}
+      availableYears={availableYears}
+      filteredStreams={filteredStreams}
+      catalogSongs={songs}
+      flattenedSongs={flattenedSongs}
+      groupedSongs={groupedSongs}
+      allCatalogSongCount={songs.length}
+      hasActiveFilters={hasActiveFilters}
+      loadError={loadError}
+      shuffleOn={shuffleOn}
+      currentTrackId={currentTrackId}
+      unavailableVideoIds={unavailableVideoIds}
+      playlistCount={playlists.length}
+      likedCount={likedCount}
+      recentCount={recentCount}
+      showPlaylistPanel={showPlaylistPanel}
+      showLikedSongsPanel={showLikedSongsPanel}
+      showRecentlyPlayedPanel={showRecentlyPlayedPanel}
+      showCreateDialog={showCreateDialog}
+      scrollContainerRef={scrollContainerRef}
+      timelineListRef={timelineListRef}
+      groupedListRef={groupedListRef}
+      mobileSearchListRef={mobileSearchListRef}
+      timelineVirtualizer={timelineVirtualizer}
+      groupedVirtualizer={groupedVirtualizer}
+      mobileSearchVirtualizer={mobileSearchVirtualizer}
+      isSongExpanded={isSongExpanded}
+      onHideToast={hideToast}
+      onMobileTabChange={setMobileTab}
+      onSearchInputChange={setSearchInput}
+      onSelectedArtistChange={setSelectedArtist}
+      onClearAllFilters={clearAllFilters}
+      onToggleYear={toggleYear}
+      onClearYears={clearYears}
+      onClearStreamFilter={clearStreamFilter}
+      onToggleStreamFilter={toggleStreamFilter}
+      onCreatePlaylist={openCreateDialog}
+      onViewPlaylists={openPlaylistPanel}
+      onViewLikedSongs={openLikedSongsPanel}
+      onViewRecentlyPlayed={openRecentlyPlayedPanel}
+      onPlayAll={handlePlayAll}
+      onToggleShuffle={toggleShuffle}
+      onViewModeChange={setViewMode}
+      onRetry={fetchSongs}
+      onToggleExpand={toggleSongExpansion}
+      onPlay={playTrack}
+      onAddToQueue={handleAddToQueue}
+      onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
+      onShowAllStreams={showAllStreamsOnHome}
+      onShowStream={showStreamOnHome}
+      onClosePlaylistPanel={closePlaylistPanel}
+      onCloseLikedSongsPanel={closeLikedSongsPanel}
+      onCloseRecentlyPlayedPanel={closeRecentlyPlayedPanel}
+      onCloseCreateDialog={closeCreateDialog}
+      onToast={showToastMessage}
+    />
   );
 }
