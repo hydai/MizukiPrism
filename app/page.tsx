@@ -14,8 +14,7 @@ import { usePlaylist } from './contexts/PlaylistContext';
 import { useLikedSongs } from './contexts/LikedSongsContext';
 import { useRecentlyPlayed } from './contexts/RecentlyPlayedContext';
 import Toast from './components/Toast';
-import CatalogHomeContent from './components/CatalogHomeContent';
-import CatalogMobileTabs from './components/CatalogMobileTabs';
+import CatalogMainContent from './components/CatalogMainContent';
 import CatalogPanels from './components/CatalogPanels';
 import CatalogSidebar from './components/CatalogSidebar';
 import CatalogShell from './components/CatalogShell';
@@ -160,8 +159,8 @@ export default function Home() {
         }
         onMobileTabChange={setMobileTab}
       >
-        <CatalogHomeContent
-          isMobileHomeActive={mobileTab === 'home'}
+        <CatalogMainContent
+          mobileTab={mobileTab}
           streamerName={streamerData.name}
           streamerDescription={streamerData.description}
           streamerAvatarUrl={streamerData.avatarUrl}
@@ -169,22 +168,33 @@ export default function Home() {
           loadError={loadError}
           shuffleOn={shuffleOn}
           viewMode={viewMode}
+          searchInput={searchInput}
+          selectedArtist={selectedArtist}
+          allArtists={allArtists}
           availableYears={availableYears}
           selectedYears={selectedYears}
+          filteredStreams={filteredStreams}
           flattenedSongs={flattenedSongs}
           groupedSongs={groupedSongs}
           allCatalogSongCount={songs.length}
           hasActiveFilters={hasActiveFilters}
           timelineListRef={timelineListRef}
           groupedListRef={groupedListRef}
+          mobileSearchListRef={mobileSearchListRef}
           timelineVirtualizer={timelineVirtualizer}
           groupedVirtualizer={groupedVirtualizer}
+          mobileSearchVirtualizer={mobileSearchVirtualizer}
           currentTrackId={currentTrackId}
           unavailableVideoIds={unavailableVideoIds}
+          likedCount={likedCount}
+          recentCount={recentCount}
+          playlistCount={playlists.length}
           isSongExpanded={isSongExpanded}
           onPlayAll={handlePlayAll}
           onToggleShuffle={toggleShuffle}
           onViewModeChange={setViewMode}
+          onSearchInputChange={setSearchInput}
+          onSelectedArtistChange={setSelectedArtist}
           onClearYears={clearYears}
           onToggleYear={toggleYear}
           onRetry={fetchSongs}
@@ -193,38 +203,13 @@ export default function Home() {
           onPlay={playTrack}
           onAddToQueue={handleAddToQueue}
           onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
+          onOpenLikedSongs={openLikedSongsPanel}
+          onOpenRecentlyPlayed={openRecentlyPlayedPanel}
+          onOpenCreatePlaylist={openCreateDialog}
+          onOpenPlaylists={openPlaylistPanel}
+          onShowAllStreams={showAllStreamsOnHome}
+          onShowStream={showStreamOnHome}
         />
-
-        {mobileTab !== 'home' && (
-          <CatalogMobileTabs
-            activeTab={mobileTab}
-            searchInput={searchInput}
-            selectedArtist={selectedArtist}
-            allArtists={allArtists}
-            flattenedSongs={flattenedSongs}
-            searchListRef={mobileSearchListRef}
-            searchVirtualizer={mobileSearchVirtualizer}
-            currentTrackId={currentTrackId}
-            unavailableVideoIds={unavailableVideoIds}
-            likedCount={likedCount}
-            recentCount={recentCount}
-            playlistCount={playlists.length}
-            availableYears={availableYears}
-            selectedYears={selectedYears}
-            filteredStreams={filteredStreams}
-            onSearchInputChange={setSearchInput}
-            onSelectedArtistChange={setSelectedArtist}
-            onPlay={playTrack}
-            onOpenLikedSongs={openLikedSongsPanel}
-            onOpenRecentlyPlayed={openRecentlyPlayedPanel}
-            onOpenCreatePlaylist={openCreateDialog}
-            onOpenPlaylists={openPlaylistPanel}
-            onToggleYear={toggleYear}
-            onClearYears={clearYears}
-            onShowAllStreams={showAllStreamsOnHome}
-            onShowStream={showStreamOnHome}
-          />
-        )}
       </CatalogShell>
 
       <CatalogPanels
