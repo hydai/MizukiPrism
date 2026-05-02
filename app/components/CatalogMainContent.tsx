@@ -5,16 +5,8 @@ import type { Virtualizer } from '@tanstack/react-virtual';
 import type { Track } from '../contexts/PlayerContext';
 import type { CatalogMobileTab, CatalogViewMode } from '../hooks/useCatalogViewState';
 import type { CatalogSong, CatalogStream, FlattenedSong } from '../lib/catalogData';
-import CatalogHomeContent from './CatalogHomeContent';
+import CatalogHomeContent, { type StreamerSocialLinks } from './CatalogHomeContent';
 import CatalogMobileTabs from './CatalogMobileTabs';
-
-interface StreamerSocialLinks {
-  youtube: string;
-  twitter: string;
-  facebook: string;
-  instagram: string;
-  twitch: string;
-}
 
 interface CatalogMainContentProps {
   mobileTab: CatalogMobileTab;
