@@ -391,7 +391,7 @@ export default function Home() {
 
                 <TimelineSongList
                   songs={flattenedSongs}
-                  catalogSongCount={songs.length}
+                  allCatalogSongCount={songs.length}
                   hasActiveFilters={hasActiveFilters}
                   listRef={timelineListRef}
                   virtualizer={timelineVirtualizer}
