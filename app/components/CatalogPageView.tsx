@@ -12,7 +12,7 @@ import CatalogSidebar from './CatalogSidebar';
 import CatalogShell from './CatalogShell';
 import Toast from './Toast';
 
-interface CatalogPageViewProps {
+export interface CatalogPageViewProps {
   showToast: boolean;
   toastMessage: string;
   apiLoadError: string | null;
