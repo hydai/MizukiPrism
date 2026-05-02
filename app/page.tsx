@@ -14,12 +14,11 @@ import { usePlaylist } from './contexts/PlaylistContext';
 import { useLikedSongs } from './contexts/LikedSongsContext';
 import { useRecentlyPlayed } from './contexts/RecentlyPlayedContext';
 import Toast from './components/Toast';
-import AlbumArt from './components/AlbumArt';
 import CatalogPanels from './components/CatalogPanels';
 import CatalogSidebar from './components/CatalogSidebar';
+import CatalogSongSection from './components/CatalogSongSection';
 import DesktopActionBar from './components/DesktopActionBar';
 import DesktopHero from './components/DesktopHero';
-import GroupedSongList from './components/GroupedSongList';
 import MobileActionBar from './components/MobileActionBar';
 import MobileBottomNav from './components/MobileBottomNav';
 import MobileHero from './components/MobileHero';
@@ -28,9 +27,6 @@ import MobileSearchTab from './components/MobileSearchTab';
 import MobileStreamsTab from './components/MobileStreamsTab';
 import MobileTopBar from './components/MobileTopBar';
 import MobileYearFilterScroll from './components/MobileYearFilterScroll';
-import SongLoadErrorState from './components/SongLoadErrorState';
-import TimelineSongList from './components/TimelineSongList';
-import TimelineTableHeader from './components/TimelineTableHeader';
 
 export default function Home() {
   const {
@@ -137,8 +133,6 @@ export default function Home() {
     groupedSongCount: groupedSongs.length,
   });
 
-  const gradientText = "bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500";
-
   return (
     <>
       <Toast message={toastMessage} show={showToast} onHide={hideToast} />
@@ -232,50 +226,27 @@ export default function Home() {
             onToggleYear={toggleYear}
           />
 
-          {/* Song List - Conditional Rendering based on View Mode */}
-          <div className="px-4 pb-32 mt-2">
-            {/* Always-visible logical counts for E2E tests (virtual scrolling caps DOM nodes) */}
-            <span data-testid="total-performance-count" className="sr-only">{flattenedSongs.length}</span>
-            <span data-testid="total-song-card-count" className="sr-only">{groupedSongs.length}</span>
-            {loadError ? (
-              <SongLoadErrorState onRetry={fetchSongs} />
-            ) : viewMode === 'timeline' ? (
-              /* Timeline View */
-              <>
-                <TimelineTableHeader />
-
-                <TimelineSongList
-                  songs={flattenedSongs}
-                  allCatalogSongCount={songs.length}
-                  hasActiveFilters={hasActiveFilters}
-                  listRef={timelineListRef}
-                  virtualizer={timelineVirtualizer}
-                  currentTrackId={currentTrackId}
-                  unavailableVideoIds={unavailableVideoIds}
-                  onClearFilters={clearAllFilters}
-                  onPlay={playTrack}
-                  onAddToQueue={handleAddToQueue}
-                  onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
-                />
-              </>
-            ) : (
-              /* Grouped View */
-              <GroupedSongList
-                songs={groupedSongs}
-                allCatalogSongCount={songs.length}
-                hasActiveFilters={hasActiveFilters}
-                listRef={groupedListRef}
-                virtualizer={groupedVirtualizer}
-                unavailableVideoIds={unavailableVideoIds}
-                isSongExpanded={isSongExpanded}
-                onToggleExpand={toggleSongExpansion}
-                onClearFilters={clearAllFilters}
-                onPlay={playTrack}
-                onAddToQueue={handleAddToQueue}
-                onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
-              />
-            )}
-          </div>
+          <CatalogSongSection
+            loadError={loadError}
+            viewMode={viewMode}
+            flattenedSongs={flattenedSongs}
+            groupedSongs={groupedSongs}
+            allCatalogSongCount={songs.length}
+            hasActiveFilters={hasActiveFilters}
+            timelineListRef={timelineListRef}
+            groupedListRef={groupedListRef}
+            timelineVirtualizer={timelineVirtualizer}
+            groupedVirtualizer={groupedVirtualizer}
+            currentTrackId={currentTrackId}
+            unavailableVideoIds={unavailableVideoIds}
+            isSongExpanded={isSongExpanded}
+            onRetry={fetchSongs}
+            onToggleExpand={toggleSongExpansion}
+            onClearFilters={clearAllFilters}
+            onPlay={playTrack}
+            onAddToQueue={handleAddToQueue}
+            onAddToPlaylistSuccess={handleAddToPlaylistSuccess}
+          />
           {/* End home tab content wrapper */}
           </div>
 
