@@ -12,7 +12,7 @@ import MobileActionBar from './MobileActionBar';
 import MobileHero from './MobileHero';
 import MobileYearFilterScroll from './MobileYearFilterScroll';
 
-interface StreamerSocialLinks {
+export interface StreamerSocialLinks {
   youtube: string;
   twitter: string;
   facebook: string;
