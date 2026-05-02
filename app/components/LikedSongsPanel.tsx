@@ -2,7 +2,8 @@
 
 import { Heart, Play, ListPlus } from 'lucide-react';
 import { useLikedSongs } from '../contexts/LikedSongsContext';
-import { usePlayer, type Track } from '../contexts/PlayerContext';
+import { usePlayer } from '../contexts/PlayerContext';
+import type { Track } from '../types/player';
 import AlbumArt from './AlbumArt';
 import BottomSheet from './BottomSheet';
 

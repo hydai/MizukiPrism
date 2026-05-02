@@ -1,20 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
-
-export interface Track {
-  id: string;
-  songId: string;
-  title: string;
-  originalArtist: string;
-  videoId: string;
-  timestamp: number;
-  endTimestamp?: number;
-  deleted?: boolean;
-  albumArtUrl?: string;
-}
-
-export type RepeatMode = 'off' | 'all' | 'one';
+import type { RepeatMode, Track } from '../types/player';
 
 function shuffleArray<T>(arr: T[]): T[] {
   const result = [...arr];

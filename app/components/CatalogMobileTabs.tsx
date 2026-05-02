@@ -2,7 +2,7 @@
 
 import type { RefObject } from 'react';
 import type { Virtualizer } from '@tanstack/react-virtual';
-import type { Track } from '../contexts/PlayerContext';
+import type { Track } from '../types/player';
 import type { CatalogMobileTab } from '../hooks/useCatalogViewState';
 import type { CatalogStream, FlattenedSong } from '../lib/catalogData';
 import MobileLibraryTab from './MobileLibraryTab';

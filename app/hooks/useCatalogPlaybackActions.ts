@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import type { Track } from '../contexts/PlayerContext';
+import type { Track } from '../types/player';
 import type { CatalogSong, FlattenedSong } from '../lib/catalogData';
 import {
   buildGroupedPlaybackTracks,

@@ -3,7 +3,7 @@
 import type { RefObject } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
 import type { Virtualizer } from '@tanstack/react-virtual';
-import type { Track } from '../contexts/PlayerContext';
+import type { Track } from '../types/player';
 import type { FlattenedSong } from '../lib/catalogData';
 import MobileSearchRow from './MobileSearchRow';
 

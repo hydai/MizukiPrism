@@ -4,7 +4,7 @@ import { memo } from 'react';
 import { Disc3, ChevronDown, ChevronRight, Play, Plus, ExternalLink, Heart } from 'lucide-react';
 import AddToPlaylistDropdown from './AddToPlaylistDropdown';
 import { useLikedSongs } from '../contexts/LikedSongsContext';
-import type { Track } from '../contexts/PlayerContext';
+import type { Track } from '../types/player';
 import type { CatalogSong } from '../lib/catalogData';
 
 interface SongCardProps {

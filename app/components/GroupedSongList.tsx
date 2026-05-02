@@ -2,7 +2,7 @@
 
 import type { RefObject } from 'react';
 import type { Virtualizer } from '@tanstack/react-virtual';
-import type { Track } from '../contexts/PlayerContext';
+import type { Track } from '../types/player';
 import type { CatalogSong } from '../lib/catalogData';
 import SongCard from './SongCard';
 import SongEmptyState from './SongEmptyState';
