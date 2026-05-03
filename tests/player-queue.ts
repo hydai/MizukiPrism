@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { advancePlayerQueue } from '../app/lib/playerQueue';
+import { advancePlayerQueue, shuffleTracks } from '../app/lib/playerQueue';
 import type { Track } from '../app/types/player';
 
 function queueTrack(id: string, deleted = false): Track {
@@ -53,6 +53,24 @@ const repeatAllQueueWithExistingFromTrack = advancePlayerQueue({
 assert.equal(repeatAllQueueWithExistingFromTrack.nextTrack?.id, 'a');
 assert.deepEqual(repeatAllQueueWithExistingFromTrack.queue.map((track) => track.id), ['b']);
 assert.equal(repeatAllQueueWithExistingFromTrack.skippedDeleted, false);
+
+assert.deepEqual(
+  shuffleTracks([queueA, queueB], () => 1).map((track) => track.id),
+  ['a', 'b'],
+);
+
+const shuffledPickWithUpperBoundRandom = advancePlayerQueue({
+  queue: [queueA, queueB],
+  fromTrack: null,
+  repeatMode: 'off',
+  shuffleOn: true,
+  allTracks: [],
+  random: () => 1,
+});
+
+assert.equal(shuffledPickWithUpperBoundRandom.nextTrack?.id, 'b');
+assert.deepEqual(shuffledPickWithUpperBoundRandom.queue.map((track) => track.id), ['a']);
+assert.equal(shuffledPickWithUpperBoundRandom.skippedDeleted, false);
 
 const emptyQueue = advancePlayerQueue({
   queue: [deletedQueueTrack],
