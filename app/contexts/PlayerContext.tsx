@@ -158,8 +158,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     savePlayerMuted(newMuted);
   };
 
-  // Advance to next non-deleted track in queue, skipping deleted ones.
-  // Returns true if a non-deleted track was found and set as current, false if all remaining are deleted or queue is empty.
+  // Advance to the next playable track, refilling from all tracks in repeat-all mode when needed.
+  // Returns true when a track is selected and set as current; false when no playable track remains.
   const advanceSkippingDeleted = (currentQ: Track[], fromTrack: Track | null): boolean => {
     const result = advancePlayerQueue({
       queue: currentQ,
