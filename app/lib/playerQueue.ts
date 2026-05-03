@@ -33,12 +33,14 @@ export function advancePlayerQueue({
   random = Math.random,
 }: AdvancePlayerQueueOptions): AdvancePlayerQueueResult {
   let skippedDeleted = false;
-  let remainingQueue = [...queue];
+  let firstQueuedIndex = 0;
 
-  while (remainingQueue.length > 0 && remainingQueue[0]?.deleted) {
+  while (firstQueuedIndex < queue.length && queue[firstQueuedIndex]?.deleted) {
     skippedDeleted = true;
-    remainingQueue = remainingQueue.slice(1);
+    firstQueuedIndex += 1;
   }
+
+  let remainingQueue = queue.slice(firstQueuedIndex);
 
   if (remainingQueue.length === 0 && repeatMode === 'all' && allTracks.length > 0) {
     const tracks = allTracks.filter((track) => !track.deleted);
