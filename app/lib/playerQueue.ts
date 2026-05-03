@@ -15,10 +15,19 @@ interface AdvancePlayerQueueResult {
   skippedDeleted: boolean;
 }
 
+function randomIndex(length: number, random: () => number): number {
+  const sample = random();
+  const boundedSample = Number.isFinite(sample)
+    ? Math.min(Math.max(sample, 0), 1 - Number.EPSILON)
+    : 0;
+
+  return Math.floor(boundedSample * length);
+}
+
 export function shuffleTracks<T>(tracks: readonly T[], random: () => number = Math.random): T[] {
   const result = [...tracks];
   for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
+    const j = randomIndex(i + 1, random);
     [result[i], result[j]] = [result[j], result[i]];
   }
   return result;
@@ -60,7 +69,7 @@ export function advancePlayerQueue({
   }
 
   const pickIndex = shuffleOn
-    ? Math.floor(random() * playable.length)
+    ? randomIndex(playable.length, random)
     : 0;
   const nextTrack = playable[pickIndex]!;
   const actualIndex = remainingQueue.indexOf(nextTrack);
