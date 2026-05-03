@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { loadPlayerPreferences, savePlayerMuted, savePlayerVolume } from '../lib/playerPreferences';
 import type { RepeatMode, Track } from '../types/player';
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -124,23 +125,14 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   // Load volume/mute from localStorage on mount (SSR-safe)
   useEffect(() => {
-    try {
-      const savedVolume = localStorage.getItem('mizuki-volume');
-      const savedMuted = localStorage.getItem('mizuki-muted');
-      if (savedVolume !== null) {
-        const v = Number(savedVolume);
-        if (!isNaN(v) && v >= 0 && v <= 100) {
-          setVolumeState(v);
-          volumeRef.current = v;
-        }
-      }
-      if (savedMuted !== null) {
-        const m = savedMuted === 'true';
-        setIsMuted(m);
-        isMutedRef.current = m;
-      }
-    } catch {
-      // localStorage unavailable — use session defaults
+    const preferences = loadPlayerPreferences();
+    if (preferences.volume != null) {
+      setVolumeState(preferences.volume);
+      volumeRef.current = preferences.volume;
+    }
+    if (preferences.isMuted != null) {
+      setIsMuted(preferences.isMuted);
+      isMutedRef.current = preferences.isMuted;
     }
   }, []);
 
@@ -156,9 +148,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       if (playerRef.current && playerRef.current.unMute) {
         playerRef.current.unMute();
       }
-      try { localStorage.setItem('mizuki-muted', 'false'); } catch {}
+      savePlayerMuted(false);
     }
-    try { localStorage.setItem('mizuki-volume', String(clamped)); } catch {}
+    savePlayerVolume(clamped);
   };
 
   const toggleMute = () => {
@@ -171,7 +163,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         playerRef.current.unMute?.();
       }
     }
-    try { localStorage.setItem('mizuki-muted', String(newMuted)); } catch {}
+    savePlayerMuted(newMuted);
   };
 
   // Advance to next non-deleted track in queue, skipping deleted ones.
