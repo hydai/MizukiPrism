@@ -65,7 +65,12 @@ export function advancePlayerQueue({
   const nextQueue = [...remainingQueue];
   nextQueue.splice(actualIndex, 1);
 
-  if (repeatMode === 'all' && fromTrack && !fromTrack.deleted) {
+  if (
+    repeatMode === 'all'
+    && fromTrack
+    && !fromTrack.deleted
+    && !nextQueue.some((track) => track.id === fromTrack.id)
+  ) {
     nextQueue.push(fromTrack);
   }
 
