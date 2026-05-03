@@ -2,16 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { loadPlayerPreferences, savePlayerMuted, savePlayerVolume } from '../lib/playerPreferences';
+import { advancePlayerQueue } from '../lib/playerQueue';
 import type { RepeatMode, Track } from '../types/player';
-
-function shuffleArray<T>(arr: T[]): T[] {
-  const result = [...arr];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
 
 interface PlayerContextType {
   currentTrack: Track | null;
@@ -169,27 +161,16 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   // Advance to next non-deleted track in queue, skipping deleted ones.
   // Returns true if a non-deleted track was found and set as current, false if all remaining are deleted or queue is empty.
   const advanceSkippingDeleted = (currentQ: Track[], fromTrack: Track | null): boolean => {
-    // Filter out deleted tracks
-    let skippedAny = false;
-    let remainingQueue = currentQ;
-    while (remainingQueue.length > 0 && remainingQueue[0].deleted) {
-      skippedAny = true;
-      remainingQueue = remainingQueue.slice(1);
-    }
+    const result = advancePlayerQueue({
+      queue: currentQ,
+      fromTrack,
+      repeatMode: repeatModeRef.current,
+      shuffleOn: shuffleOnRef.current,
+      allTracks: allTracksRef.current,
+    });
 
-    // If queue empty and repeat-all is on, re-populate from allTracks
-    if (remainingQueue.length === 0 && repeatModeRef.current === 'all' && allTracksRef.current.length > 0) {
-      const tracks = allTracksRef.current.filter(t => !t.deleted);
-      if (tracks.length > 0) {
-        remainingQueue = shuffleOnRef.current ? shuffleArray(tracks) : [...tracks];
-      }
-    }
-
-    const playable = remainingQueue.filter(t => !t.deleted);
-
-    if (playable.length === 0) {
-      // Nothing playable
-      if (skippedAny) {
+    if (!result.nextTrack) {
+      if (result.skippedDeleted) {
         setSkipNotification('播放完畢');
       }
       setQueue([]);
@@ -200,33 +181,16 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
-    // Shuffle: pick random track from playable queue; otherwise take first
-    let pickIndex: number;
-    if (shuffleOnRef.current) {
-      pickIndex = Math.floor(Math.random() * playable.length);
-    } else {
-      pickIndex = 0;
-    }
-    const nextTrack = playable[pickIndex];
-
-    // Remove picked track from remainingQueue (find first occurrence)
-    const actualIndex = remainingQueue.indexOf(nextTrack);
-    const newQueue = [...remainingQueue];
-    newQueue.splice(actualIndex, 1);
-    // Repeat-all: rotate the finished track to the end of the queue
-    if (repeatModeRef.current === 'all' && fromTrack && !fromTrack.deleted) {
-      newQueue.push(fromTrack);
-    }
-    setQueue(newQueue);
+    setQueue(result.queue);
 
     if (fromTrack) {
       setPlayHistory(prev => [...prev, fromTrack]);
     }
-    if (skippedAny) {
+    if (result.skippedDeleted) {
       setSkipNotification('已跳過無法播放的版本');
     }
-    setCurrentTrack(nextTrack);
-    setCurrentTime(nextTrack.timestamp);
+    setCurrentTrack(result.nextTrack);
+    setCurrentTime(result.nextTrack.timestamp);
     return true;
   };
 
