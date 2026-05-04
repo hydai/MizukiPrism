@@ -475,7 +475,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
     await expect(miniPlayer.locator('button[aria-label="Play"]')).toBeVisible();
   });
 
-  test('AC7f: Repeat-one native ended event clamps out-of-bounds restart', async ({ page }) => {
+  test('AC7f: Repeat-one native ended event clamps out-of-bounds restart and warns once', async ({ page }) => {
     const currentRow = await findPerformanceRow(page, CLIPPED_CURRENT_FIXTURE);
 
     await currentRow.hover();
@@ -500,7 +500,20 @@ test.describe('PLAY-002: Play Queue Management', () => {
       window.__mockYouTubePlayer?.isPlaying === true
         && window.__mockYouTubePlayer?.currentTime === 0
     ));
-    await expect(page.locator('[data-testid="toast"]').filter({ hasText: '時間戳可能有誤' })).toHaveCount(0);
+    const timestampWarningToast = page.locator('[data-testid="toast"]').filter({ hasText: '時間戳可能有誤' });
+    await expect(timestampWarningToast).toBeVisible();
+    await expect(timestampWarningToast).not.toBeVisible({ timeout: 5000 });
+
+    await page.evaluate(() => {
+      window.__mockYouTubePlayer?.setCurrentTime(999999);
+      window.__mockYouTubePlayer?.emitStateChange(0);
+    });
+    await page.waitForFunction(() => (
+      window.__mockYouTubePlayer?.isPlaying === true
+        && window.__mockYouTubePlayer?.currentTime === 0
+    ));
+    await page.waitForTimeout(1000);
+    await expect(timestampWarningToast).toHaveCount(0);
     await expect(miniPlayer.locator('button[aria-label="Pause"]')).toBeVisible();
   });
 
