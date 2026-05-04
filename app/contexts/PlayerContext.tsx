@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
+import { usePlayerTimePolling } from '../hooks/usePlayerTimePolling';
 import { useSyncedRef } from '../hooks/useSyncedRef';
 import { useYouTubeIframeApi } from '../hooks/useYouTubeIframeApi';
 import {
@@ -15,7 +16,6 @@ import {
   resolvePlayerError,
 } from '../lib/playerErrors';
 import {
-  hasReachedTrackEnd,
   resolvePlaybackEndAction,
   resolveYouTubePlayerLoadAction,
   resolveYouTubePlaybackState,
@@ -112,7 +112,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const playerRef = useRef<any>(null);
   const playerDivId = 'youtube-player';
-  const timeUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const loadedVideoIdRef = useRef<string | null>(null);
   // Refs to always have fresh values in async callbacks
   const queueRef = useRef<Track[]>([]);
@@ -172,7 +171,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   // Advance to the next playable track, refilling from all tracks in repeat-all mode when needed.
   // Returns true when a track is selected and set as current; false when no playable track remains.
-  const advanceSkippingDeleted = (currentQ: Track[], fromTrack: Track | null): boolean => {
+  const advanceSkippingDeleted = useCallback((currentQ: Track[], fromTrack: Track | null): boolean => {
     const result = advancePlayerQueue({
       queue: currentQ,
       fromTrack,
@@ -204,57 +203,17 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setCurrentTrack(result.nextTrack);
     setCurrentTime(result.nextTrack.timestamp);
     return true;
-  };
-
-  // Clear playback polling on unmount.
-  useEffect(() => {
-    return () => {
-      if (timeUpdateIntervalRef.current) {
-        clearInterval(timeUpdateIntervalRef.current);
-        timeUpdateIntervalRef.current = null;
-      }
-    };
   }, []);
 
-  // Start (or restart) the time-update polling interval.
-  // Uses refs so the callback always sees fresh track/queue state.
-  const startTimeUpdateInterval = () => {
-    if (timeUpdateIntervalRef.current) {
-      clearInterval(timeUpdateIntervalRef.current);
-    }
-    timeUpdateIntervalRef.current = setInterval(() => {
-      if (playerRef.current && playerRef.current.getCurrentTime) {
-        const current = playerRef.current.getCurrentTime();
-        setCurrentTime(current);
-
-        const track = currentTrackRef.current;
-        if (hasReachedTrackEnd(track, current)) {
-          const freshQueue = queueRef.current;
-          const endAction = resolvePlaybackEndAction({
-            currentTrack: track,
-            queueLength: freshQueue.length,
-            repeatMode: repeatModeRef.current,
-          });
-
-          if (endAction.type === 'loop') {
-            playerRef.current.seekTo(endAction.track.timestamp, true);
-            return;
-          }
-          if (endAction.type === 'advance') {
-            advanceSkippingDeleted(freshQueue, track);
-            return;
-          }
-
-          playerRef.current.pauseVideo();
-          setIsPlaying(false);
-          if (timeUpdateIntervalRef.current) {
-            clearInterval(timeUpdateIntervalRef.current);
-            timeUpdateIntervalRef.current = null;
-          }
-        }
-      }
-    }, 500);
-  };
+  const { startTimeUpdateInterval, stopTimeUpdateInterval } = usePlayerTimePolling({
+    playerRef,
+    currentTrackRef,
+    queueRef,
+    repeatModeRef,
+    setCurrentTime,
+    setIsPlaying,
+    advanceToNextTrack: advanceSkippingDeleted,
+  });
 
   // Initialize YouTube player when ready and track is available.
   // Reuses the existing player instance to preserve autoplay permission.
@@ -367,10 +326,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
             if (endAction.type === 'stop') {
               setIsPlaying(false);
-              if (timeUpdateIntervalRef.current) {
-                clearInterval(timeUpdateIntervalRef.current);
-                timeUpdateIntervalRef.current = null;
-              }
+              stopTimeUpdateInterval();
             }
           }
         },
@@ -383,7 +339,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         },
       },
     });
-  }, [isPlayerReady, currentTrack]);
+  }, [isPlayerReady, currentTrack, startTimeUpdateInterval, stopTimeUpdateInterval, advanceSkippingDeleted]);
 
   const toggleRepeat = () => {
     setRepeatMode(getNextRepeatMode);
