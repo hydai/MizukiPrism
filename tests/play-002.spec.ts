@@ -28,14 +28,90 @@ interface PerformanceFixture {
 }
 
 interface CatalogPerformanceFixture {
+  id: string;
+  streamId: string;
   date: string;
+  streamTitle: string;
+  videoId: string;
+  timestamp: number;
   endTimestamp?: number | null;
+  note: string;
 }
 
 interface CatalogSongFixture {
+  id: string;
   title: string;
+  originalArtist: string;
+  tags: string[];
   performances: CatalogPerformanceFixture[];
 }
+
+const TEST_CATALOG_SONGS: CatalogSongFixture[] = [
+  {
+    id: 'song-fixture-1',
+    title: CLIPPED_CURRENT_FIXTURE.title,
+    originalArtist: 'Fixture Artist A',
+    tags: [],
+    performances: [{
+      id: 'performance-fixture-1',
+      streamId: 'stream-fixture-2026-04-10',
+      date: CLIPPED_CURRENT_FIXTURE.date,
+      streamTitle: '我回來啦 Fixture Karaoke Stream A',
+      videoId: 'fixture-video-a',
+      timestamp: 4763,
+      endTimestamp: CLIPPED_CURRENT_FIXTURE.endTimestamp,
+      note: '',
+    }],
+  },
+  {
+    id: 'song-fixture-2',
+    title: CLIPPED_QUEUE_FIXTURE.title,
+    originalArtist: 'Fixture Artist B',
+    tags: [],
+    performances: [{
+      id: 'performance-fixture-2',
+      streamId: 'stream-fixture-2026-04-09',
+      date: CLIPPED_QUEUE_FIXTURE.date,
+      streamTitle: '我回來啦 Fixture Karaoke Stream B',
+      videoId: 'fixture-video-b',
+      timestamp: 1160,
+      endTimestamp: CLIPPED_QUEUE_FIXTURE.endTimestamp,
+      note: '',
+    }],
+  },
+  {
+    id: 'song-fixture-3',
+    title: 'Keep Cold',
+    originalArtist: 'Fixture Artist C',
+    tags: [],
+    performances: [{
+      id: 'performance-fixture-3',
+      streamId: 'stream-fixture-2026-04-08',
+      date: '2026-04-08',
+      streamTitle: 'Fixture Karaoke Stream C',
+      videoId: 'fixture-video-c',
+      timestamp: 2478,
+      endTimestamp: 2712,
+      note: '',
+    }],
+  },
+  {
+    id: 'song-fixture-4',
+    title: FULL_LENGTH_FIXTURE.title,
+    originalArtist: 'Fixture Artist D',
+    tags: [],
+    performances: [{
+      id: 'performance-fixture-4',
+      streamId: 'stream-fixture-2022-01-01',
+      date: FULL_LENGTH_FIXTURE.date,
+      streamTitle: 'Fixture Full Length Stream',
+      videoId: 'fixture-video-d',
+      timestamp: 781,
+      endTimestamp: FULL_LENGTH_FIXTURE.endTimestamp,
+      note: '',
+    }],
+  },
+];
 
 declare global {
   interface Window {
@@ -102,6 +178,16 @@ async function mockYouTubeIframeApi(page: Page) {
   });
 }
 
+async function mockCatalogSongsApi(page: Page) {
+  await page.route('**/api/songs', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(TEST_CATALOG_SONGS),
+    });
+  });
+}
+
 async function expectCatalogPerformanceFixture(page: Page, fixture: PerformanceFixture): Promise<void> {
   const actual = await page.evaluate(async ({ title, date }) => {
     const response = await fetch('/api/songs');
@@ -137,10 +223,15 @@ async function waitForMockPlayback(page: Page): Promise<void> {
   await page.waitForFunction(() => window.__mockYouTubePlayer?.isPlaying === true);
 }
 
+async function useDesktopViewport(page: Page): Promise<void> {
+  await page.setViewportSize({ width: 1280, height: 720 });
+}
+
 test.describe('PLAY-002: Play Queue Management', () => {
 
   test.beforeEach(async ({ page }) => {
     await mockYouTubeIframeApi(page);
+    await mockCatalogSongsApi(page);
     await page.goto(BASE_URL);
     // Wait for page to be fully loaded
     await page.waitForLoadState('networkidle');
@@ -427,6 +518,8 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC7d: Native ended event loops current track with repeat-one enabled', async ({ page }) => {
+    await useDesktopViewport(page);
+
     const currentRow = await findPerformanceRow(page, CLIPPED_CURRENT_FIXTURE);
 
     await currentRow.hover();
@@ -438,6 +531,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
     await page.waitForFunction(() => Boolean(window.__mockYouTubePlayer));
 
     const repeatButton = miniPlayer.locator('[data-testid="desktop-repeat-button"]');
+    await expect(repeatButton).toBeVisible();
     await repeatButton.click();
     await repeatButton.click();
 
@@ -476,6 +570,8 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC7f: Repeat-one native ended event clamps out-of-bounds restart and warns once', async ({ page }) => {
+    await useDesktopViewport(page);
+
     const currentRow = await findPerformanceRow(page, CLIPPED_CURRENT_FIXTURE);
 
     await currentRow.hover();
@@ -487,6 +583,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
     await page.waitForFunction(() => Boolean(window.__mockYouTubePlayer));
 
     const repeatButton = miniPlayer.locator('[data-testid="desktop-repeat-button"]');
+    await expect(repeatButton).toBeVisible();
     await repeatButton.click();
     await repeatButton.click();
 

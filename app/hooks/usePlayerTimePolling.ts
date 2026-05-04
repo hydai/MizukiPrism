@@ -1,18 +1,19 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
-import { hasReachedTrackEnd } from '../lib/playerPlayback';
+import {
+  createPlayerTimePoller,
+  type CurrentRef,
+  type PlayerTimePoller,
+  type TrackEndHandler,
+} from '../lib/playerTimePolling';
 import type { Track } from '../types/player';
-
-type CurrentRef<T> = {
-  current: T;
-};
 
 interface UsePlayerTimePollingOptions {
   playerRef: CurrentRef<any>;
   currentTrackRef: CurrentRef<Track | null>;
   setCurrentTime: (time: number) => void;
-  handleTrackEnd: () => 'continue' | 'stop';
+  handleTrackEnd: TrackEndHandler;
 }
 
 export function usePlayerTimePolling({
@@ -21,39 +22,27 @@ export function usePlayerTimePolling({
   setCurrentTime,
   handleTrackEnd,
 }: UsePlayerTimePollingOptions) {
-  const timeUpdateIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollerSnapshot = {
+    playerRef,
+    currentTrackRef,
+    setCurrentTime,
+    handleTrackEnd,
+  };
+  const pollerRef = useRef<PlayerTimePoller | null>(null);
+
+  if (!pollerRef.current) {
+    pollerRef.current = createPlayerTimePoller(pollerSnapshot);
+  } else {
+    pollerRef.current.update(pollerSnapshot);
+  }
 
   const stopTimeUpdateInterval = useCallback(() => {
-    if (timeUpdateIntervalRef.current) {
-      clearInterval(timeUpdateIntervalRef.current);
-      timeUpdateIntervalRef.current = null;
-    }
+    pollerRef.current?.stop();
   }, []);
 
   const startTimeUpdateInterval = useCallback(() => {
-    stopTimeUpdateInterval();
-
-    timeUpdateIntervalRef.current = setInterval(() => {
-      const player = playerRef.current;
-      if (!player?.getCurrentTime) return;
-
-      const current = player.getCurrentTime();
-      setCurrentTime(current);
-
-      const track = currentTrackRef.current;
-      if (!hasReachedTrackEnd(track, current)) return;
-
-      if (handleTrackEnd() === 'stop') {
-        stopTimeUpdateInterval();
-      }
-    }, 500);
-  }, [
-    currentTrackRef,
-    handleTrackEnd,
-    playerRef,
-    setCurrentTime,
-    stopTimeUpdateInterval,
-  ]);
+    pollerRef.current?.start();
+  }, []);
 
   useEffect(() => stopTimeUpdateInterval, [stopTimeUpdateInterval]);
 
