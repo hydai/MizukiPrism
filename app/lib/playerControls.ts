@@ -12,11 +12,15 @@ export function addUniqueTrackById(tracks: Track[], track: Track): Track[] {
     : [...tracks, track];
 }
 
-export function removeTrackAtIndex(tracks: readonly Track[], index: number): Track[] {
+export function removeTrackAtIndex(tracks: Track[], index: number): Track[] {
+  if (index < 0 || index >= tracks.length) {
+    return tracks;
+  }
+
   return tracks.filter((_, currentIndex) => currentIndex !== index);
 }
 
-export function moveTrack(tracks: readonly Track[], fromIndex: number, toIndex: number): Track[] {
+export function moveTrack(tracks: Track[], fromIndex: number, toIndex: number): Track[] {
   if (
     fromIndex < 0
     || fromIndex >= tracks.length
@@ -24,7 +28,7 @@ export function moveTrack(tracks: readonly Track[], fromIndex: number, toIndex: 
     || toIndex >= tracks.length
     || fromIndex === toIndex
   ) {
-    return [...tracks];
+    return tracks;
   }
 
   const nextTracks = [...tracks];
