@@ -298,6 +298,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           setIsPlaying(false);
           if (timeUpdateIntervalRef.current) {
             clearInterval(timeUpdateIntervalRef.current);
+            timeUpdateIntervalRef.current = null;
           }
         }
       }
@@ -417,6 +418,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
             if (endAction.type === 'stop') {
               setIsPlaying(false);
+              if (timeUpdateIntervalRef.current) {
+                clearInterval(timeUpdateIntervalRef.current);
+                timeUpdateIntervalRef.current = null;
+              }
             }
           }
         },
