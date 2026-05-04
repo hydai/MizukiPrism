@@ -1,6 +1,13 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import {
+  addUniqueTrackById,
+  getNextRepeatMode,
+  moveTrack,
+  removeTrackAtIndex,
+  resolvePreviousPlayback,
+} from '../lib/playerControls';
 import { loadPlayerPreferences, savePlayerMuted, savePlayerVolume } from '../lib/playerPreferences';
 import { advancePlayerQueue } from '../lib/playerQueue';
 import {
@@ -406,7 +413,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   }, [isPlayerReady, currentTrack]);
 
   const toggleRepeat = () => {
-    setRepeatMode(prev => prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off');
+    setRepeatMode(getNextRepeatMode);
   };
 
   const toggleShuffle = () => {
@@ -414,7 +421,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addToAllTracks = (track: Track) => {
-    setAllTracks(prev => prev.some(t => t.id === track.id) ? prev : [...prev, track]);
+    setAllTracks(prev => addUniqueTrackById(prev, track));
   };
 
   const playTrack = (track: Track) => {
@@ -446,21 +453,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const previous = () => {
-    if (!currentTrack) return;
+    const action = resolvePreviousPlayback({
+      currentTrack,
+      currentTime,
+      playHistory,
+    });
 
-    const timePlayed = currentTime - currentTrack.timestamp;
-
-    if (timePlayed > 3) {
-      // Restart current song
-      seekTo(currentTrack.timestamp);
-    } else {
-      // Go to previous song in history
-      if (playHistory.length > 0) {
-        const prevTrack = playHistory[playHistory.length - 1];
-        setPlayHistory((prev) => prev.slice(0, -1));
-        setCurrentTrack(prevTrack);
-        setCurrentTime(prevTrack.timestamp);
-      }
+    if (action.type === 'restart') {
+      seekTo(action.track.timestamp);
+    } else if (action.type === 'history') {
+      setPlayHistory(action.history);
+      setCurrentTrack(action.track);
+      setCurrentTime(action.track.timestamp);
     }
   };
 
@@ -483,16 +487,11 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const removeFromQueue = (index: number) => {
-    setQueue(prev => prev.filter((_, i) => i !== index));
+    setQueue(prev => removeTrackAtIndex(prev, index));
   };
 
   const reorderQueue = (fromIndex: number, toIndex: number) => {
-    setQueue(prev => {
-      const newQueue = [...prev];
-      const [removed] = newQueue.splice(fromIndex, 1);
-      newQueue.splice(toIndex, 0, removed);
-      return newQueue;
-    });
+    setQueue(prev => moveTrack(prev, fromIndex, toIndex));
   };
 
   return (
