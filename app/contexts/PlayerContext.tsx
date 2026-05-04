@@ -140,6 +140,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setTimestampWarning(TIMESTAMP_WARNING_MESSAGE);
   }, []);
 
+  const resetTimestampWarningOnceState = useCallback(() => {
+    timestampWarningTrackIdsRef.current.clear();
+  }, []);
+
   // Load volume/mute from localStorage on mount (SSR-safe)
   useEffect(() => {
     const preferences = loadPlayerPreferences();
@@ -199,6 +203,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
+    resetTimestampWarningOnceState();
     setQueue(result.queue);
 
     if (fromTrack) {
@@ -210,7 +215,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setCurrentTrack(result.nextTrack);
     setCurrentTime(result.nextTrack.timestamp);
     return true;
-  }, []);
+  }, [resetTimestampWarningOnceState]);
 
   const handlePlaybackEnd = useCallback((options: { resumeLoopPlayback?: boolean } = {}): 'continue' | 'stop' => {
     const player = playerRef.current;
@@ -375,6 +380,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     if (currentTrack && currentTrack.id !== track.id) {
       setPlayHistory((prev) => [...prev, currentTrack]);
     }
+    resetTimestampWarningOnceState();
     setCurrentTrack(track);
     setCurrentTime(track.timestamp);
     addToAllTracks(track);
@@ -409,6 +415,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       seekTo(action.track.timestamp);
     } else if (action.type === 'history') {
       setPlayHistory((prev) => prev.slice(0, -1));
+      resetTimestampWarningOnceState();
       setCurrentTrack(action.track);
       setCurrentTime(action.track.timestamp);
     }
