@@ -16,16 +16,9 @@ export function isYouTubeIframeApiReady(): boolean {
 }
 
 function getExistingYouTubeIframeApiScript(): HTMLScriptElement | null {
-  const script = document.querySelector<HTMLScriptElement>(
+  return document.querySelector<HTMLScriptElement>(
     `script[src="${YOUTUBE_IFRAME_API_SRC}"]`,
   );
-
-  if (script?.getAttribute(YOUTUBE_IFRAME_API_STATUS_ATTRIBUTE) === 'failed') {
-    script.remove();
-    return null;
-  }
-
-  return script;
 }
 
 function insertYouTubeIframeApiScript(): HTMLScriptElement {
@@ -49,7 +42,6 @@ function insertYouTubeIframeApiScript(): HTMLScriptElement {
 
 function removeFailedYouTubeIframeApiScript(script: HTMLScriptElement): void {
   if (!isYouTubeIframeApiReady() && script.parentNode) {
-    script.setAttribute(YOUTUBE_IFRAME_API_STATUS_ATTRIBUTE, 'failed');
     script.parentNode.removeChild(script);
   }
 }
@@ -79,13 +71,17 @@ export function loadYouTubeIframeApi(): Promise<void> {
       }
     };
 
+    const restoreErrorHandler = (): void => {
+      if (script.onerror === handleError) {
+        script.onerror = previousErrorHandler;
+      }
+    };
+
     const rejectLoad = (error: unknown): void => {
       if (isSettled) return;
       isSettled = true;
       restoreReadyHandler();
-      if (script.onerror === handleError) {
-        script.onerror = previousErrorHandler;
-      }
+      restoreErrorHandler();
       removeFailedYouTubeIframeApiScript(script);
       apiLoadPromise = null;
       reject(error instanceof Error ? error : new Error('YouTube IFrame API failed to load'));
@@ -95,6 +91,7 @@ export function loadYouTubeIframeApi(): Promise<void> {
       if (isSettled) return;
       isSettled = true;
       restoreReadyHandler();
+      restoreErrorHandler();
       script.setAttribute(YOUTUBE_IFRAME_API_STATUS_ATTRIBUTE, 'ready');
       let previousHandlerError: unknown;
       let didPreviousHandlerThrow = false;
