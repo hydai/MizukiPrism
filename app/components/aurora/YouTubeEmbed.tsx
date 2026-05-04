@@ -4,8 +4,9 @@
 // Checks window.YT?.Player before loading script to avoid conflicts with the main app's player.
 
 import { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
+import { loadYouTubeIframeApi } from '../../lib/youtubeIframeApi';
 
-// Window.YT global type is declared in PlayerContext.tsx
+// Window.YT global type is declared in the shared YouTube API loader.
 
 export interface YouTubeEmbedHandle {
   getCurrentTime: () => number;
@@ -18,37 +19,6 @@ interface Props {
   videoId?: string;
   onReady?: () => void;
   onStateChange?: (isPlaying: boolean) => void;
-}
-
-let apiLoaded = false;
-let apiLoading = false;
-const readyCallbacks: (() => void)[] = [];
-
-function loadYouTubeAPI(): Promise<void> {
-  // If the API is already available (e.g. loaded by main app's player), use it directly
-  if (apiLoaded || window.YT?.Player) {
-    apiLoaded = true;
-    return Promise.resolve();
-  }
-  return new Promise((resolve) => {
-    if (apiLoading) {
-      readyCallbacks.push(resolve);
-      return;
-    }
-    apiLoading = true;
-    readyCallbacks.push(resolve);
-
-    const script = document.createElement('script');
-    script.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(script);
-
-    window.onYouTubeIframeAPIReady = () => {
-      apiLoaded = true;
-      apiLoading = false;
-      for (const cb of readyCallbacks) cb();
-      readyCallbacks.length = 0;
-    };
-  });
 }
 
 export const YouTubeEmbed = forwardRef<YouTubeEmbedHandle, Props>(
@@ -93,13 +63,20 @@ export const YouTubeEmbed = forwardRef<YouTubeEmbedHandle, Props>(
 
     useEffect(() => {
       if (!videoId) return;
-      loadYouTubeAPI().then(() => {
+      let isActive = true;
+
+      void loadYouTubeIframeApi().then(() => {
+        if (!isActive) return;
         if (playerRef.current && readyRef.current) {
           playerRef.current.loadVideoById(videoId);
         } else {
           initPlayer(videoId);
         }
-      });
+      }).catch(() => undefined);
+
+      return () => {
+        isActive = false;
+      };
     }, [videoId, initPlayer]);
 
     useEffect(() => {
@@ -127,7 +104,7 @@ export const YouTubeEmbed = forwardRef<YouTubeEmbedHandle, Props>(
         if (playerRef.current && readyRef.current) {
           playerRef.current.loadVideoById(vid);
         } else {
-          loadYouTubeAPI().then(() => initPlayer(vid));
+          void loadYouTubeIframeApi().then(() => initPlayer(vid)).catch(() => undefined);
         }
       },
       togglePlay: () => {
