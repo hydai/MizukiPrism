@@ -46,6 +46,10 @@ function removeFailedYouTubeIframeApiScript(script: HTMLScriptElement): void {
   }
 }
 
+function logYouTubeIframeApiHandlerError(message: string, error: unknown): void {
+  console.error(message, error);
+}
+
 export function loadYouTubeIframeApi(): Promise<void> {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return Promise.reject(new Error('YouTube IFrame API can only be loaded in a browser'));
@@ -93,41 +97,35 @@ export function loadYouTubeIframeApi(): Promise<void> {
       restoreReadyHandler();
       restoreErrorHandler();
       script.setAttribute(YOUTUBE_IFRAME_API_STATUS_ATTRIBUTE, 'ready');
-      let previousHandlerError: unknown;
-      let didPreviousHandlerThrow = false;
 
       try {
         previousReadyHandler?.call(window);
       } catch (error) {
-        previousHandlerError = error;
-        didPreviousHandlerThrow = true;
+        logYouTubeIframeApiHandlerError(
+          'Previous YouTube IFrame API ready handler failed:',
+          error,
+        );
       } finally {
         resolve();
-      }
-
-      if (didPreviousHandlerThrow) {
-        throw previousHandlerError;
       }
     }
 
     const handleError: OnErrorEventHandler = (event, source, lineno, colno, error) => {
       let previousHandlerError: unknown;
-      let didPreviousHandlerThrow = false;
 
       if (typeof previousErrorHandler === 'function') {
         try {
           previousErrorHandler.call(script, event, source, lineno, colno, error);
         } catch (handlerError) {
           previousHandlerError = handlerError;
-          didPreviousHandlerThrow = true;
+          logYouTubeIframeApiHandlerError(
+            'Previous YouTube IFrame API error handler failed:',
+            handlerError,
+          );
         }
       }
 
       rejectLoad(error ?? previousHandlerError);
-
-      if (didPreviousHandlerThrow) {
-        throw previousHandlerError;
-      }
     };
 
     script.onerror = handleError;
