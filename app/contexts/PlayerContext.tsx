@@ -218,9 +218,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       const videoDuration = player?.getDuration?.() || 0;
       const startPosition = resolveTrackStartPosition(endAction.track, videoDuration);
       player?.seekTo(startPosition.startSeconds, true);
-      if (startPosition.timestampOutOfBounds) {
-        setTimestampWarning(TIMESTAMP_WARNING_MESSAGE);
-      }
       if (options.resumeLoopPlayback) {
         player?.playVideo();
       }

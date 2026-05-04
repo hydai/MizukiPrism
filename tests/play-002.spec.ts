@@ -133,6 +133,10 @@ async function findPerformanceRow(page: Page, fixture: PerformanceFixture): Prom
   return row;
 }
 
+async function waitForMockPlayback(page: Page): Promise<void> {
+  await page.waitForFunction(() => window.__mockYouTubePlayer?.isPlaying === true);
+}
+
 test.describe('PLAY-002: Play Queue Management', () => {
 
   test.beforeEach(async ({ page }) => {
@@ -391,7 +395,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
 
     const miniPlayer = page.locator('[data-testid="mini-player"]');
     await expect(miniPlayer).toBeVisible();
-    await page.waitForFunction(() => Boolean(window.__mockYouTubePlayer));
+    await waitForMockPlayback(page);
 
     await page.evaluate(() => {
       window.__mockYouTubePlayer?.setCurrentTime(999999);
@@ -412,7 +416,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
 
     const miniPlayer = page.locator('[data-testid="mini-player"]');
     await expect(miniPlayer).toBeVisible();
-    await page.waitForFunction(() => Boolean(window.__mockYouTubePlayer));
+    await waitForMockPlayback(page);
 
     await page.evaluate(() => {
       window.__mockYouTubePlayer?.setCurrentTime(999999);
@@ -496,6 +500,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
       window.__mockYouTubePlayer?.isPlaying === true
         && window.__mockYouTubePlayer?.currentTime === 0
     ));
+    await expect(page.locator('[data-testid="toast"]').filter({ hasText: '時間戳可能有誤' })).toHaveCount(0);
     await expect(miniPlayer.locator('button[aria-label="Pause"]')).toBeVisible();
   });
 
