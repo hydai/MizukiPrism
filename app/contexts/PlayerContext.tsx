@@ -13,6 +13,11 @@ import {
   PLAYER_API_LOAD_ERROR_MESSAGE,
   resolvePlayerError,
 } from '../lib/playerErrors';
+import {
+  hasReachedTrackEnd,
+  resolvePlaybackEndAction,
+  resolveYouTubePlaybackState,
+} from '../lib/playerPlayback';
 import { loadPlayerPreferences, savePlayerMuted, savePlayerVolume } from '../lib/playerPreferences';
 import { advancePlayerQueue } from '../lib/playerQueue';
 import {
@@ -272,23 +277,27 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         setCurrentTime(current);
 
         const track = currentTrackRef.current;
-        // Check if reached end timestamp
-        if (track?.endTimestamp && current >= track.endTimestamp) {
-          // Repeat-one: loop back to start of current track
-          if (repeatModeRef.current === 'one') {
-            playerRef.current.seekTo(track.timestamp, true);
+        if (hasReachedTrackEnd(track, current)) {
+          const freshQueue = queueRef.current;
+          const endAction = resolvePlaybackEndAction({
+            currentTrack: track,
+            queueLength: freshQueue.length,
+            repeatMode: repeatModeRef.current,
+          });
+
+          if (endAction.type === 'loop') {
+            playerRef.current.seekTo(endAction.track.timestamp, true);
             return;
           }
-          // Auto-play next song in queue if available, skipping deleted versions
-          const freshQueue = queueRef.current;
-          if (freshQueue.length > 0 || repeatModeRef.current === 'all') {
-            advanceSkippingDeleted(freshQueue, currentTrackRef.current);
-          } else {
-            playerRef.current.pauseVideo();
-            setIsPlaying(false);
-            if (timeUpdateIntervalRef.current) {
-              clearInterval(timeUpdateIntervalRef.current);
-            }
+          if (endAction.type === 'advance') {
+            advanceSkippingDeleted(freshQueue, track);
+            return;
+          }
+
+          playerRef.current.pauseVideo();
+          setIsPlaying(false);
+          if (timeUpdateIntervalRef.current) {
+            clearInterval(timeUpdateIntervalRef.current);
           }
         }
       }
@@ -380,26 +389,33 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           startTimeUpdateInterval();
         },
         onStateChange: (event: any) => {
-          // YT.PlayerState: PLAYING=1, PAUSED=2, ENDED=0
-          if (event.data === 1) {
+          const playbackState = resolveYouTubePlaybackState(event.data);
+          if (playbackState === 'playing') {
             setIsPlaying(true);
             // Update duration (needed after loadVideoById since onReady doesn't re-fire)
             const d = event.target.getDuration?.();
             if (d > 0) setDuration(d);
-          } else if (event.data === 2) {
+          } else if (playbackState === 'paused') {
             setIsPlaying(false);
-          } else if (event.data === 0) {
-            // Video ended — repeat-one: seek back and replay
-            if (repeatModeRef.current === 'one' && currentTrackRef.current) {
-              playerRef.current.seekTo(currentTrackRef.current.timestamp, true);
+          } else if (playbackState === 'ended') {
+            const freshQueue = queueRef.current;
+            const endAction = resolvePlaybackEndAction({
+              currentTrack: currentTrackRef.current,
+              queueLength: freshQueue.length,
+              repeatMode: repeatModeRef.current,
+            });
+
+            if (endAction.type === 'loop') {
+              playerRef.current.seekTo(endAction.track.timestamp, true);
               playerRef.current.playVideo();
               return;
             }
-            // Auto-play next in queue, skipping deleted versions
-            const freshQueue = queueRef.current;
-            if (freshQueue.length > 0 || repeatModeRef.current === 'all') {
+            if (endAction.type === 'advance') {
               advanceSkippingDeleted(freshQueue, currentTrackRef.current);
-            } else {
+              return;
+            }
+
+            if (endAction.type === 'stop') {
               setIsPlaying(false);
             }
           }
