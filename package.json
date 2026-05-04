@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint app lib shared tests/catalog-data.ts tests/contracts.ts tests/player-controls.ts tests/player-errors.ts tests/player-queue.ts tests/player-time.ts tests/player-volume.ts tests/timestamps.ts next.config.ts tailwind.config.ts playwright.config.ts",
+    "lint": "eslint app lib shared tests/catalog-data.ts tests/contracts.ts tests/player-controls.ts tests/player-errors.ts tests/player-playback.ts tests/player-queue.ts tests/player-time.ts tests/player-volume.ts tests/timestamps.ts next.config.ts tailwind.config.ts playwright.config.ts",
     "install:admin": "npm install --prefix admin",
     "install:admin-ui": "npm install --prefix admin/ui",
     "install:python": "cd tools/mizukilens && python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'",
@@ -16,6 +16,7 @@
     "test:contracts": "tsx tests/contracts.ts",
     "test:player-controls": "tsx tests/player-controls.ts",
     "test:player-errors": "tsx tests/player-errors.ts",
+    "test:player-playback": "tsx tests/player-playback.ts",
     "test:player-queue": "tsx tests/player-queue.ts",
     "test:player-time": "tsx tests/player-time.ts",
     "test:player-volume": "tsx tests/player-volume.ts",
@@ -24,7 +25,7 @@
     "build:admin-ui": "npm run build --prefix admin/ui",
     "test:python": "cd tools/mizukilens && .venv/bin/python3 -m pytest tests -q",
     "test:e2e": "playwright test",
-    "check": "npm run lint && npm run test:catalog && npm run test:contracts && npm run test:player-controls && npm run test:player-errors && npm run test:player-queue && npm run test:player-time && npm run test:player-volume && npm run test:timestamps && npm run build && npm run typecheck:admin && npm run build:admin-ui && npm run test:python"
+    "check": "npm run lint && npm run test:catalog && npm run test:contracts && npm run test:player-controls && npm run test:player-errors && npm run test:player-playback && npm run test:player-queue && npm run test:player-time && npm run test:player-volume && npm run test:timestamps && npm run build && npm run typecheck:admin && npm run build:admin-ui && npm run test:python"
   },
   "keywords": [],
   "author": "",
