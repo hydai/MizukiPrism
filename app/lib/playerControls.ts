@@ -6,9 +6,9 @@ export function getNextRepeatMode(repeatMode: RepeatMode): RepeatMode {
   return 'off';
 }
 
-export function addUniqueTrackById(tracks: readonly Track[], track: Track): Track[] {
+export function addUniqueTrackById(tracks: Track[], track: Track): Track[] {
   return tracks.some((existing) => existing.id === track.id)
-    ? [...tracks]
+    ? tracks
     : [...tracks, track];
 }
 
@@ -36,7 +36,7 @@ export function moveTrack(tracks: readonly Track[], fromIndex: number, toIndex: 
 type PreviousPlaybackAction =
   | { type: 'none' }
   | { type: 'restart'; track: Track }
-  | { type: 'history'; track: Track; history: Track[] };
+  | { type: 'history'; track: Track };
 
 interface ResolvePreviousPlaybackOptions {
   currentTrack: Track | null;
@@ -68,6 +68,5 @@ export function resolvePreviousPlayback({
   return {
     type: 'history',
     track: previousTrack,
-    history: playHistory.slice(0, -1),
   };
 }
