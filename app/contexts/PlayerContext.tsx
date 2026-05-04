@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { useSyncedRef } from '../hooks/useSyncedRef';
 import {
   addUniqueTrackById,
   getNextRepeatMode,
@@ -130,17 +131,16 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const volumeRef = useRef(75);
   const isMutedRef = useRef(false);
 
+  useSyncedRef(queueRef, queue);
+  useSyncedRef(currentTrackRef, currentTrack);
+  useSyncedRef(repeatModeRef, repeatMode);
+  useSyncedRef(shuffleOnRef, shuffleOn);
+  useSyncedRef(allTracksRef, allTracks);
+  useSyncedRef(volumeRef, volume);
+  useSyncedRef(isMutedRef, isMuted);
+
   const clearTimestampWarning = () => setTimestampWarning(null);
   const clearSkipNotification = () => setSkipNotification(null);
-
-  // Keep refs in sync with state
-  useEffect(() => { queueRef.current = queue; }, [queue]);
-  useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
-  useEffect(() => { repeatModeRef.current = repeatMode; }, [repeatMode]);
-  useEffect(() => { shuffleOnRef.current = shuffleOn; }, [shuffleOn]);
-  useEffect(() => { allTracksRef.current = allTracks; }, [allTracks]);
-  useEffect(() => { volumeRef.current = volume; }, [volume]);
-  useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
 
   // Load volume/mute from localStorage on mount (SSR-safe)
   useEffect(() => {
