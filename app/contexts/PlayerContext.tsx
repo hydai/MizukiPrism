@@ -3,6 +3,12 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { loadPlayerPreferences, savePlayerMuted, savePlayerVolume } from '../lib/playerPreferences';
 import { advancePlayerQueue } from '../lib/playerQueue';
+import {
+  getTrackCurrentTime,
+  getTrackDuration,
+  resolveTrackStartPosition,
+  TIMESTAMP_WARNING_MESSAGE,
+} from '../lib/playerTime';
 import type { RepeatMode, Track } from '../types/player';
 
 interface PlayerContextType {
@@ -82,12 +88,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [isMuted, setIsMuted] = useState(false);
 
   // Derived track-relative time values (never fall back to full VOD duration)
-  const trackCurrentTime = currentTrack
-    ? Math.max(0, currentTime - currentTrack.timestamp)
-    : 0;
-  const trackDuration = currentTrack?.endTimestamp != null
-    ? currentTrack.endTimestamp - currentTrack.timestamp
-    : null;
+  const trackCurrentTime = getTrackCurrentTime(currentTrack, currentTime);
+  const trackDuration = getTrackDuration(currentTrack);
 
   const playerRef = useRef<any>(null);
   const playerDivId = 'youtube-player';
@@ -292,11 +294,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       if (currentTrack.videoId === loadedVideoIdRef.current) {
         // Same VOD — just seek to the new timestamp
         const videoDuration = player.getDuration?.() || 0;
-        if (currentTrack.timestamp > 0 && videoDuration > 0 && currentTrack.timestamp >= videoDuration) {
-          player.seekTo(0, true);
-          setTimestampWarning('時間戳可能有誤');
-        } else {
-          player.seekTo(currentTrack.timestamp, true);
+        const startPosition = resolveTrackStartPosition(currentTrack, videoDuration);
+        player.seekTo(startPosition.startSeconds, true);
+        if (startPosition.timestampOutOfBounds) {
+          setTimestampWarning(TIMESTAMP_WARNING_MESSAGE);
         }
         player.setVolume(volumeRef.current);
         if (isMutedRef.current) { player.mute(); } else { player.unMute(); }
@@ -344,11 +345,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           setDuration(videoDuration);
 
           // Check if timestamp exceeds video length
-          if (currentTrack.timestamp > 0 && videoDuration > 0 && currentTrack.timestamp >= videoDuration) {
-            event.target.seekTo(0, true);
-            setTimestampWarning('時間戳可能有誤');
-          } else {
-            event.target.seekTo(currentTrack.timestamp, true);
+          const startPosition = resolveTrackStartPosition(currentTrack, videoDuration);
+          event.target.seekTo(startPosition.startSeconds, true);
+          if (startPosition.timestampOutOfBounds) {
+            setTimestampWarning(TIMESTAMP_WARNING_MESSAGE);
           }
 
           // Apply saved volume/mute settings to newly created player
