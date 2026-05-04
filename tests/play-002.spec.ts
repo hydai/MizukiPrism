@@ -5,7 +5,9 @@ const BASE_URL = 'http://localhost:3000';
 declare global {
   interface Window {
     __mockYouTubePlayer?: {
+      currentTime: number;
       isPlaying: boolean;
+      emitStateChange: (stateCode: number) => void;
       setCurrentTime: (seconds: number) => void;
     };
   }
@@ -46,6 +48,12 @@ async function mockYouTubeIframeApi(page: Page) {
             }
             destroy() { this.isPlaying = false; }
             getPlayerState() { return this.isPlaying ? 1 : 2; }
+            emitStateChange(stateCode) {
+              if (stateCode === 0) {
+                this.isPlaying = false;
+              }
+              this.options?.events?.onStateChange?.({ target: this, data: stateCode });
+            }
             setCurrentTime(seconds) { this.currentTime = seconds; }
           }
 
@@ -60,6 +68,7 @@ async function mockYouTubeIframeApi(page: Page) {
 test.describe('PLAY-002: Play Queue Management', () => {
 
   test.beforeEach(async ({ page }) => {
+    await mockYouTubeIframeApi(page);
     await page.goto(BASE_URL);
     // Wait for page to be fully loaded
     await page.waitForLoadState('networkidle');
@@ -125,7 +134,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
     await expect(queueItems).toHaveCount(3);
 
     // Verify queue header shows count
-    await expect(queuePanel).toContainText('3 首歌曲');
+    await expect(queuePanel).toContainText('3 首');
 
     await page.screenshot({ path: '.screenshots/play-002-ac2-multiple-items.png', fullPage: true });
   });
@@ -300,10 +309,6 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC7b: Polling interval advances when track end is reached', async ({ page }) => {
-    await mockYouTubeIframeApi(page);
-    await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
-
     const rows = page.locator('[data-testid="performance-row"]');
     const secondRowTitle = await rows.nth(1).locator('.font-bold').first().textContent();
 
@@ -329,10 +334,6 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC7c: Polling interval pauses player when no next track remains', async ({ page }) => {
-    await mockYouTubeIframeApi(page);
-    await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
-
     const rows = page.locator('[data-testid="performance-row"]');
     await rows.nth(0).hover();
     await rows.nth(0).locator('button').first().click();
@@ -343,6 +344,58 @@ test.describe('PLAY-002: Play Queue Management', () => {
 
     await page.evaluate(() => {
       window.__mockYouTubePlayer?.setCurrentTime(999999);
+    });
+
+    await page.waitForFunction(() => window.__mockYouTubePlayer?.isPlaying === false);
+    await expect(miniPlayer.locator('button[aria-label="Play"]')).toBeVisible();
+  });
+
+  test('AC7d: Native ended event loops current track with repeat-one enabled', async ({ page }) => {
+    const rows = page.locator('[data-testid="performance-row"]');
+    const firstRowTitle = await rows.nth(0).locator('.font-bold').first().textContent();
+
+    await rows.nth(0).hover();
+    await rows.nth(0).locator('button').first().click();
+
+    const miniPlayer = page.locator('[data-testid="mini-player"]');
+    await expect(miniPlayer).toBeVisible();
+    await expect(miniPlayer.locator('button[aria-label="Pause"]')).toBeVisible();
+    await page.waitForFunction(() => Boolean(window.__mockYouTubePlayer));
+
+    const repeatButton = miniPlayer.locator('[data-testid="desktop-repeat-button"]');
+    await repeatButton.click();
+    await repeatButton.click();
+
+    const trackStartTime = await page.evaluate(() => window.__mockYouTubePlayer?.currentTime ?? 0);
+    await page.evaluate(() => {
+      window.__mockYouTubePlayer?.setCurrentTime(999999);
+      window.__mockYouTubePlayer?.emitStateChange(0);
+    });
+
+    await page.waitForFunction((expectedStartTime) => (
+      window.__mockYouTubePlayer?.isPlaying === true
+        && window.__mockYouTubePlayer?.currentTime === expectedStartTime
+    ), trackStartTime);
+    await expect(miniPlayer.locator('.font-bold.text-slate-800')).toHaveText(firstRowTitle ?? '');
+    await expect(miniPlayer.locator('button[aria-label="Pause"]')).toBeVisible();
+  });
+
+  test('AC7e: Native ended event stops playback when a full-length track ends', async ({ page }) => {
+    const searchInput = page.getByPlaceholder('搜尋歌曲...');
+    await searchInput.fill('Jump Up Super Star!');
+    await page.waitForTimeout(300);
+
+    const rows = page.locator('[data-testid="performance-row"]');
+    await rows.first().hover();
+    await rows.first().locator('button').first().click();
+
+    const miniPlayer = page.locator('[data-testid="mini-player"]');
+    await expect(miniPlayer).toBeVisible();
+    await expect(miniPlayer.locator('button[aria-label="Pause"]')).toBeVisible();
+    await page.waitForFunction(() => Boolean(window.__mockYouTubePlayer));
+
+    await page.evaluate(() => {
+      window.__mockYouTubePlayer?.emitStateChange(0);
     });
 
     await page.waitForFunction(() => window.__mockYouTubePlayer?.isPlaying === false);
