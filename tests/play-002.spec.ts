@@ -206,7 +206,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
     await expect(queueItems).toHaveCount(3);
 
     // Verify queue header shows count
-    await expect(queuePanel).toContainText('3 首');
+    await expect(queuePanel.locator('h2')).toHaveText('播放佇列 · 3 首');
 
     await page.screenshot({ path: '.screenshots/play-002-ac2-multiple-items.png', fullPage: true });
   });
@@ -514,6 +514,10 @@ test.describe('PLAY-002: Play Queue Management', () => {
     ));
     await page.waitForTimeout(1000);
     await expect(timestampWarningToast).toHaveCount(0);
+
+    await currentRow.hover();
+    await currentRow.locator('button').first().click();
+    await expect(timestampWarningToast).toBeVisible();
     await expect(miniPlayer.locator('button[aria-label="Pause"]')).toBeVisible();
   });
 
