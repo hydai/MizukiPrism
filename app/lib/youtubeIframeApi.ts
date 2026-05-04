@@ -38,6 +38,10 @@ function insertYouTubeIframeApiScript(): HTMLScriptElement {
 }
 
 export function loadYouTubeIframeApi(): Promise<void> {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return Promise.reject(new Error('YouTube IFrame API can only be loaded in a browser'));
+  }
+
   if (isYouTubeIframeApiReady()) {
     return Promise.resolve();
   }
