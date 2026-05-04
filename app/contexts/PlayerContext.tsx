@@ -141,12 +141,14 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const setVolume = (n: number) => {
     const clamped = clampPlayerVolume(n);
     setVolumeState(clamped);
+    volumeRef.current = clamped;
     if (playerRef.current && playerRef.current.setVolume) {
       playerRef.current.setVolume(clamped);
     }
     // Auto-unmute when dragging above 0 while muted
     if (shouldAutoUnmute(clamped, isMutedRef.current)) {
       setIsMuted(false);
+      isMutedRef.current = false;
       if (playerRef.current && playerRef.current.unMute) {
         playerRef.current.unMute();
       }
@@ -158,6 +160,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const toggleMute = () => {
     const newMuted = getNextMutedState(isMutedRef.current);
     setIsMuted(newMuted);
+    isMutedRef.current = newMuted;
     if (playerRef.current) {
       if (newMuted) {
         playerRef.current.mute?.();
