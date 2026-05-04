@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { useSyncedRef } from '../hooks/useSyncedRef';
+import { useYouTubeIframeApi } from '../hooks/useYouTubeIframeApi';
 import {
   addUniqueTrackById,
   getNextRepeatMode,
@@ -11,7 +12,6 @@ import {
 } from '../lib/playerControls';
 import {
   addUnavailableVideoId,
-  PLAYER_API_LOAD_ERROR_MESSAGE,
   resolvePlayerError,
 } from '../lib/playerErrors';
 import {
@@ -86,19 +86,10 @@ export const usePlayer = () => {
   return context;
 };
 
-declare global {
-  interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady: () => void;
-  }
-}
-
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isPlayerReady, setIsPlayerReady] = useState(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
-  const [apiLoadError, setApiLoadError] = useState<string | null>(null);
   const [unavailableVideoIds, setUnavailableVideoIds] = useState<Set<string>>(new Set());
   const [timestampWarning, setTimestampWarning] = useState<string | null>(null);
   const [skipNotification, setSkipNotification] = useState<string | null>(null);
@@ -113,6 +104,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [allTracks, setAllTracks] = useState<Track[]>([]);
   const [volume, setVolumeState] = useState(75);
   const [isMuted, setIsMuted] = useState(false);
+  const { isPlayerReady, apiLoadError } = useYouTubeIframeApi();
 
   // Derived track-relative time values (never fall back to full VOD duration)
   const trackCurrentTime = getTrackCurrentTime(currentTrack, currentTime);
@@ -122,7 +114,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const playerDivId = 'youtube-player';
   const timeUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const loadedVideoIdRef = useRef<string | null>(null);
-  const apiLoadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // Refs to always have fresh values in async callbacks
   const queueRef = useRef<Track[]>([]);
   const currentTrackRef = useRef<Track | null>(null);
@@ -215,50 +206,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     return true;
   };
 
-  // Load YouTube IFrame API
+  // Clear playback polling on unmount.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    if (window.YT && window.YT.Player) {
-      setIsPlayerReady(true);
-      return;
-    }
-
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-
-    // Set timeout for API load failure (10 seconds)
-    apiLoadTimeoutRef.current = setTimeout(() => {
-      if (!window.YT || !window.YT.Player) {
-        setApiLoadError(PLAYER_API_LOAD_ERROR_MESSAGE);
-      }
-    }, 10000);
-
-    window.onYouTubeIframeAPIReady = () => {
-      if (apiLoadTimeoutRef.current) {
-        clearTimeout(apiLoadTimeoutRef.current);
-        apiLoadTimeoutRef.current = null;
-      }
-      setIsPlayerReady(true);
-    };
-
-    // Handle script load error
-    tag.onerror = () => {
-      if (apiLoadTimeoutRef.current) {
-        clearTimeout(apiLoadTimeoutRef.current);
-        apiLoadTimeoutRef.current = null;
-      }
-      setApiLoadError(PLAYER_API_LOAD_ERROR_MESSAGE);
-    };
-
     return () => {
       if (timeUpdateIntervalRef.current) {
         clearInterval(timeUpdateIntervalRef.current);
-      }
-      if (apiLoadTimeoutRef.current) {
-        clearTimeout(apiLoadTimeoutRef.current);
+        timeUpdateIntervalRef.current = null;
       }
     };
   }, []);
