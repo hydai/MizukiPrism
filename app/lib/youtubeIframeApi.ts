@@ -96,19 +96,49 @@ export function loadYouTubeIframeApi(): Promise<void> {
       isSettled = true;
       restoreReadyHandler();
       script.setAttribute(YOUTUBE_IFRAME_API_STATUS_ATTRIBUTE, 'ready');
-      previousReadyHandler?.();
-      resolve();
+      let previousHandlerError: unknown;
+      let didPreviousHandlerThrow = false;
+
+      try {
+        previousReadyHandler?.call(window);
+      } catch (error) {
+        previousHandlerError = error;
+        didPreviousHandlerThrow = true;
+      } finally {
+        resolve();
+      }
+
+      if (didPreviousHandlerThrow) {
+        throw previousHandlerError;
+      }
     }
 
     const handleError: OnErrorEventHandler = (event, source, lineno, colno, error) => {
+      let previousHandlerError: unknown;
+      let didPreviousHandlerThrow = false;
+
       if (typeof previousErrorHandler === 'function') {
-        previousErrorHandler.call(script, event, source, lineno, colno, error);
+        try {
+          previousErrorHandler.call(script, event, source, lineno, colno, error);
+        } catch (handlerError) {
+          previousHandlerError = handlerError;
+          didPreviousHandlerThrow = true;
+        }
       }
-      rejectLoad(error);
+
+      rejectLoad(error ?? previousHandlerError);
+
+      if (didPreviousHandlerThrow) {
+        throw previousHandlerError;
+      }
     };
 
     script.onerror = handleError;
     window.onYouTubeIframeAPIReady = resolveReady;
+
+    if (isYouTubeIframeApiReady()) {
+      resolveReady();
+    }
   });
 
   return apiLoadPromise;
