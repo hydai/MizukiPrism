@@ -16,6 +16,7 @@ import {
   resolveTrackStartPosition,
   TIMESTAMP_WARNING_MESSAGE,
 } from '../lib/playerTime';
+import { clampPlayerVolume, getNextMutedState, shouldAutoUnmute } from '../lib/playerVolume';
 import type { RepeatMode, Track } from '../types/player';
 
 interface PlayerContextType {
@@ -138,13 +139,13 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const setVolume = (n: number) => {
-    const clamped = Math.max(0, Math.min(100, n));
+    const clamped = clampPlayerVolume(n);
     setVolumeState(clamped);
     if (playerRef.current && playerRef.current.setVolume) {
       playerRef.current.setVolume(clamped);
     }
     // Auto-unmute when dragging above 0 while muted
-    if (clamped > 0 && isMutedRef.current) {
+    if (shouldAutoUnmute(clamped, isMutedRef.current)) {
       setIsMuted(false);
       if (playerRef.current && playerRef.current.unMute) {
         playerRef.current.unMute();
@@ -155,7 +156,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const toggleMute = () => {
-    const newMuted = !isMutedRef.current;
+    const newMuted = getNextMutedState(isMutedRef.current);
     setIsMuted(newMuted);
     if (playerRef.current) {
       if (newMuted) {
