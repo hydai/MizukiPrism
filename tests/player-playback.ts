@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   hasReachedTrackEnd,
   resolvePlaybackEndAction,
+  resolveYouTubePlayerLoadAction,
   resolveYouTubePlaybackState,
 } from '../app/lib/playerPlayback';
 import type { Track } from '../app/types/player';
@@ -76,3 +77,39 @@ assert.equal(resolveYouTubePlaybackState(2), 'paused');
 assert.equal(resolveYouTubePlaybackState(0), 'ended');
 assert.equal(resolveYouTubePlaybackState(3), 'ignored');
 assert.equal(resolveYouTubePlaybackState('1'), 'ignored');
+
+assert.deepEqual(
+  resolveYouTubePlayerLoadAction({
+    hasPlayer: false,
+    loadedVideoId: null,
+    nextVideoId: 'video-a',
+  }),
+  { type: 'create' },
+);
+
+assert.deepEqual(
+  resolveYouTubePlayerLoadAction({
+    hasPlayer: true,
+    loadedVideoId: null,
+    nextVideoId: 'video-a',
+  }),
+  { type: 'create' },
+);
+
+assert.deepEqual(
+  resolveYouTubePlayerLoadAction({
+    hasPlayer: true,
+    loadedVideoId: 'video-a',
+    nextVideoId: 'video-a',
+  }),
+  { type: 'seek-existing' },
+);
+
+assert.deepEqual(
+  resolveYouTubePlayerLoadAction({
+    hasPlayer: true,
+    loadedVideoId: 'video-a',
+    nextVideoId: 'video-b',
+  }),
+  { type: 'load-existing' },
+);
