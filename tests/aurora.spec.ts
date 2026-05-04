@@ -31,6 +31,17 @@ test.describe('Aurora: Community Timestamping Tool', () => {
     await expect(page.getByTestId('import-button')).toBeVisible();
   });
 
+  test('YouTube API load failure shows player error', async ({ page }) => {
+    await page.route('https://www.youtube.com/iframe_api', (route) => route.abort());
+
+    await page.goto(`${BASE_URL}/aurora`);
+    await page.getByTestId('vod-url-input').fill('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    await page.getByTestId('load-video-button').click();
+
+    await expect(page.getByTestId('aurora-workspace')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('aurora-player-error')).toContainText('無法載入 YouTube');
+  });
+
   test('Enter key submits URL', async ({ page }) => {
     await page.goto(`${BASE_URL}/aurora`);
     const input = page.getByTestId('vod-url-input');
