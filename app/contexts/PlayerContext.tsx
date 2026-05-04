@@ -462,7 +462,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     if (action.type === 'restart') {
       seekTo(action.track.timestamp);
     } else if (action.type === 'history') {
-      setPlayHistory(action.history);
+      setPlayHistory((prev) => prev.slice(0, -1));
       setCurrentTrack(action.track);
       setCurrentTime(action.track.timestamp);
     }

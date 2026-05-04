@@ -28,7 +28,8 @@ assert.equal(getNextRepeatMode('all'), 'one');
 assert.equal(getNextRepeatMode('one'), 'off');
 
 assert.deepEqual(addUniqueTrackById([trackA], trackB).map((item) => item.id), ['a', 'b']);
-assert.deepEqual(addUniqueTrackById([trackA], { ...trackB, id: 'a' }).map((item) => item.id), ['a']);
+const existingTracks = [trackA];
+assert.strictEqual(addUniqueTrackById(existingTracks, { ...trackB, id: 'a' }), existingTracks);
 
 assert.deepEqual(removeTrackAtIndex([trackA, trackB, trackC], 1).map((item) => item.id), ['a', 'c']);
 assert.deepEqual(removeTrackAtIndex([trackA, trackB], 4).map((item) => item.id), ['a', 'b']);
@@ -63,7 +64,7 @@ assert.deepEqual(
     currentTime: 23,
     playHistory: [trackA],
   }),
-  { type: 'history', track: trackA, history: [] },
+  { type: 'history', track: trackA },
 );
 
 assert.deepEqual(
@@ -82,5 +83,5 @@ assert.deepEqual(
     playHistory: [trackA, trackB],
     restartThresholdSeconds: 5,
   }),
-  { type: 'history', track: trackB, history: [trackA] },
+  { type: 'history', track: trackB },
 );
