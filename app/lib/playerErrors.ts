@@ -23,7 +23,10 @@ export function resolvePlayerError(errorCode: unknown, videoId: string | null): 
   };
 }
 
-export function addUnavailableVideoId(videoIds: Set<string>, videoId: string): Set<string> {
+export function addUnavailableVideoId<T extends ReadonlySet<string>>(
+  videoIds: T,
+  videoId: string,
+): T | Set<string> {
   if (videoIds.has(videoId)) {
     return videoIds;
   }
