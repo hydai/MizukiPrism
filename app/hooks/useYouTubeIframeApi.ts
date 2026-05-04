@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { PLAYER_API_LOAD_ERROR_MESSAGE } from '../lib/playerErrors';
-import { isYouTubeIframeApiReady, loadYouTubeIframeApi } from '../lib/youtubeIframeApi';
-
-const PLAYER_API_LOAD_TIMEOUT_MS = 10000;
+import {
+  isYouTubeIframeApiReady,
+  loadYouTubeIframeApi,
+  YOUTUBE_IFRAME_API_LOAD_TIMEOUT_MS,
+} from '../lib/youtubeIframeApi';
 
 export function useYouTubeIframeApi() {
   const [isPlayerReady, setIsPlayerReady] = useState(false);
@@ -26,7 +28,7 @@ export function useYouTubeIframeApi() {
       if (isActive && !isYouTubeIframeApiReady()) {
         setApiLoadError(PLAYER_API_LOAD_ERROR_MESSAGE);
       }
-    }, PLAYER_API_LOAD_TIMEOUT_MS);
+    }, YOUTUBE_IFRAME_API_LOAD_TIMEOUT_MS);
 
     loadYouTubeIframeApi()
       .then(() => {

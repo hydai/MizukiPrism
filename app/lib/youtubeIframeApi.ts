@@ -1,8 +1,9 @@
 export const YOUTUBE_IFRAME_API_SRC = 'https://www.youtube.com/iframe_api';
+export const YOUTUBE_IFRAME_API_LOAD_TIMEOUT_MS = 10000;
 
 declare global {
   interface Window {
-    YT: any;
+    YT?: any;
     onYouTubeIframeAPIReady?: () => void;
   }
 }
@@ -37,6 +38,12 @@ function insertYouTubeIframeApiScript(): HTMLScriptElement {
   return script;
 }
 
+function removeFailedYouTubeIframeApiScript(script: HTMLScriptElement): void {
+  if (!isYouTubeIframeApiReady() && script.parentNode) {
+    script.parentNode.removeChild(script);
+  }
+}
+
 export function loadYouTubeIframeApi(): Promise<void> {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return Promise.reject(new Error('YouTube IFrame API can only be loaded in a browser'));
@@ -54,23 +61,48 @@ export function loadYouTubeIframeApi(): Promise<void> {
     const previousReadyHandler = window.onYouTubeIframeAPIReady;
     const script = insertYouTubeIframeApiScript();
     const previousErrorHandler = script.onerror;
+    let isSettled = false;
 
-    const resolveReady = () => {
-      previousReadyHandler?.();
+    const restoreReadyHandler = (): void => {
       if (window.onYouTubeIframeAPIReady === resolveReady) {
         window.onYouTubeIframeAPIReady = previousReadyHandler;
       }
-      resolve();
     };
 
-    script.onerror = (event, source, lineno, colno, error) => {
+    const rejectLoad = (error: unknown): void => {
+      if (isSettled) return;
+      isSettled = true;
+      window.clearTimeout(loadTimeout);
+      restoreReadyHandler();
+      if (script.onerror === handleError) {
+        script.onerror = previousErrorHandler;
+      }
+      removeFailedYouTubeIframeApiScript(script);
+      apiLoadPromise = null;
+      reject(error instanceof Error ? error : new Error('YouTube IFrame API failed to load'));
+    };
+
+    function resolveReady(): void {
+      if (isSettled) return;
+      isSettled = true;
+      window.clearTimeout(loadTimeout);
+      restoreReadyHandler();
+      previousReadyHandler?.();
+      resolve();
+    }
+
+    const handleError: OnErrorEventHandler = (event, source, lineno, colno, error) => {
       if (typeof previousErrorHandler === 'function') {
         previousErrorHandler.call(script, event, source, lineno, colno, error);
       }
-      apiLoadPromise = null;
-      reject(error ?? new Error('YouTube IFrame API failed to load'));
+      rejectLoad(error);
     };
 
+    const loadTimeout = window.setTimeout(() => {
+      rejectLoad(new Error('YouTube IFrame API load timed out'));
+    }, YOUTUBE_IFRAME_API_LOAD_TIMEOUT_MS);
+
+    script.onerror = handleError;
     window.onYouTubeIframeAPIReady = resolveReady;
   });
 
