@@ -32,13 +32,16 @@ const existingTracks = [trackA];
 assert.strictEqual(addUniqueTrackById(existingTracks, { ...trackB, id: 'a' }), existingTracks);
 
 assert.deepEqual(removeTrackAtIndex([trackA, trackB, trackC], 1).map((item) => item.id), ['a', 'c']);
-assert.deepEqual(removeTrackAtIndex([trackA, trackB], 4).map((item) => item.id), ['a', 'b']);
+const unchangedRemoveTracks = [trackA, trackB];
+assert.strictEqual(removeTrackAtIndex(unchangedRemoveTracks, 4), unchangedRemoveTracks);
+assert.strictEqual(removeTrackAtIndex(unchangedRemoveTracks, -1), unchangedRemoveTracks);
 
 assert.deepEqual(moveTrack([trackA, trackB, trackC], 0, 2).map((item) => item.id), ['b', 'c', 'a']);
 assert.deepEqual(moveTrack([trackA, trackB, trackC], 2, 0).map((item) => item.id), ['c', 'a', 'b']);
-assert.deepEqual(moveTrack([trackA, trackB], 1, 1).map((item) => item.id), ['a', 'b']);
-assert.deepEqual(moveTrack([trackA, trackB], -1, 1).map((item) => item.id), ['a', 'b']);
-assert.deepEqual(moveTrack([trackA, trackB], 0, 4).map((item) => item.id), ['a', 'b']);
+const unchangedMoveTracks = [trackA, trackB];
+assert.strictEqual(moveTrack(unchangedMoveTracks, 1, 1), unchangedMoveTracks);
+assert.strictEqual(moveTrack(unchangedMoveTracks, -1, 1), unchangedMoveTracks);
+assert.strictEqual(moveTrack(unchangedMoveTracks, 0, 4), unchangedMoveTracks);
 
 assert.deepEqual(
   resolvePreviousPlayback({
