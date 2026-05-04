@@ -188,6 +188,12 @@ async function mockCatalogSongsApi(page: Page) {
   });
 }
 
+async function reloadWithMockCatalogSongs(page: Page): Promise<void> {
+  await mockCatalogSongsApi(page);
+  await page.reload();
+  await page.waitForLoadState('networkidle');
+}
+
 async function expectProductionSongsApiEndTimestamp(request: APIRequestContext): Promise<void> {
   const response = await request.get(`${BASE_URL}/api/songs`);
   expect(response.ok()).toBe(true);
@@ -251,7 +257,6 @@ test.describe('PLAY-002: Play Queue Management', () => {
 
   test.beforeEach(async ({ page }) => {
     await mockYouTubeIframeApi(page);
-    await mockCatalogSongsApi(page);
     await page.goto(BASE_URL);
     // Wait for page to be fully loaded
     await page.waitForLoadState('networkidle');
@@ -492,6 +497,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC7b: Polling interval advances when track end is reached', async ({ page }) => {
+    await reloadWithMockCatalogSongs(page);
     await expectCatalogPerformanceFixture(page, CLIPPED_CURRENT_FIXTURE);
     await expectCatalogPerformanceFixture(page, CLIPPED_QUEUE_FIXTURE);
 
@@ -519,6 +525,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC7c: Polling interval pauses player when no next track remains', async ({ page }) => {
+    await reloadWithMockCatalogSongs(page);
     await expectCatalogPerformanceFixture(page, CLIPPED_CURRENT_FIXTURE);
 
     const currentRow = await findPerformanceRow(page, CLIPPED_CURRENT_FIXTURE);
@@ -538,6 +545,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC7d: Native ended event loops current track with repeat-one enabled', async ({ page }) => {
+    await reloadWithMockCatalogSongs(page);
     await useDesktopViewport(page);
 
     const currentRow = await findPerformanceRow(page, CLIPPED_CURRENT_FIXTURE);
@@ -570,6 +578,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC7e: Native ended event stops playback when a full-length track ends', async ({ page }) => {
+    await reloadWithMockCatalogSongs(page);
     await expectCatalogPerformanceFixture(page, FULL_LENGTH_FIXTURE);
 
     const currentRow = await findPerformanceRow(page, FULL_LENGTH_FIXTURE);
@@ -590,6 +599,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC7f: Repeat-one native ended event clamps out-of-bounds restart and warns once', async ({ page }) => {
+    await reloadWithMockCatalogSongs(page);
     await useDesktopViewport(page);
 
     const currentRow = await findPerformanceRow(page, CLIPPED_CURRENT_FIXTURE);
