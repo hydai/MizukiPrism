@@ -5,6 +5,7 @@ const BASE_URL = 'http://localhost:3000';
 declare global {
   interface Window {
     __mockYouTubePlayer?: {
+      isPlaying: boolean;
       setCurrentTime: (seconds: number) => void;
     };
   }
@@ -325,6 +326,27 @@ test.describe('PLAY-002: Play Queue Management', () => {
       secondRowTitle ?? '',
       { timeout: 3000 },
     );
+  });
+
+  test('AC7c: Polling interval pauses player when no next track remains', async ({ page }) => {
+    await mockYouTubeIframeApi(page);
+    await page.goto(BASE_URL);
+    await page.waitForLoadState('networkidle');
+
+    const rows = page.locator('[data-testid="performance-row"]');
+    await rows.nth(0).hover();
+    await rows.nth(0).locator('button').first().click();
+
+    const miniPlayer = page.locator('[data-testid="mini-player"]');
+    await expect(miniPlayer).toBeVisible();
+    await page.waitForFunction(() => Boolean(window.__mockYouTubePlayer));
+
+    await page.evaluate(() => {
+      window.__mockYouTubePlayer?.setCurrentTime(999999);
+    });
+
+    await page.waitForFunction(() => window.__mockYouTubePlayer?.isPlaying === false);
+    await expect(miniPlayer.locator('button[aria-label="Play"]')).toBeVisible();
   });
 
   test('AC8: Next button plays next item or stops if queue empty', async ({ page }) => {

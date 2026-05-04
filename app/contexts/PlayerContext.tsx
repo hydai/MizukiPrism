@@ -226,6 +226,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       return advanceSkippingDeleted(freshQueue, currentTrackRef.current) ? 'continue' : 'stop';
     }
 
+    player?.pauseVideo();
     setIsPlaying(false);
     return 'stop';
   }, [advanceSkippingDeleted]);
