@@ -2,6 +2,60 @@ import { test, expect, Page } from '@playwright/test';
 
 const BASE_URL = 'http://localhost:3000';
 
+declare global {
+  interface Window {
+    __mockYouTubePlayer?: {
+      setCurrentTime: (seconds: number) => void;
+    };
+  }
+}
+
+async function mockYouTubeIframeApi(page: Page) {
+  await page.route('https://www.youtube.com/iframe_api', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      body: `
+        (() => {
+          class MockYouTubePlayer {
+            constructor(_elementId, options) {
+              this.options = options;
+              this.currentTime = Number(options?.playerVars?.start ?? 0);
+              this.duration = 999999;
+              this.isPlaying = false;
+              window.__mockYouTubePlayer = this;
+              setTimeout(() => this.options?.events?.onReady?.({ target: this }), 0);
+            }
+            getCurrentTime() { return this.currentTime; }
+            getDuration() { return this.duration; }
+            seekTo(seconds) { this.currentTime = seconds; }
+            playVideo() {
+              this.isPlaying = true;
+              this.options?.events?.onStateChange?.({ target: this, data: 1 });
+            }
+            pauseVideo() {
+              this.isPlaying = false;
+              this.options?.events?.onStateChange?.({ target: this, data: 2 });
+            }
+            loadVideoById(input) {
+              this.currentTime = typeof input === 'object' && input !== null
+                ? Number(input.startSeconds ?? 0)
+                : 0;
+              this.playVideo();
+            }
+            destroy() { this.isPlaying = false; }
+            getPlayerState() { return this.isPlaying ? 1 : 2; }
+            setCurrentTime(seconds) { this.currentTime = seconds; }
+          }
+
+          window.YT = { Player: MockYouTubePlayer };
+          setTimeout(() => window.onYouTubeIframeAPIReady?.(), 0);
+        })();
+      `,
+    });
+  });
+}
+
 test.describe('PLAY-002: Play Queue Management', () => {
 
   test.beforeEach(async ({ page }) => {
@@ -242,6 +296,35 @@ test.describe('PLAY-002: Play Queue Management', () => {
     expect(currentTitle).not.toBe(firstSongTitle);
 
     await page.screenshot({ path: '.screenshots/play-002-ac7-auto-play.png', fullPage: true });
+  });
+
+  test('AC7b: Polling interval advances when track end is reached', async ({ page }) => {
+    await mockYouTubeIframeApi(page);
+    await page.goto(BASE_URL);
+    await page.waitForLoadState('networkidle');
+
+    const rows = page.locator('[data-testid="performance-row"]');
+    const secondRowTitle = await rows.nth(1).locator('.font-bold').first().textContent();
+
+    await rows.nth(1).hover();
+    await rows.nth(1).locator('[data-testid="add-to-queue"]').click();
+    await page.waitForTimeout(300);
+
+    await rows.nth(0).hover();
+    await rows.nth(0).locator('button').first().click();
+
+    const miniPlayer = page.locator('[data-testid="mini-player"]');
+    await expect(miniPlayer).toBeVisible();
+    await page.waitForFunction(() => Boolean(window.__mockYouTubePlayer));
+
+    await page.evaluate(() => {
+      window.__mockYouTubePlayer?.setCurrentTime(999999);
+    });
+
+    await expect(miniPlayer.locator('.font-bold.text-slate-800')).toHaveText(
+      secondRowTitle ?? '',
+      { timeout: 3000 },
+    );
   });
 
   test('AC8: Next button plays next item or stops if queue empty', async ({ page }) => {

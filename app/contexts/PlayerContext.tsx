@@ -205,14 +205,36 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     return true;
   }, []);
 
+  const handlePlaybackEnd = useCallback((options: { resumeLoopPlayback?: boolean } = {}): 'continue' | 'stop' => {
+    const player = playerRef.current;
+    const freshQueue = queueRef.current;
+    const endAction = resolvePlaybackEndAction({
+      currentTrack: currentTrackRef.current,
+      queueLength: freshQueue.length,
+      repeatMode: repeatModeRef.current,
+    });
+
+    if (endAction.type === 'loop') {
+      player?.seekTo(endAction.track.timestamp, true);
+      if (options.resumeLoopPlayback) {
+        player?.playVideo();
+      }
+      return 'continue';
+    }
+
+    if (endAction.type === 'advance') {
+      return advanceSkippingDeleted(freshQueue, currentTrackRef.current) ? 'continue' : 'stop';
+    }
+
+    setIsPlaying(false);
+    return 'stop';
+  }, [advanceSkippingDeleted]);
+
   const { startTimeUpdateInterval, stopTimeUpdateInterval } = usePlayerTimePolling({
     playerRef,
     currentTrackRef,
-    queueRef,
-    repeatModeRef,
     setCurrentTime,
-    setIsPlaying,
-    advanceToNextTrack: advanceSkippingDeleted,
+    handleTrackEnd: handlePlaybackEnd,
   });
 
   // Initialize YouTube player when ready and track is available.
@@ -307,25 +329,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           } else if (playbackState === 'paused') {
             setIsPlaying(false);
           } else if (playbackState === 'ended') {
-            const freshQueue = queueRef.current;
-            const endAction = resolvePlaybackEndAction({
-              currentTrack: currentTrackRef.current,
-              queueLength: freshQueue.length,
-              repeatMode: repeatModeRef.current,
-            });
-
-            if (endAction.type === 'loop') {
-              playerRef.current.seekTo(endAction.track.timestamp, true);
-              playerRef.current.playVideo();
-              return;
-            }
-            if (endAction.type === 'advance') {
-              advanceSkippingDeleted(freshQueue, currentTrackRef.current);
-              return;
-            }
-
-            if (endAction.type === 'stop') {
-              setIsPlaying(false);
+            if (handlePlaybackEnd({ resumeLoopPlayback: true }) === 'stop') {
               stopTimeUpdateInterval();
             }
           }
@@ -339,7 +343,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         },
       },
     });
-  }, [isPlayerReady, currentTrack, startTimeUpdateInterval, stopTimeUpdateInterval, advanceSkippingDeleted]);
+  }, [isPlayerReady, currentTrack, startTimeUpdateInterval, stopTimeUpdateInterval, handlePlaybackEnd]);
 
   const toggleRepeat = () => {
     setRepeatMode(getNextRepeatMode);

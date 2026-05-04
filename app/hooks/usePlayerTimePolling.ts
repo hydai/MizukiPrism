@@ -1,9 +1,8 @@
+'use client';
+
 import { useCallback, useEffect, useRef } from 'react';
-import {
-  hasReachedTrackEnd,
-  resolvePlaybackEndAction,
-} from '../lib/playerPlayback';
-import type { RepeatMode, Track } from '../types/player';
+import { hasReachedTrackEnd } from '../lib/playerPlayback';
+import type { Track } from '../types/player';
 
 type CurrentRef<T> = {
   current: T;
@@ -12,21 +11,15 @@ type CurrentRef<T> = {
 interface UsePlayerTimePollingOptions {
   playerRef: CurrentRef<any>;
   currentTrackRef: CurrentRef<Track | null>;
-  queueRef: CurrentRef<Track[]>;
-  repeatModeRef: CurrentRef<RepeatMode>;
   setCurrentTime: (time: number) => void;
-  setIsPlaying: (isPlaying: boolean) => void;
-  advanceToNextTrack: (queue: Track[], fromTrack: Track | null) => void;
+  handleTrackEnd: () => 'continue' | 'stop';
 }
 
 export function usePlayerTimePolling({
   playerRef,
   currentTrackRef,
-  queueRef,
-  repeatModeRef,
   setCurrentTime,
-  setIsPlaying,
-  advanceToNextTrack,
+  handleTrackEnd,
 }: UsePlayerTimePollingOptions) {
   const timeUpdateIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -50,35 +43,15 @@ export function usePlayerTimePolling({
       const track = currentTrackRef.current;
       if (!hasReachedTrackEnd(track, current)) return;
 
-      const freshQueue = queueRef.current;
-      const endAction = resolvePlaybackEndAction({
-        currentTrack: track,
-        queueLength: freshQueue.length,
-        repeatMode: repeatModeRef.current,
-      });
-
-      if (endAction.type === 'loop') {
-        player.seekTo(endAction.track.timestamp, true);
-        return;
+      if (handleTrackEnd() === 'stop') {
+        stopTimeUpdateInterval();
       }
-
-      if (endAction.type === 'advance') {
-        advanceToNextTrack(freshQueue, track);
-        return;
-      }
-
-      player.pauseVideo();
-      setIsPlaying(false);
-      stopTimeUpdateInterval();
     }, 500);
   }, [
-    advanceToNextTrack,
     currentTrackRef,
+    handleTrackEnd,
     playerRef,
-    queueRef,
-    repeatModeRef,
     setCurrentTime,
-    setIsPlaying,
     stopTimeUpdateInterval,
   ]);
 
