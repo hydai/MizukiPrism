@@ -8,6 +8,11 @@ import {
   removeTrackAtIndex,
   resolvePreviousPlayback,
 } from '../lib/playerControls';
+import {
+  addUnavailableVideoId,
+  PLAYER_API_LOAD_ERROR_MESSAGE,
+  resolvePlayerError,
+} from '../lib/playerErrors';
 import { loadPlayerPreferences, savePlayerMuted, savePlayerVolume } from '../lib/playerPreferences';
 import { advancePlayerQueue } from '../lib/playerQueue';
 import {
@@ -224,7 +229,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     // Set timeout for API load failure (10 seconds)
     apiLoadTimeoutRef.current = setTimeout(() => {
       if (!window.YT || !window.YT.Player) {
-        setApiLoadError('播放器載入失敗，請重新整理頁面');
+        setApiLoadError(PLAYER_API_LOAD_ERROR_MESSAGE);
       }
     }, 10000);
 
@@ -242,7 +247,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         clearTimeout(apiLoadTimeoutRef.current);
         apiLoadTimeoutRef.current = null;
       }
-      setApiLoadError('播放器載入失敗，請重新整理頁面');
+      setApiLoadError(PLAYER_API_LOAD_ERROR_MESSAGE);
     };
 
     return () => {
@@ -400,16 +405,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           }
         },
         onError: (event: any) => {
-          // YouTube error codes:
-          // 2: Invalid parameter
-          // 5: HTML5 player error
-          // 100: Video not found / removed
-          // 101: Video not allowed in embedded players
-          // 150: Same as 101 (owner restricted embedding)
-          const errorVideoId = loadedVideoIdRef.current;
-          if ([100, 101, 150].includes(event.data) && errorVideoId) {
-            setPlayerError('此影片已無法播放');
-            setUnavailableVideoIds(prev => new Set([...prev, errorVideoId]));
+          const resolvedError = resolvePlayerError(event.data, loadedVideoIdRef.current);
+          if (resolvedError) {
+            setPlayerError(resolvedError.message);
+            setUnavailableVideoIds(prev => addUnavailableVideoId(prev, resolvedError.unavailableVideoId));
           }
         },
       },
