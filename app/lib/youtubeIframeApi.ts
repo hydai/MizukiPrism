@@ -1,5 +1,6 @@
 export const YOUTUBE_IFRAME_API_SRC = 'https://www.youtube.com/iframe_api';
 export const YOUTUBE_IFRAME_API_LOAD_TIMEOUT_MS = 10000;
+const YOUTUBE_IFRAME_API_STATUS_ATTRIBUTE = 'data-youtube-iframe-api-status';
 
 declare global {
   interface Window {
@@ -15,9 +16,16 @@ export function isYouTubeIframeApiReady(): boolean {
 }
 
 function getExistingYouTubeIframeApiScript(): HTMLScriptElement | null {
-  return document.querySelector<HTMLScriptElement>(
+  const script = document.querySelector<HTMLScriptElement>(
     `script[src="${YOUTUBE_IFRAME_API_SRC}"]`,
   );
+
+  if (script?.getAttribute(YOUTUBE_IFRAME_API_STATUS_ATTRIBUTE) === 'failed') {
+    script.remove();
+    return null;
+  }
+
+  return script;
 }
 
 function insertYouTubeIframeApiScript(): HTMLScriptElement {
@@ -26,6 +34,7 @@ function insertYouTubeIframeApiScript(): HTMLScriptElement {
 
   const script = document.createElement('script');
   script.src = YOUTUBE_IFRAME_API_SRC;
+  script.setAttribute(YOUTUBE_IFRAME_API_STATUS_ATTRIBUTE, 'loading');
 
   const firstScriptTag = document.getElementsByTagName('script')[0];
   if (firstScriptTag?.parentNode) {
@@ -40,6 +49,7 @@ function insertYouTubeIframeApiScript(): HTMLScriptElement {
 
 function removeFailedYouTubeIframeApiScript(script: HTMLScriptElement): void {
   if (!isYouTubeIframeApiReady() && script.parentNode) {
+    script.setAttribute(YOUTUBE_IFRAME_API_STATUS_ATTRIBUTE, 'failed');
     script.parentNode.removeChild(script);
   }
 }
@@ -72,7 +82,6 @@ export function loadYouTubeIframeApi(): Promise<void> {
     const rejectLoad = (error: unknown): void => {
       if (isSettled) return;
       isSettled = true;
-      window.clearTimeout(loadTimeout);
       restoreReadyHandler();
       if (script.onerror === handleError) {
         script.onerror = previousErrorHandler;
@@ -85,8 +94,8 @@ export function loadYouTubeIframeApi(): Promise<void> {
     function resolveReady(): void {
       if (isSettled) return;
       isSettled = true;
-      window.clearTimeout(loadTimeout);
       restoreReadyHandler();
+      script.setAttribute(YOUTUBE_IFRAME_API_STATUS_ATTRIBUTE, 'ready');
       previousReadyHandler?.();
       resolve();
     }
@@ -97,10 +106,6 @@ export function loadYouTubeIframeApi(): Promise<void> {
       }
       rejectLoad(error);
     };
-
-    const loadTimeout = window.setTimeout(() => {
-      rejectLoad(new Error('YouTube IFrame API load timed out'));
-    }, YOUTUBE_IFRAME_API_LOAD_TIMEOUT_MS);
 
     script.onerror = handleError;
     window.onYouTubeIframeAPIReady = resolveReady;
