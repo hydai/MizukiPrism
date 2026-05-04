@@ -26,7 +26,14 @@ import {
   resolveTrackStartPosition,
   TIMESTAMP_WARNING_MESSAGE,
 } from '../lib/playerTime';
-import { clampPlayerVolume, getNextMutedState, shouldAutoUnmute } from '../lib/playerVolume';
+import {
+  applyPlayerAudioSettings,
+  applyPlayerMutedState,
+  applyPlayerVolume,
+  clampPlayerVolume,
+  getNextMutedState,
+  shouldAutoUnmute,
+} from '../lib/playerVolume';
 import type { RepeatMode, Track } from '../types/player';
 
 interface PlayerContextType {
@@ -152,16 +159,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     const clamped = clampPlayerVolume(n);
     setVolumeState(clamped);
     volumeRef.current = clamped;
-    if (playerRef.current && playerRef.current.setVolume) {
-      playerRef.current.setVolume(clamped);
-    }
+    applyPlayerVolume(playerRef.current, clamped);
     // Auto-unmute when dragging above 0 while muted
     if (shouldAutoUnmute(clamped, isMutedRef.current)) {
       setIsMuted(false);
       isMutedRef.current = false;
-      if (playerRef.current && playerRef.current.unMute) {
-        playerRef.current.unMute();
-      }
+      applyPlayerMutedState(playerRef.current, false);
       savePlayerMuted(false);
     }
     savePlayerVolume(clamped);
@@ -171,13 +174,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     const newMuted = getNextMutedState(isMutedRef.current);
     setIsMuted(newMuted);
     isMutedRef.current = newMuted;
-    if (playerRef.current) {
-      if (newMuted) {
-        playerRef.current.mute?.();
-      } else {
-        playerRef.current.unMute?.();
-      }
-    }
+    applyPlayerMutedState(playerRef.current, newMuted);
     savePlayerMuted(newMuted);
   };
 
@@ -325,8 +322,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         if (startPosition.timestampOutOfBounds) {
           setTimestampWarning(TIMESTAMP_WARNING_MESSAGE);
         }
-        player.setVolume(volumeRef.current);
-        if (isMutedRef.current) { player.mute(); } else { player.unMute(); }
+        applyPlayerAudioSettings(player, volumeRef.current, isMutedRef.current);
         player.playVideo();
         setIsPlaying(true);
         startTimeUpdateInterval();
@@ -338,8 +334,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           videoId: currentTrack.videoId,
           startSeconds: currentTrack.timestamp,
         });
-        player.setVolume(volumeRef.current);
-        if (isMutedRef.current) { player.mute(); } else { player.unMute(); }
+        applyPlayerAudioSettings(player, volumeRef.current, isMutedRef.current);
         setIsPlaying(true);
         startTimeUpdateInterval();
         return;
@@ -378,12 +373,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           }
 
           // Apply saved volume/mute settings to newly created player
-          event.target.setVolume(volumeRef.current);
-          if (isMutedRef.current) {
-            event.target.mute();
-          } else {
-            event.target.unMute();
-          }
+          applyPlayerAudioSettings(event.target, volumeRef.current, isMutedRef.current);
 
           event.target.playVideo();
           setIsPlaying(true);

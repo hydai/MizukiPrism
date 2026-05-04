@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import {
+  applyPlayerAudioSettings,
+  applyPlayerMutedState,
+  applyPlayerVolume,
   clampPlayerVolume,
   getNextMutedState,
   shouldAutoUnmute,
@@ -17,3 +20,31 @@ assert.equal(shouldAutoUnmute(50, false), false);
 
 assert.equal(getNextMutedState(false), true);
 assert.equal(getNextMutedState(true), false);
+
+const calls: string[] = [];
+const player = {
+  setVolume: (volume: number) => calls.push(`volume:${volume}`),
+  mute: () => calls.push('mute'),
+  unMute: () => calls.push('unmute'),
+};
+
+applyPlayerVolume(player, 42);
+assert.deepEqual(calls, ['volume:42']);
+
+calls.length = 0;
+applyPlayerMutedState(player, true);
+applyPlayerMutedState(player, false);
+assert.deepEqual(calls, ['mute', 'unmute']);
+
+calls.length = 0;
+applyPlayerAudioSettings(player, 25, true);
+assert.deepEqual(calls, ['volume:25', 'mute']);
+
+calls.length = 0;
+applyPlayerAudioSettings(player, 75, false);
+assert.deepEqual(calls, ['volume:75', 'unmute']);
+
+assert.doesNotThrow(() => {
+  applyPlayerAudioSettings(null, 50, true);
+  applyPlayerAudioSettings({}, 50, false);
+});
