@@ -121,6 +121,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const allTracksRef = useRef<Track[]>([]);
   const volumeRef = useRef(75);
   const isMutedRef = useRef(false);
+  const timestampWarningTrackIdsRef = useRef<Set<string>>(new Set());
 
   useSyncedRef(queueRef, queue);
   useSyncedRef(currentTrackRef, currentTrack);
@@ -132,6 +133,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const clearTimestampWarning = () => setTimestampWarning(null);
   const clearSkipNotification = () => setSkipNotification(null);
+
+  const showTimestampWarningOnce = useCallback((track: Track) => {
+    if (timestampWarningTrackIdsRef.current.has(track.id)) return;
+    timestampWarningTrackIdsRef.current.add(track.id);
+    setTimestampWarning(TIMESTAMP_WARNING_MESSAGE);
+  }, []);
 
   // Load volume/mute from localStorage on mount (SSR-safe)
   useEffect(() => {
@@ -218,6 +225,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       const videoDuration = player?.getDuration?.() || 0;
       const startPosition = resolveTrackStartPosition(endAction.track, videoDuration);
       player?.seekTo(startPosition.startSeconds, true);
+      if (startPosition.timestampOutOfBounds) {
+        showTimestampWarningOnce(endAction.track);
+      }
       if (options.resumeLoopPlayback) {
         player?.playVideo();
       }
@@ -231,7 +241,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     player?.pauseVideo();
     setIsPlaying(false);
     return 'stop';
-  }, [advanceSkippingDeleted]);
+  }, [advanceSkippingDeleted, showTimestampWarningOnce]);
 
   const { startTimeUpdateInterval, stopTimeUpdateInterval } = usePlayerTimePolling({
     playerRef,
@@ -262,7 +272,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       const startPosition = resolveTrackStartPosition(currentTrack, videoDuration);
       player.seekTo(startPosition.startSeconds, true);
       if (startPosition.timestampOutOfBounds) {
-        setTimestampWarning(TIMESTAMP_WARNING_MESSAGE);
+        showTimestampWarningOnce(currentTrack);
       }
       applyPlayerAudioSettings(player, volumeRef.current, isMutedRef.current);
       player.playVideo();
@@ -312,7 +322,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           const startPosition = resolveTrackStartPosition(currentTrack, videoDuration);
           event.target.seekTo(startPosition.startSeconds, true);
           if (startPosition.timestampOutOfBounds) {
-            setTimestampWarning(TIMESTAMP_WARNING_MESSAGE);
+            showTimestampWarningOnce(currentTrack);
           }
 
           // Apply saved volume/mute settings to newly created player
@@ -346,7 +356,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         },
       },
     });
-  }, [isPlayerReady, currentTrack, startTimeUpdateInterval, stopTimeUpdateInterval, handlePlaybackEnd]);
+  }, [isPlayerReady, currentTrack, startTimeUpdateInterval, stopTimeUpdateInterval, handlePlaybackEnd, showTimestampWarningOnce]);
 
   const toggleRepeat = () => {
     setRepeatMode(getNextRepeatMode);
