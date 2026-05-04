@@ -32,9 +32,16 @@ export function usePlayerTimePolling({
 
   if (!pollerRef.current) {
     pollerRef.current = createPlayerTimePoller(pollerSnapshot);
-  } else {
-    pollerRef.current.update(pollerSnapshot);
   }
+
+  useEffect(() => {
+    pollerRef.current?.update({
+      playerRef,
+      currentTrackRef,
+      setCurrentTime,
+      handleTrackEnd,
+    });
+  }, [currentTrackRef, handleTrackEnd, playerRef, setCurrentTime]);
 
   const stopTimeUpdateInterval = useCallback(() => {
     pollerRef.current?.stop();

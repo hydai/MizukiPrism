@@ -1,4 +1,4 @@
-import { test, expect, Locator, Page } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 
 const BASE_URL = 'http://localhost:3000';
 const CLIPPED_CURRENT_FIXTURE = {
@@ -188,6 +188,22 @@ async function mockCatalogSongsApi(page: Page) {
   });
 }
 
+async function expectProductionSongsApiEndTimestamp(request: APIRequestContext): Promise<void> {
+  const response = await request.get(`${BASE_URL}/api/songs`);
+  expect(response.ok()).toBe(true);
+
+  const songs = await response.json() as CatalogSongFixture[];
+  const serializedEndTimestamp = songs
+    .flatMap((song) => song.performances)
+    .find((performance) => typeof performance.endTimestamp === 'number')
+    ?.endTimestamp;
+
+  expect(
+    serializedEndTimestamp,
+    'production /api/songs should preserve numeric endTimestamp values',
+  ).toEqual(expect.any(Number));
+}
+
 async function expectCatalogPerformanceFixture(page: Page, fixture: PerformanceFixture): Promise<void> {
   const actual = await page.evaluate(async ({ title, date }) => {
     const response = await fetch('/api/songs');
@@ -226,6 +242,10 @@ async function waitForMockPlayback(page: Page): Promise<void> {
 async function useDesktopViewport(page: Page): Promise<void> {
   await page.setViewportSize({ width: 1280, height: 720 });
 }
+
+test('PLAY-002 contract: production /api/songs serializes endTimestamp', async ({ request }) => {
+  await expectProductionSongsApiEndTimestamp(request);
+});
 
 test.describe('PLAY-002: Play Queue Management', () => {
 
