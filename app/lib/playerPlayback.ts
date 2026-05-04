@@ -11,10 +11,21 @@ export type PlaybackEndAction =
   | { type: 'advance' }
   | { type: 'stop' };
 
+export type YouTubePlayerLoadAction =
+  | { type: 'create' }
+  | { type: 'seek-existing' }
+  | { type: 'load-existing' };
+
 interface ResolvePlaybackEndActionOptions {
   currentTrack: Track | null;
   queueLength: number;
   repeatMode: RepeatMode;
+}
+
+interface ResolveYouTubePlayerLoadActionOptions {
+  hasPlayer: boolean;
+  loadedVideoId: string | null;
+  nextVideoId: string;
 }
 
 export function hasReachedTrackEnd(track: Track | null, currentTime: number): boolean {
@@ -42,4 +53,20 @@ export function resolveYouTubePlaybackState(stateCode: unknown): YouTubePlayback
   if (stateCode === YOUTUBE_PLAYER_STATE_PAUSED) return 'paused';
   if (stateCode === YOUTUBE_PLAYER_STATE_ENDED) return 'ended';
   return 'ignored';
+}
+
+export function resolveYouTubePlayerLoadAction({
+  hasPlayer,
+  loadedVideoId,
+  nextVideoId,
+}: ResolveYouTubePlayerLoadActionOptions): YouTubePlayerLoadAction {
+  if (!hasPlayer || !loadedVideoId) {
+    return { type: 'create' };
+  }
+
+  if (loadedVideoId === nextVideoId) {
+    return { type: 'seek-existing' };
+  }
+
+  return { type: 'load-existing' };
 }

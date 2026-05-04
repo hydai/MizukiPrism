@@ -17,6 +17,7 @@ import {
 import {
   hasReachedTrackEnd,
   resolvePlaybackEndAction,
+  resolveYouTubePlayerLoadAction,
   resolveYouTubePlaybackState,
 } from '../lib/playerPlayback';
 import { loadPlayerPreferences, savePlayerMuted, savePlayerVolume } from '../lib/playerPreferences';
@@ -311,34 +312,39 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setPlayerError(null);
 
     const player = playerRef.current;
+    const loadAction = resolveYouTubePlayerLoadAction({
+      hasPlayer: Boolean(player),
+      loadedVideoId: loadedVideoIdRef.current,
+      nextVideoId: currentTrack.videoId,
+    });
 
     // --- Reuse existing player ---
-    if (player && loadedVideoIdRef.current) {
-      if (currentTrack.videoId === loadedVideoIdRef.current) {
-        // Same VOD — just seek to the new timestamp
-        const videoDuration = player.getDuration?.() || 0;
-        const startPosition = resolveTrackStartPosition(currentTrack, videoDuration);
-        player.seekTo(startPosition.startSeconds, true);
-        if (startPosition.timestampOutOfBounds) {
-          setTimestampWarning(TIMESTAMP_WARNING_MESSAGE);
-        }
-        applyPlayerAudioSettings(player, volumeRef.current, isMutedRef.current);
-        player.playVideo();
-        setIsPlaying(true);
-        startTimeUpdateInterval();
-        return;
-      } else {
-        // Different VOD — load new video without destroying the iframe
-        loadedVideoIdRef.current = currentTrack.videoId;
-        player.loadVideoById({
-          videoId: currentTrack.videoId,
-          startSeconds: currentTrack.timestamp,
-        });
-        applyPlayerAudioSettings(player, volumeRef.current, isMutedRef.current);
-        setIsPlaying(true);
-        startTimeUpdateInterval();
-        return;
+    if (player && loadAction.type === 'seek-existing') {
+      // Same VOD — just seek to the new timestamp
+      const videoDuration = player.getDuration?.() || 0;
+      const startPosition = resolveTrackStartPosition(currentTrack, videoDuration);
+      player.seekTo(startPosition.startSeconds, true);
+      if (startPosition.timestampOutOfBounds) {
+        setTimestampWarning(TIMESTAMP_WARNING_MESSAGE);
       }
+      applyPlayerAudioSettings(player, volumeRef.current, isMutedRef.current);
+      player.playVideo();
+      setIsPlaying(true);
+      startTimeUpdateInterval();
+      return;
+    }
+
+    if (player && loadAction.type === 'load-existing') {
+      // Different VOD — load new video without destroying the iframe
+      loadedVideoIdRef.current = currentTrack.videoId;
+      player.loadVideoById({
+        videoId: currentTrack.videoId,
+        startSeconds: currentTrack.timestamp,
+      });
+      applyPlayerAudioSettings(player, volumeRef.current, isMutedRef.current);
+      setIsPlaying(true);
+      startTimeUpdateInterval();
+      return;
     }
 
     // --- First-time creation ---
