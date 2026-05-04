@@ -18,18 +18,31 @@ export interface YouTubeEmbedHandle {
 interface Props {
   videoId?: string;
   onReady?: () => void;
+  onError?: (error: Error) => void;
   onStateChange?: (isPlaying: boolean) => void;
 }
 
+function toYouTubeIframeApiLoadError(error: unknown): Error {
+  return error instanceof Error ? error : new Error('YouTube IFrame API failed to load');
+}
+
 export const YouTubeEmbed = forwardRef<YouTubeEmbedHandle, Props>(
-  function YouTubeEmbed({ videoId, onReady, onStateChange }, ref) {
+  function YouTubeEmbed({ videoId, onReady, onError, onStateChange }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
     const playerRef = useRef<any>(null);
     const readyRef = useRef(false);
     const onReadyRef = useRef(onReady);
     onReadyRef.current = onReady;
+    const onErrorRef = useRef(onError);
+    onErrorRef.current = onError;
     const onStateChangeRef = useRef(onStateChange);
     onStateChangeRef.current = onStateChange;
+
+    const reportLoadError = useCallback((error: unknown) => {
+      const loadError = toYouTubeIframeApiLoadError(error);
+      console.error('Failed to load YouTube IFrame API:', loadError);
+      onErrorRef.current?.(loadError);
+    }, []);
 
     const initPlayer = useCallback((vid: string) => {
       if (!containerRef.current) return;
@@ -65,19 +78,24 @@ export const YouTubeEmbed = forwardRef<YouTubeEmbedHandle, Props>(
       if (!videoId) return;
       let isActive = true;
 
-      void loadYouTubeIframeApi().then(() => {
-        if (!isActive) return;
-        if (playerRef.current && readyRef.current) {
-          playerRef.current.loadVideoById(videoId);
-        } else {
-          initPlayer(videoId);
-        }
-      }).catch(() => undefined);
+      void loadYouTubeIframeApi()
+        .then(() => {
+          if (!isActive) return;
+          if (playerRef.current && readyRef.current) {
+            playerRef.current.loadVideoById(videoId);
+          } else {
+            initPlayer(videoId);
+          }
+        })
+        .catch((error) => {
+          if (!isActive) return;
+          reportLoadError(error);
+        });
 
       return () => {
         isActive = false;
       };
-    }, [videoId, initPlayer]);
+    }, [videoId, initPlayer, reportLoadError]);
 
     useEffect(() => {
       return () => {
@@ -104,7 +122,9 @@ export const YouTubeEmbed = forwardRef<YouTubeEmbedHandle, Props>(
         if (playerRef.current && readyRef.current) {
           playerRef.current.loadVideoById(vid);
         } else {
-          void loadYouTubeIframeApi().then(() => initPlayer(vid)).catch(() => undefined);
+          void loadYouTubeIframeApi()
+            .then(() => initPlayer(vid))
+            .catch(reportLoadError);
         }
       },
       togglePlay: () => {

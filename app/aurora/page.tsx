@@ -46,6 +46,7 @@ export default function AuroraPage() {
   const [showExport, setShowExport] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playerError, setPlayerError] = useState('');
   const [fillingIndex, setFillingIndex] = useState<number | null>(null);
   const [bulkFillStatus, setBulkFillStatus] = useState<string | null>(null);
   const playerRef = useRef<YouTubeEmbedHandle>(null);
@@ -79,6 +80,7 @@ export default function AuroraPage() {
       return;
     }
     setUrlError('');
+    setPlayerError('');
     setVideoId(id);
     pushRecent(id);
     const saved = loadSession(id);
@@ -380,13 +382,24 @@ export default function AuroraPage() {
           <div className="flex flex-col lg:flex-row gap-6" data-testid="aurora-workspace">
             {/* Left: YouTube Player */}
             <div className="lg:w-1/2 flex flex-col gap-4">
-              <YouTubeEmbed ref={playerRef} videoId={videoId} onStateChange={setIsPlaying} />
+              <YouTubeEmbed
+                ref={playerRef}
+                videoId={videoId}
+                onReady={() => setPlayerError('')}
+                onError={() => setPlayerError('無法載入 YouTube 播放器，請稍後再試。')}
+                onStateChange={setIsPlaying}
+              />
               <AuroraPlayerControls
                 isPlaying={isPlaying}
                 onTogglePlay={handleTogglePlay}
                 onSeekBackward={handleSeekBackward}
                 onSeekForward={handleSeekForward}
               />
+              {playerError && (
+                <p className="text-red-500 text-[12px]" data-testid="aurora-player-error">
+                  {playerError}
+                </p>
+              )}
               <p className="text-[12px] text-[var(--text-tertiary)] font-mono truncate">
                 {vodUrl || `https://youtube.com/watch?v=${videoId}`}
               </p>
