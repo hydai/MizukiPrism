@@ -72,6 +72,19 @@ assert.equal(shuffledPickWithUpperBoundRandom.nextTrack?.id, 'b');
 assert.deepEqual(shuffledPickWithUpperBoundRandom.queue.map((track) => track.id), ['a']);
 assert.equal(shuffledPickWithUpperBoundRandom.skippedDeleted, false);
 
+const shuffledDuplicateReferencePick = advancePlayerQueue({
+  queue: [queueA, queueB, queueA],
+  fromTrack: null,
+  repeatMode: 'off',
+  shuffleOn: true,
+  allTracks: [],
+  random: () => 0.99,
+});
+
+assert.equal(shuffledDuplicateReferencePick.nextTrack?.id, 'a');
+assert.deepEqual(shuffledDuplicateReferencePick.queue.map((track) => track.id), ['a', 'b']);
+assert.equal(shuffledDuplicateReferencePick.skippedDeleted, false);
+
 const emptyQueue = advancePlayerQueue({
   queue: [deletedQueueTrack],
   fromTrack: null,

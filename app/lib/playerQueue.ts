@@ -58,7 +58,9 @@ export function advancePlayerQueue({
     }
   }
 
-  const playable = remainingQueue.filter((track) => !track.deleted);
+  const playable = remainingQueue
+    .map((track, index) => ({ track, index }))
+    .filter(({ track }) => !track.deleted);
 
   if (playable.length === 0) {
     return {
@@ -71,10 +73,10 @@ export function advancePlayerQueue({
   const pickIndex = shuffleOn
     ? randomIndex(playable.length, random)
     : 0;
-  const nextTrack = playable[pickIndex]!;
-  const actualIndex = remainingQueue.indexOf(nextTrack);
+  const selected = playable[pickIndex]!;
+  const nextTrack = selected.track;
   const nextQueue = [...remainingQueue];
-  nextQueue.splice(actualIndex, 1);
+  nextQueue.splice(selected.index, 1);
 
   if (
     repeatMode === 'all'
