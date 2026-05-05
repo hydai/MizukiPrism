@@ -7,6 +7,7 @@ import { usePlayerNavigationControls } from '../hooks/usePlayerNavigationControl
 import { usePlayerNotificationState } from '../hooks/usePlayerNotificationState';
 import { usePlayerPlaybackEnd } from '../hooks/usePlayerPlaybackEnd';
 import { usePlayerPlaybackModes } from '../hooks/usePlayerPlaybackModes';
+import { usePlayerPlaybackState } from '../hooks/usePlayerPlaybackState';
 import { usePlayerQueueAdvance } from '../hooks/usePlayerQueueAdvance';
 import { usePlayerQueueState } from '../hooks/usePlayerQueueState';
 import { usePlayerRuntimeRefs } from '../hooks/usePlayerRuntimeRefs';
@@ -70,10 +71,15 @@ export const usePlayer = () => {
 };
 
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [showModal, setShowModal] = useState(false);
+  const {
+    isPlaying,
+    setIsPlaying,
+    currentTime,
+    setCurrentTime,
+    duration,
+    setDuration,
+  } = usePlayerPlaybackState();
   const {
     repeatMode,
     shuffleOn,
