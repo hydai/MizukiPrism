@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { isLocalStorageAvailable } from '../lib/browserStorage';
 import type { PlaylistContextType } from '../types/playlistContext';
 import type { Playlist, PlaylistExportEnvelope, PlaylistVersion } from '../types/playlist';
 
@@ -17,17 +18,6 @@ export const usePlaylist = () => {
 const STORAGE_KEY = 'mizukiprism_playlists';
 const STORAGE_QUOTA_ERROR = '本機儲存空間不足';
 const STORAGE_UNSUPPORTED_ERROR = '您的瀏覽器不支援本機儲存，播放清單功能無法使用';
-
-function isLocalStorageAvailable(): boolean {
-  try {
-    const testKey = '__mizukiprism_ls_test__';
-    localStorage.setItem(testKey, '1');
-    localStorage.removeItem(testKey);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 function formatDate(): string {
   const d = new Date();

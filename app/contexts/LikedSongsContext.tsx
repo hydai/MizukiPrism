@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { isLocalStorageAvailable } from '../lib/browserStorage';
 
 export interface LikedVersion {
   performanceId: string;
@@ -31,17 +32,6 @@ export const useLikedSongs = () => {
 };
 
 const STORAGE_KEY = 'mizukiprism_liked_songs';
-
-function isLocalStorageAvailable(): boolean {
-  try {
-    const testKey = '__mizukiprism_ls_test__';
-    localStorage.setItem(testKey, '1');
-    localStorage.removeItem(testKey);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 export const LikedSongsProvider = ({ children }: { children: ReactNode }) => {
   const [likedSongs, setLikedSongs] = useState<LikedVersion[]>([]);
