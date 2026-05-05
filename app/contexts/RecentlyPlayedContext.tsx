@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { isLocalStorageAvailable } from '../lib/browserStorage';
 
 export interface RecentPlay {
   performanceId: string;
@@ -32,17 +33,6 @@ export const useRecentlyPlayed = () => {
 
 const STORAGE_KEY = 'mizukiprism_recently_played';
 const MAX_ENTRIES = 50;
-
-function isLocalStorageAvailable(): boolean {
-  try {
-    const testKey = '__mizukiprism_ls_test__';
-    localStorage.setItem(testKey, '1');
-    localStorage.removeItem(testKey);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 export const RecentlyPlayedProvider = ({ children }: { children: ReactNode }) => {
   const [recentPlays, setRecentPlays] = useState<RecentPlay[]>([]);
