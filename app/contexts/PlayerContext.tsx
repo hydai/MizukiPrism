@@ -2,16 +2,14 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { usePlayerAudioSettings } from '../hooks/usePlayerAudioSettings';
+import { usePlayerPlaybackModes } from '../hooks/usePlayerPlaybackModes';
 import { usePlayerQueueState } from '../hooks/usePlayerQueueState';
 import { usePlayerRuntimeRefs } from '../hooks/usePlayerRuntimeRefs';
 import { usePlayerTimestampWarning } from '../hooks/usePlayerTimestampWarning';
 import { usePlayerTimePolling } from '../hooks/usePlayerTimePolling';
 import { usePlayerTransportControls } from '../hooks/usePlayerTransportControls';
 import { useYouTubeIframeApi } from '../hooks/useYouTubeIframeApi';
-import {
-  getNextRepeatMode,
-  resolvePreviousPlayback,
-} from '../lib/playerControls';
+import { resolvePreviousPlayback } from '../lib/playerControls';
 import {
   addUnavailableVideoId,
   resolvePlayerError,
@@ -95,8 +93,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [duration, setDuration] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [playHistory, setPlayHistory] = useState<Track[]>([]);
-  const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
-  const [shuffleOn, setShuffleOn] = useState(false);
+  const {
+    repeatMode,
+    shuffleOn,
+    toggleRepeat,
+    toggleShuffle,
+  } = usePlayerPlaybackModes();
   const {
     queue,
     setQueue,
@@ -363,14 +365,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     volumeRef,
     isMutedRef,
   ]);
-
-  const toggleRepeat = () => {
-    setRepeatMode(getNextRepeatMode);
-  };
-
-  const toggleShuffle = () => {
-    setShuffleOn(prev => !prev);
-  };
 
   const playTrack = (track: Track) => {
     // Add current track to history before switching
