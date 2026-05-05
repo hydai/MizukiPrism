@@ -1,8 +1,9 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, ReactNode } from 'react';
 import { usePlayerAudioSettings } from '../hooks/usePlayerAudioSettings';
 import { usePlayerErrorState } from '../hooks/usePlayerErrorState';
+import { usePlayerModalState } from '../hooks/usePlayerModalState';
 import { usePlayerNavigationControls } from '../hooks/usePlayerNavigationControls';
 import { usePlayerNotificationState } from '../hooks/usePlayerNotificationState';
 import { usePlayerPlaybackEnd } from '../hooks/usePlayerPlaybackEnd';
@@ -71,7 +72,7 @@ export const usePlayer = () => {
 };
 
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
-  const [showModal, setShowModal] = useState(false);
+  const { showModal, setShowModal } = usePlayerModalState();
   const {
     isPlaying,
     setIsPlaying,
