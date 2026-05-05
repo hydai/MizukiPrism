@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
+import { usePlayerAudioSettings } from '../hooks/usePlayerAudioSettings';
 import { usePlayerTimestampWarning } from '../hooks/usePlayerTimestampWarning';
 import { usePlayerTimePolling } from '../hooks/usePlayerTimePolling';
 import { useSyncedRef } from '../hooks/useSyncedRef';
@@ -21,22 +22,33 @@ import {
   resolveYouTubePlayerLoadAction,
   resolveYouTubePlaybackState,
 } from '../lib/playerPlayback';
-import { loadPlayerPreferences, savePlayerMuted, savePlayerVolume } from '../lib/playerPreferences';
 import { advancePlayerQueue } from '../lib/playerQueue';
 import {
   getTrackCurrentTime,
   getTrackDuration,
   resolveTrackStartPosition,
 } from '../lib/playerTime';
-import {
-  applyPlayerAudioSettings,
-  applyPlayerMutedState,
-  applyPlayerVolume,
-  clampPlayerVolume,
-  getNextMutedState,
-  shouldAutoUnmute,
-} from '../lib/playerVolume';
+import { applyPlayerAudioSettings, type PlayerAudioControls } from '../lib/playerVolume';
 import type { RepeatMode, Track } from '../types/player';
+
+interface YouTubePlayerInstance extends PlayerAudioControls {
+  destroy: () => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
+  loadVideoById: (options: { videoId: string; startSeconds: number }) => void;
+  pauseVideo: () => void;
+  playVideo: () => void;
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+}
+
+interface YouTubePlayerEvent {
+  target: YouTubePlayerInstance;
+  data: number;
+}
+
+interface YouTubePlayerErrorEvent {
+  data: number;
+}
 
 interface PlayerContextType {
   currentTrack: Track | null;
@@ -102,15 +114,13 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   const [shuffleOn, setShuffleOn] = useState(false);
   const [allTracks, setAllTracks] = useState<Track[]>([]);
-  const [volume, setVolumeState] = useState(75);
-  const [isMuted, setIsMuted] = useState(false);
   const { isPlayerReady, apiLoadError } = useYouTubeIframeApi();
 
   // Derived track-relative time values (never fall back to full VOD duration)
   const trackCurrentTime = getTrackCurrentTime(currentTrack, currentTime);
   const trackDuration = getTrackDuration(currentTrack);
 
-  const playerRef = useRef<any>(null);
+  const playerRef = useRef<YouTubePlayerInstance | null>(null);
   const playerDivId = 'youtube-player';
   const loadedVideoIdRef = useRef<string | null>(null);
   // Refs to always have fresh values in async callbacks
@@ -119,16 +129,20 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const repeatModeRef = useRef<RepeatMode>('off');
   const shuffleOnRef = useRef(false);
   const allTracksRef = useRef<Track[]>([]);
-  const volumeRef = useRef(75);
-  const isMutedRef = useRef(false);
+  const {
+    volume,
+    isMuted,
+    volumeRef,
+    isMutedRef,
+    setVolume,
+    toggleMute,
+  } = usePlayerAudioSettings(playerRef);
 
   useSyncedRef(queueRef, queue);
   useSyncedRef(currentTrackRef, currentTrack);
   useSyncedRef(repeatModeRef, repeatMode);
   useSyncedRef(shuffleOnRef, shuffleOn);
   useSyncedRef(allTracksRef, allTracks);
-  useSyncedRef(volumeRef, volume);
-  useSyncedRef(isMutedRef, isMuted);
 
   const clearTimestampWarning = () => setTimestampWarning(null);
   const clearSkipNotification = () => setSkipNotification(null);
@@ -136,42 +150,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     showTimestampWarningOnce,
     resetTimestampWarningOnceState,
   } = usePlayerTimestampWarning(setTimestampWarning);
-
-  // Load volume/mute from localStorage on mount (SSR-safe)
-  useEffect(() => {
-    const preferences = loadPlayerPreferences();
-    if (preferences.volume != null) {
-      setVolumeState(preferences.volume);
-      volumeRef.current = preferences.volume;
-    }
-    if (preferences.isMuted != null) {
-      setIsMuted(preferences.isMuted);
-      isMutedRef.current = preferences.isMuted;
-    }
-  }, []);
-
-  const setVolume = (n: number) => {
-    const clamped = clampPlayerVolume(n);
-    setVolumeState(clamped);
-    volumeRef.current = clamped;
-    applyPlayerVolume(playerRef.current, clamped);
-    // Auto-unmute when dragging above 0 while muted
-    if (shouldAutoUnmute(clamped, isMutedRef.current)) {
-      setIsMuted(false);
-      isMutedRef.current = false;
-      applyPlayerMutedState(playerRef.current, false);
-      savePlayerMuted(false);
-    }
-    savePlayerVolume(clamped);
-  };
-
-  const toggleMute = () => {
-    const newMuted = getNextMutedState(isMutedRef.current);
-    setIsMuted(newMuted);
-    isMutedRef.current = newMuted;
-    applyPlayerMutedState(playerRef.current, newMuted);
-    savePlayerMuted(newMuted);
-  };
 
   // Advance to the next playable track, refilling from all tracks in repeat-all mode when needed.
   // Returns true when a track is selected and set as current; false when no playable track remains.
@@ -312,7 +290,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         origin: typeof window !== 'undefined' ? window.location.origin : undefined,
       },
       events: {
-        onReady: (event: any) => {
+        onReady: (event: YouTubePlayerEvent) => {
           const videoDuration = event.target.getDuration();
           setDuration(videoDuration);
 
@@ -330,7 +308,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           setIsPlaying(true);
           startTimeUpdateInterval();
         },
-        onStateChange: (event: any) => {
+        onStateChange: (event: YouTubePlayerEvent) => {
           const playbackState = resolveYouTubePlaybackState(event.data);
           if (playbackState === 'playing') {
             setIsPlaying(true);
@@ -345,7 +323,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
             }
           }
         },
-        onError: (event: any) => {
+        onError: (event: YouTubePlayerErrorEvent) => {
           const resolvedError = resolvePlayerError(event.data, loadedVideoIdRef.current);
           if (resolvedError) {
             setPlayerError(resolvedError.message);
@@ -353,8 +331,17 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           }
         },
       },
-    });
-  }, [isPlayerReady, currentTrack, startTimeUpdateInterval, stopTimeUpdateInterval, handlePlaybackEnd, showTimestampWarningOnce]);
+    }) as YouTubePlayerInstance;
+  }, [
+    isPlayerReady,
+    currentTrack,
+    startTimeUpdateInterval,
+    stopTimeUpdateInterval,
+    handlePlaybackEnd,
+    showTimestampWarningOnce,
+    volumeRef,
+    isMutedRef,
+  ]);
 
   const toggleRepeat = () => {
     setRepeatMode(getNextRepeatMode);
