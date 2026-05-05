@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
+import { usePlayerTimestampWarning } from '../hooks/usePlayerTimestampWarning';
 import { usePlayerTimePolling } from '../hooks/usePlayerTimePolling';
 import { useSyncedRef } from '../hooks/useSyncedRef';
 import { useYouTubeIframeApi } from '../hooks/useYouTubeIframeApi';
@@ -26,7 +27,6 @@ import {
   getTrackCurrentTime,
   getTrackDuration,
   resolveTrackStartPosition,
-  TIMESTAMP_WARNING_MESSAGE,
 } from '../lib/playerTime';
 import {
   applyPlayerAudioSettings,
@@ -121,7 +121,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const allTracksRef = useRef<Track[]>([]);
   const volumeRef = useRef(75);
   const isMutedRef = useRef(false);
-  const timestampWarningTrackIdsRef = useRef<Set<string>>(new Set());
 
   useSyncedRef(queueRef, queue);
   useSyncedRef(currentTrackRef, currentTrack);
@@ -133,16 +132,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const clearTimestampWarning = () => setTimestampWarning(null);
   const clearSkipNotification = () => setSkipNotification(null);
-
-  const showTimestampWarningOnce = useCallback((track: Track) => {
-    if (timestampWarningTrackIdsRef.current.has(track.id)) return;
-    timestampWarningTrackIdsRef.current.add(track.id);
-    setTimestampWarning(TIMESTAMP_WARNING_MESSAGE);
-  }, []);
-
-  const resetTimestampWarningOnceState = useCallback(() => {
-    timestampWarningTrackIdsRef.current.clear();
-  }, []);
+  const {
+    showTimestampWarningOnce,
+    resetTimestampWarningOnceState,
+  } = usePlayerTimestampWarning(setTimestampWarning);
 
   // Load volume/mute from localStorage on mount (SSR-safe)
   useEffect(() => {
