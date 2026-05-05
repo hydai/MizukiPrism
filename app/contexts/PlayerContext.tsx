@@ -14,13 +14,10 @@ import { usePlayerQueueState } from '../hooks/usePlayerQueueState';
 import { usePlayerRuntimeRefs } from '../hooks/usePlayerRuntimeRefs';
 import { usePlayerTimePolling } from '../hooks/usePlayerTimePolling';
 import { usePlayerTrackSelection } from '../hooks/usePlayerTrackSelection';
+import { usePlayerTrackTime } from '../hooks/usePlayerTrackTime';
 import { usePlayerTransportControls } from '../hooks/usePlayerTransportControls';
 import { usePlayerYouTubeLifecycle } from '../hooks/usePlayerYouTubeLifecycle';
 import { useYouTubeIframeApi } from '../hooks/useYouTubeIframeApi';
-import {
-  getTrackCurrentTime,
-  getTrackDuration,
-} from '../lib/playerTime';
 import type { RepeatMode, Track } from '../types/player';
 
 interface PlayerContextType {
@@ -126,9 +123,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     addToAllTracks,
   });
 
-  // Derived track-relative time values (never fall back to full VOD duration)
-  const trackCurrentTime = getTrackCurrentTime(currentTrack, currentTime);
-  const trackDuration = getTrackDuration(currentTrack);
+  const { trackCurrentTime, trackDuration } = usePlayerTrackTime({
+    currentTrack,
+    currentTime,
+  });
 
   const playerDivId = 'youtube-player';
   const {
