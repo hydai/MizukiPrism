@@ -1,4 +1,4 @@
-interface PlayerAudioControls {
+export interface PlayerAudioControls {
   setVolume?: (volume: number) => void;
   mute?: () => void;
   unMute?: () => void;
