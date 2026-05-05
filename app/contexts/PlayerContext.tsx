@@ -2,15 +2,13 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { usePlayerAudioSettings } from '../hooks/usePlayerAudioSettings';
+import { usePlayerQueueState } from '../hooks/usePlayerQueueState';
 import { usePlayerRuntimeRefs } from '../hooks/usePlayerRuntimeRefs';
 import { usePlayerTimestampWarning } from '../hooks/usePlayerTimestampWarning';
 import { usePlayerTimePolling } from '../hooks/usePlayerTimePolling';
 import { useYouTubeIframeApi } from '../hooks/useYouTubeIframeApi';
 import {
-  addUniqueTrackById,
   getNextRepeatMode,
-  moveTrack,
-  removeTrackAtIndex,
   resolvePreviousPlayback,
 } from '../lib/playerControls';
 import {
@@ -96,11 +94,19 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [duration, setDuration] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [playHistory, setPlayHistory] = useState<Track[]>([]);
-  const [queue, setQueue] = useState<Track[]>([]);
-  const [showQueue, setShowQueue] = useState(false);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   const [shuffleOn, setShuffleOn] = useState(false);
-  const [allTracks, setAllTracks] = useState<Track[]>([]);
+  const {
+    queue,
+    setQueue,
+    showQueue,
+    setShowQueue,
+    allTracks,
+    addToAllTracks,
+    addToQueue,
+    removeFromQueue,
+    reorderQueue,
+  } = usePlayerQueueState();
   const { isPlayerReady, apiLoadError } = useYouTubeIframeApi();
 
   // Derived track-relative time values (never fall back to full VOD duration)
@@ -179,6 +185,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     playerRef,
     repeatModeRef,
     resetTimestampWarningOnceState,
+    setQueue,
     shuffleOnRef,
   ]);
 
@@ -358,10 +365,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setShuffleOn(prev => !prev);
   };
 
-  const addToAllTracks = (track: Track) => {
-    setAllTracks(prev => addUniqueTrackById(prev, track));
-  };
-
   const playTrack = (track: Track) => {
     // Add current track to history before switching
     if (currentTrack && currentTrack.id !== track.id) {
@@ -419,19 +422,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         setIsPlaying(false);
       }
     }
-  };
-
-  const addToQueue = (track: Track) => {
-    setQueue(prev => [...prev, track]);
-    addToAllTracks(track);
-  };
-
-  const removeFromQueue = (index: number) => {
-    setQueue(prev => removeTrackAtIndex(prev, index));
-  };
-
-  const reorderQueue = (fromIndex: number, toIndex: number) => {
-    setQueue(prev => moveTrack(prev, fromIndex, toIndex));
   };
 
   return (
