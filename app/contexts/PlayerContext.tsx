@@ -6,6 +6,7 @@ import { usePlayerErrorState } from '../hooks/usePlayerErrorState';
 import { usePlayerNavigationControls } from '../hooks/usePlayerNavigationControls';
 import { usePlayerNotificationState } from '../hooks/usePlayerNotificationState';
 import { usePlayerPlaybackModes } from '../hooks/usePlayerPlaybackModes';
+import { usePlayerQueueAdvance } from '../hooks/usePlayerQueueAdvance';
 import { usePlayerQueueState } from '../hooks/usePlayerQueueState';
 import { usePlayerRuntimeRefs } from '../hooks/usePlayerRuntimeRefs';
 import { usePlayerTimePolling } from '../hooks/usePlayerTimePolling';
@@ -17,7 +18,6 @@ import {
   resolveYouTubePlayerLoadAction,
   resolveYouTubePlaybackState,
 } from '../lib/playerPlayback';
-import { advancePlayerQueue } from '../lib/playerQueue';
 import {
   getTrackCurrentTime,
   getTrackDuration,
@@ -164,53 +164,19 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setIsPlaying,
     setCurrentTime,
   });
-
-  // Advance to the next playable track, refilling from all tracks in repeat-all mode when needed.
-  // Returns true when a track is selected and set as current; false when no playable track remains.
-  const advanceSkippingDeleted = useCallback((currentQ: Track[], fromTrack: Track | null): boolean => {
-    const result = advancePlayerQueue({
-      queue: currentQ,
-      fromTrack,
-      repeatMode: repeatModeRef.current,
-      shuffleOn: shuffleOnRef.current,
-      allTracks: allTracksRef.current,
-    });
-
-    if (!result.nextTrack) {
-      if (result.skippedDeleted) {
-        showSkipNotification('播放完畢');
-      }
-      setQueue([]);
-      setIsPlaying(false);
-      if (playerRef.current) {
-        playerRef.current.pauseVideo();
-      }
-      return false;
-    }
-
-    resetTimestampWarningOnceState();
-    setQueue(result.queue);
-
-    if (fromTrack) {
-      setPlayHistory(prev => [...prev, fromTrack]);
-    }
-    if (result.skippedDeleted) {
-      showSkipNotification('已跳過無法播放的版本');
-    }
-    setCurrentTrack(result.nextTrack);
-    setCurrentTime(result.nextTrack.timestamp);
-    return true;
-  }, [
+  const { advanceSkippingDeleted } = usePlayerQueueAdvance({
+    repeatModeRef,
+    shuffleOnRef,
     allTracksRef,
     playerRef,
-    repeatModeRef,
     resetTimestampWarningOnceState,
-    setCurrentTrack,
-    setPlayHistory,
     setQueue,
+    setIsPlaying,
+    setPlayHistory,
     showSkipNotification,
-    shuffleOnRef,
-  ]);
+    setCurrentTrack,
+    setCurrentTime,
+  });
 
   const handlePlaybackEnd = useCallback((options: { resumeLoopPlayback?: boolean } = {}): 'continue' | 'stop' => {
     const player = playerRef.current;
