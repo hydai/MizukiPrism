@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { usePlayerAudioSettings } from '../hooks/usePlayerAudioSettings';
 import { usePlayerErrorState } from '../hooks/usePlayerErrorState';
+import { usePlayerNavigationControls } from '../hooks/usePlayerNavigationControls';
 import { usePlayerNotificationState } from '../hooks/usePlayerNotificationState';
 import { usePlayerPlaybackModes } from '../hooks/usePlayerPlaybackModes';
 import { usePlayerQueueState } from '../hooks/usePlayerQueueState';
@@ -11,7 +12,6 @@ import { usePlayerTimePolling } from '../hooks/usePlayerTimePolling';
 import { usePlayerTrackSelection } from '../hooks/usePlayerTrackSelection';
 import { usePlayerTransportControls } from '../hooks/usePlayerTransportControls';
 import { useYouTubeIframeApi } from '../hooks/useYouTubeIframeApi';
-import { resolvePreviousPlayback } from '../lib/playerControls';
 import {
   resolvePlaybackEndAction,
   resolveYouTubePlayerLoadAction,
@@ -378,35 +378,21 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     isMutedRef,
   ]);
 
-  const previous = () => {
-    const action = resolvePreviousPlayback({
-      currentTrack,
-      currentTime,
-      playHistory,
-    });
-
-    if (action.type === 'restart') {
-      seekTo(action.track.timestamp);
-    } else if (action.type === 'history') {
-      setPlayHistory((prev) => prev.slice(0, -1));
-      resetTimestampWarningOnceState();
-      setCurrentTrack(action.track);
-      setCurrentTime(action.track.timestamp);
-    }
-  };
-
-  const next = () => {
-    // User pressed next — always advance (ignore repeat-one)
-    if (queue.length > 0 || repeatMode === 'all') {
-      advanceSkippingDeleted(queue, currentTrack);
-    } else {
-      // No queue, stop playback
-      if (playerRef.current) {
-        playerRef.current.pauseVideo();
-        setIsPlaying(false);
-      }
-    }
-  };
+  const { previous, next } = usePlayerNavigationControls({
+    currentTrack,
+    currentTime,
+    playHistory,
+    setPlayHistory,
+    resetTimestampWarningOnceState,
+    setCurrentTrack,
+    setCurrentTime,
+    seekTo,
+    queue,
+    repeatMode,
+    advanceSkippingDeleted,
+    playerRef,
+    setIsPlaying,
+  });
 
   return (
     <PlayerContext.Provider
