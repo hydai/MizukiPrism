@@ -3,10 +3,10 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { usePlayerAudioSettings } from '../hooks/usePlayerAudioSettings';
 import { usePlayerErrorState } from '../hooks/usePlayerErrorState';
+import { usePlayerNotificationState } from '../hooks/usePlayerNotificationState';
 import { usePlayerPlaybackModes } from '../hooks/usePlayerPlaybackModes';
 import { usePlayerQueueState } from '../hooks/usePlayerQueueState';
 import { usePlayerRuntimeRefs } from '../hooks/usePlayerRuntimeRefs';
-import { usePlayerTimestampWarning } from '../hooks/usePlayerTimestampWarning';
 import { usePlayerTimePolling } from '../hooks/usePlayerTimePolling';
 import { usePlayerTransportControls } from '../hooks/usePlayerTransportControls';
 import { useYouTubeIframeApi } from '../hooks/useYouTubeIframeApi';
@@ -82,8 +82,6 @@ export const usePlayer = () => {
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [timestampWarning, setTimestampWarning] = useState<string | null>(null);
-  const [skipNotification, setSkipNotification] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showModal, setShowModal] = useState(false);
@@ -147,13 +145,15 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setIsPlaying,
     setCurrentTime,
   });
-
-  const clearTimestampWarning = () => setTimestampWarning(null);
-  const clearSkipNotification = () => setSkipNotification(null);
   const {
+    timestampWarning,
+    clearTimestampWarning,
     showTimestampWarningOnce,
     resetTimestampWarningOnceState,
-  } = usePlayerTimestampWarning(setTimestampWarning);
+    skipNotification,
+    clearSkipNotification,
+    showSkipNotification,
+  } = usePlayerNotificationState();
 
   // Advance to the next playable track, refilling from all tracks in repeat-all mode when needed.
   // Returns true when a track is selected and set as current; false when no playable track remains.
@@ -168,7 +168,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
     if (!result.nextTrack) {
       if (result.skippedDeleted) {
-        setSkipNotification('播放完畢');
+        showSkipNotification('播放完畢');
       }
       setQueue([]);
       setIsPlaying(false);
@@ -185,7 +185,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       setPlayHistory(prev => [...prev, fromTrack]);
     }
     if (result.skippedDeleted) {
-      setSkipNotification('已跳過無法播放的版本');
+      showSkipNotification('已跳過無法播放的版本');
     }
     setCurrentTrack(result.nextTrack);
     setCurrentTime(result.nextTrack.timestamp);
@@ -196,6 +196,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     repeatModeRef,
     resetTimestampWarningOnceState,
     setQueue,
+    showSkipNotification,
     shuffleOnRef,
   ]);
 
