@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { ListPlus } from 'lucide-react';
-import { usePlaylist, type PlaylistVersion } from '../contexts/PlaylistContext';
+import { usePlaylist } from '../contexts/PlaylistContext';
+import type { PlaylistVersion } from '../types/playlist';
 
 interface AddToPlaylistDropdownProps {
   version: PlaylistVersion;
