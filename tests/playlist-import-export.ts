@@ -22,7 +22,7 @@ const playlist: Playlist = {
   updatedAt: 2000,
 };
 
-assert.equal(formatPlaylistExportDate(new Date('2026-05-05T12:34:56Z')), '2026-05-05');
+assert.equal(formatPlaylistExportDate(new Date(2026, 4, 5, 12, 34, 56)), '2026-05-05');
 
 assert.deepEqual(
   buildPlaylistExportEnvelope([playlist], '2026-05-05T12:34:56.000Z'),
@@ -43,6 +43,69 @@ assert.deepEqual(
   {
     valid: true,
     playlists: [playlist],
+  },
+);
+
+assert.deepEqual(
+  validatePlaylistImport({
+    version: 1,
+    source: 'MizukiPrism',
+    playlists: [null],
+  }),
+  {
+    valid: false,
+    error: '檔案不含有效的播放清單',
+  },
+);
+
+assert.deepEqual(
+  validatePlaylistImport({
+    version: 1,
+    source: 'MizukiPrism',
+    playlists: [
+      {
+        ...playlist,
+        versions: [null],
+      },
+    ],
+  }),
+  {
+    valid: false,
+    error: '檔案不含有效的播放清單',
+  },
+);
+
+assert.deepEqual(
+  validatePlaylistImport({
+    version: 1,
+    source: 'MizukiPrism',
+    playlists: [
+      {
+        ...playlist,
+        versions: [{ ...playlist.versions[0], timestamp: '30' }],
+      },
+    ],
+  }),
+  {
+    valid: false,
+    error: '檔案不含有效的播放清單',
+  },
+);
+
+assert.deepEqual(
+  validatePlaylistImport({
+    version: 1,
+    source: 'MizukiPrism',
+    playlists: [
+      {
+        ...playlist,
+        versions: [{ ...playlist.versions[0], endTimestamp: '60' }],
+      },
+    ],
+  }),
+  {
+    valid: false,
+    error: '檔案不含有效的播放清單',
   },
 );
 

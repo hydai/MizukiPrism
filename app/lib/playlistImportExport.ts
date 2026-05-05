@@ -1,4 +1,4 @@
-import type { Playlist, PlaylistExportEnvelope } from '../types/playlist';
+import type { Playlist, PlaylistExportEnvelope, PlaylistVersion } from '../types/playlist';
 
 type PlaylistImportValidationResult =
   | { valid: true; playlists: Playlist[] }
@@ -32,31 +32,46 @@ export function buildPlaylistExportEnvelope(
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function isPlaylistVersion(value: unknown): value is PlaylistVersion {
+  if (!isRecord(value)) return false;
+
+  return typeof value.performanceId === 'string'
+    && typeof value.songTitle === 'string'
+    && typeof value.originalArtist === 'string'
+    && typeof value.videoId === 'string'
+    && typeof value.timestamp === 'number'
+    && (value.endTimestamp == null || typeof value.endTimestamp === 'number');
+}
+
 export function validatePlaylistImport(data: unknown): PlaylistImportValidationResult {
-  if (!data || typeof data !== 'object') {
+  if (!isRecord(data)) {
     return { valid: false, error: '檔案格式無效' };
   }
 
-  const envelope = data as Record<string, unknown>;
-
-  if (envelope.source !== 'MizukiPrism') {
+  if (data.source !== 'MizukiPrism') {
     return { valid: false, error: '非 MizukiPrism 匯出檔案' };
   }
 
-  if (envelope.version !== 1) {
+  if (data.version !== 1) {
     return { valid: false, error: '檔案版本不支援' };
   }
 
-  if (!Array.isArray(envelope.playlists) || envelope.playlists.length === 0) {
+  if (!Array.isArray(data.playlists) || data.playlists.length === 0) {
     return { valid: false, error: '檔案不含播放清單' };
   }
 
   const validPlaylists: Playlist[] = [];
-  for (const p of envelope.playlists) {
+  for (const p of data.playlists) {
     if (
+      isRecord(p) &&
       typeof p.id === 'string' &&
       typeof p.name === 'string' &&
       Array.isArray(p.versions) &&
+      p.versions.every(isPlaylistVersion) &&
       typeof p.createdAt === 'number' &&
       typeof p.updatedAt === 'number'
     ) {
