@@ -6,6 +6,7 @@ import { usePlayerQueueState } from '../hooks/usePlayerQueueState';
 import { usePlayerRuntimeRefs } from '../hooks/usePlayerRuntimeRefs';
 import { usePlayerTimestampWarning } from '../hooks/usePlayerTimestampWarning';
 import { usePlayerTimePolling } from '../hooks/usePlayerTimePolling';
+import { usePlayerTransportControls } from '../hooks/usePlayerTransportControls';
 import { useYouTubeIframeApi } from '../hooks/useYouTubeIframeApi';
 import {
   getNextRepeatMode,
@@ -137,6 +138,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setVolume,
     toggleMute,
   } = usePlayerAudioSettings(playerRef);
+  const { togglePlayPause, seekTo } = usePlayerTransportControls({
+    playerRef,
+    isPlaying,
+    setIsPlaying,
+    setCurrentTime,
+  });
 
   const clearTimestampWarning = () => setTimestampWarning(null);
   const clearSkipNotification = () => setSkipNotification(null);
@@ -374,24 +381,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setCurrentTrack(track);
     setCurrentTime(track.timestamp);
     addToAllTracks(track);
-  };
-
-  const togglePlayPause = () => {
-    if (!playerRef.current) return;
-
-    if (isPlaying) {
-      playerRef.current.pauseVideo();
-      setIsPlaying(false);
-    } else {
-      playerRef.current.playVideo();
-      setIsPlaying(true);
-    }
-  };
-
-  const seekTo = (seconds: number) => {
-    if (!playerRef.current) return;
-    playerRef.current.seekTo(seconds, true);
-    setCurrentTime(seconds);
   };
 
   const previous = () => {
