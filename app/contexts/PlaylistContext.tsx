@@ -1,30 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-export interface PlaylistVersion {
-  performanceId: string;
-  songTitle: string;
-  originalArtist: string;
-  videoId: string;
-  timestamp: number;
-  endTimestamp?: number;
-}
-
-export interface Playlist {
-  id: string;
-  name: string;
-  versions: PlaylistVersion[];
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface PlaylistExportEnvelope {
-  version: 1;
-  exportedAt: string;
-  source: 'MizukiPrism';
-  playlists: Playlist[];
-}
+import type { Playlist, PlaylistExportEnvelope, PlaylistVersion } from '../types/playlist';
 
 interface PlaylistContextType {
   playlists: Playlist[];
