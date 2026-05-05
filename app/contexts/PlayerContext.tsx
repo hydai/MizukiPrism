@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { usePlayerAudioSettings } from '../hooks/usePlayerAudioSettings';
+import { usePlayerErrorState } from '../hooks/usePlayerErrorState';
 import { usePlayerPlaybackModes } from '../hooks/usePlayerPlaybackModes';
 import { usePlayerQueueState } from '../hooks/usePlayerQueueState';
 import { usePlayerRuntimeRefs } from '../hooks/usePlayerRuntimeRefs';
@@ -10,10 +11,6 @@ import { usePlayerTimePolling } from '../hooks/usePlayerTimePolling';
 import { usePlayerTransportControls } from '../hooks/usePlayerTransportControls';
 import { useYouTubeIframeApi } from '../hooks/useYouTubeIframeApi';
 import { resolvePreviousPlayback } from '../lib/playerControls';
-import {
-  addUnavailableVideoId,
-  resolvePlayerError,
-} from '../lib/playerErrors';
 import {
   resolvePlaybackEndAction,
   resolveYouTubePlayerLoadAction,
@@ -40,7 +37,7 @@ interface PlayerContextType {
   isPlayerReady: boolean;
   playerError: string | null;
   apiLoadError: string | null;
-  unavailableVideoIds: Set<string>;
+  unavailableVideoIds: ReadonlySet<string>;
   timestampWarning: string | null;
   clearTimestampWarning: () => void;
   skipNotification: string | null;
@@ -85,8 +82,6 @@ export const usePlayer = () => {
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playerError, setPlayerError] = useState<string | null>(null);
-  const [unavailableVideoIds, setUnavailableVideoIds] = useState<Set<string>>(new Set());
   const [timestampWarning, setTimestampWarning] = useState<string | null>(null);
   const [skipNotification, setSkipNotification] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -99,6 +94,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     toggleRepeat,
     toggleShuffle,
   } = usePlayerPlaybackModes();
+  const {
+    playerError,
+    unavailableVideoIds,
+    clearPlayerError,
+    handlePlayerError,
+  } = usePlayerErrorState();
   const {
     queue,
     setQueue,
@@ -249,7 +250,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     if (!isPlayerReady || !currentTrack) return;
 
     // Clear previous errors when starting new track
-    setPlayerError(null);
+    clearPlayerError();
 
     const player = playerRef.current;
     const loadAction = resolveYouTubePlayerLoadAction({
@@ -344,11 +345,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           }
         },
         onError: (event: YouTubePlayerErrorEvent) => {
-          const resolvedError = resolvePlayerError(event.data, loadedVideoIdRef.current);
-          if (resolvedError) {
-            setPlayerError(resolvedError.message);
-            setUnavailableVideoIds(prev => addUnavailableVideoId(prev, resolvedError.unavailableVideoId));
-          }
+          handlePlayerError(event.data, loadedVideoIdRef.current);
         },
       },
     }) as YouTubePlayerInstance;
@@ -359,7 +356,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     stopTimeUpdateInterval,
     handlePlaybackEnd,
     showTimestampWarningOnce,
+    clearPlayerError,
     currentTrackRef,
+    handlePlayerError,
     loadedVideoIdRef,
     playerRef,
     volumeRef,
