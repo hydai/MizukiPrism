@@ -2,8 +2,14 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { isLocalStorageAvailable } from '../lib/browserStorage';
+import {
+  buildPlaylistExportEnvelope,
+  downloadPlaylistJson,
+  formatPlaylistExportDate,
+  validatePlaylistImport,
+} from '../lib/playlistImportExport';
 import type { PlaylistContextType } from '../types/playlistContext';
-import type { Playlist, PlaylistExportEnvelope, PlaylistVersion } from '../types/playlist';
+import type { Playlist, PlaylistVersion } from '../types/playlist';
 
 const PlaylistContext = createContext<PlaylistContextType | undefined>(undefined);
 
@@ -18,77 +24,6 @@ export const usePlaylist = () => {
 const STORAGE_KEY = 'mizukiprism_playlists';
 const STORAGE_QUOTA_ERROR = '本機儲存空間不足';
 const STORAGE_UNSUPPORTED_ERROR = '您的瀏覽器不支援本機儲存，播放清單功能無法使用';
-
-function formatDate(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function downloadJson(data: PlaylistExportEnvelope, filename: string) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-function buildEnvelope(playlists: Playlist[]): PlaylistExportEnvelope {
-  return {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    source: 'MizukiPrism',
-    playlists,
-  };
-}
-
-function validateImport(data: unknown): { valid: true; playlists: Playlist[] } | { valid: false; error: string } {
-  if (!data || typeof data !== 'object') {
-    return { valid: false, error: '檔案格式無效' };
-  }
-
-  const envelope = data as Record<string, unknown>;
-
-  if (envelope.source !== 'MizukiPrism') {
-    return { valid: false, error: '非 MizukiPrism 匯出檔案' };
-  }
-
-  if (envelope.version !== 1) {
-    return { valid: false, error: '檔案版本不支援' };
-  }
-
-  if (!Array.isArray(envelope.playlists) || envelope.playlists.length === 0) {
-    return { valid: false, error: '檔案不含播放清單' };
-  }
-
-  const validPlaylists: Playlist[] = [];
-  for (const p of envelope.playlists) {
-    if (
-      typeof p.id === 'string' &&
-      typeof p.name === 'string' &&
-      Array.isArray(p.versions) &&
-      typeof p.createdAt === 'number' &&
-      typeof p.updatedAt === 'number'
-    ) {
-      validPlaylists.push({
-        id: p.id,
-        name: p.name,
-        versions: p.versions,
-        createdAt: p.createdAt,
-        updatedAt: p.updatedAt,
-      });
-    }
-  }
-
-  if (validPlaylists.length === 0) {
-    return { valid: false, error: '檔案不含有效的播放清單' };
-  }
-
-  return { valid: true, playlists: validPlaylists };
-}
 
 export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -242,13 +177,19 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
 
   const exportAll = () => {
     if (playlists.length === 0) return;
-    downloadJson(buildEnvelope(playlists), `mizukiprism-playlists-${formatDate()}.json`);
+    downloadPlaylistJson(
+      buildPlaylistExportEnvelope(playlists),
+      `mizukiprism-playlists-${formatPlaylistExportDate()}.json`,
+    );
   };
 
   const exportSingle = (playlistId: string) => {
     const playlist = playlists.find(p => p.id === playlistId);
     if (!playlist) return;
-    downloadJson(buildEnvelope([playlist]), `mizukiprism-${playlist.name}-${formatDate()}.json`);
+    downloadPlaylistJson(
+      buildPlaylistExportEnvelope([playlist]),
+      `mizukiprism-${playlist.name}-${formatPlaylistExportDate()}.json`,
+    );
   };
 
   const importPlaylists = async (file: File): Promise<{ success: boolean; count?: number; error?: string }> => {
@@ -261,7 +202,7 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
         return { success: false, error: '無法匯入：檔案格式無效' };
       }
 
-      const result = validateImport(data);
+      const result = validatePlaylistImport(data);
       if (!result.valid) {
         return { success: false, error: `無法匯入：${result.error}` };
       }
