@@ -188,10 +188,15 @@ async function mockCatalogSongsApi(page: Page) {
   });
 }
 
-async function reloadWithMockCatalogSongs(page: Page): Promise<void> {
-  await mockCatalogSongsApi(page);
-  await page.reload();
+async function loadProductionPage(page: Page): Promise<void> {
+  await page.goto(BASE_URL);
   await page.waitForLoadState('networkidle');
+}
+
+async function loadMockedPollingPage(page: Page): Promise<void> {
+  await mockYouTubeIframeApi(page);
+  await mockCatalogSongsApi(page);
+  await loadProductionPage(page);
 }
 
 async function expectProductionSongsApiAvailable(request: APIRequestContext): Promise<void> {
@@ -248,14 +253,9 @@ test('PLAY-002 contract: production /api/songs is reachable', async ({ request }
 
 test.describe('PLAY-002: Play Queue Management', () => {
 
-  test.beforeEach(async ({ page }) => {
-    await mockYouTubeIframeApi(page);
-    await page.goto(BASE_URL);
-    // Wait for page to be fully loaded
-    await page.waitForLoadState('networkidle');
-  });
-
   test('AC1: Click "add to queue" shows toast notification and adds to queue', async ({ page }) => {
+    await loadProductionPage(page);
+
     // Find first performance row and hover
     const firstRow = page.locator('[data-testid="performance-row"]').first();
     await firstRow.hover();
@@ -290,6 +290,8 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC2: Add multiple versions to queue and verify order', async ({ page }) => {
+    await loadProductionPage(page);
+
     // Add first 3 performances to queue
     const rows = page.locator('[data-testid="performance-row"]');
     for (let i = 0; i < 3; i++) {
@@ -321,6 +323,8 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC3: Add same version again (duplicates allowed)', async ({ page }) => {
+    await loadProductionPage(page);
+
     // Add first performance twice
     const firstRow = page.locator('[data-testid="performance-row"]').first();
 
@@ -350,6 +354,8 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC4: Drag to reorder queue items', async ({ page }) => {
+    await loadProductionPage(page);
+
     // Add 3 performances to queue
     const rows = page.locator('[data-testid="performance-row"]');
     for (let i = 0; i < 3; i++) {
@@ -390,6 +396,8 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC5: Remove item from queue', async ({ page }) => {
+    await loadProductionPage(page);
+
     // Add 2 performances to queue
     const rows = page.locator('[data-testid="performance-row"]');
     for (let i = 0; i < 2; i++) {
@@ -426,6 +434,8 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC6: Empty queue shows empty state message', async ({ page }) => {
+    await loadProductionPage(page);
+
     // Click play button to show mini player
     const firstRow = page.locator('[data-testid="performance-row"]').first();
     await firstRow.hover();
@@ -445,6 +455,8 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC7: Auto-play next song when current finishes', async ({ page }) => {
+    await loadProductionPage(page);
+
     // Add 2 performances to queue
     const rows = page.locator('[data-testid="performance-row"]');
 
@@ -490,7 +502,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC7b: Polling interval advances when track end is reached', async ({ page }) => {
-    await reloadWithMockCatalogSongs(page);
+    await loadMockedPollingPage(page);
     await expectCatalogPerformanceFixture(page, CLIPPED_CURRENT_FIXTURE);
     await expectCatalogPerformanceFixture(page, CLIPPED_QUEUE_FIXTURE);
 
@@ -518,7 +530,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC7c: Polling interval pauses player when no next track remains', async ({ page }) => {
-    await reloadWithMockCatalogSongs(page);
+    await loadMockedPollingPage(page);
     await expectCatalogPerformanceFixture(page, CLIPPED_CURRENT_FIXTURE);
 
     const currentRow = await findPerformanceRow(page, CLIPPED_CURRENT_FIXTURE);
@@ -538,7 +550,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC7d: Native ended event loops current track with repeat-one enabled', async ({ page }) => {
-    await reloadWithMockCatalogSongs(page);
+    await loadMockedPollingPage(page);
     await useDesktopViewport(page);
 
     const currentRow = await findPerformanceRow(page, CLIPPED_CURRENT_FIXTURE);
@@ -571,7 +583,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC7e: Native ended event stops playback when a full-length track ends', async ({ page }) => {
-    await reloadWithMockCatalogSongs(page);
+    await loadMockedPollingPage(page);
     await expectCatalogPerformanceFixture(page, FULL_LENGTH_FIXTURE);
 
     const currentRow = await findPerformanceRow(page, FULL_LENGTH_FIXTURE);
@@ -592,7 +604,7 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC7f: Repeat-one native ended event clamps out-of-bounds restart and warns once', async ({ page }) => {
-    await reloadWithMockCatalogSongs(page);
+    await loadMockedPollingPage(page);
     await useDesktopViewport(page);
 
     const currentRow = await findPerformanceRow(page, CLIPPED_CURRENT_FIXTURE);
@@ -642,6 +654,8 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC8: Next button plays next item or stops if queue empty', async ({ page }) => {
+    await loadProductionPage(page);
+
     // Add 1 performance to queue
     const rows = page.locator('[data-testid="performance-row"]');
     await rows.nth(0).hover();
@@ -678,6 +692,8 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC (Grouped View): Add to queue works in grouped view', async ({ page }) => {
+    await loadProductionPage(page);
+
     // Switch to grouped view
     await page.locator('[data-testid="view-toggle-grouped"]').click();
     await page.waitForTimeout(500);
@@ -715,6 +731,8 @@ test.describe('PLAY-002: Play Queue Management', () => {
   });
 
   test('AC (Visual): Queue button badge shows count', async ({ page }) => {
+    await loadProductionPage(page);
+
     // Add 3 items to queue
     const rows = page.locator('[data-testid="performance-row"]');
     for (let i = 0; i < 3; i++) {
