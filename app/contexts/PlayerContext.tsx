@@ -1,10 +1,11 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { usePlayerAudioSettings } from '../hooks/usePlayerAudioSettings';
 import { usePlayerErrorState } from '../hooks/usePlayerErrorState';
 import { usePlayerNavigationControls } from '../hooks/usePlayerNavigationControls';
 import { usePlayerNotificationState } from '../hooks/usePlayerNotificationState';
+import { usePlayerPlaybackEnd } from '../hooks/usePlayerPlaybackEnd';
 import { usePlayerPlaybackModes } from '../hooks/usePlayerPlaybackModes';
 import { usePlayerQueueAdvance } from '../hooks/usePlayerQueueAdvance';
 import { usePlayerQueueState } from '../hooks/usePlayerQueueState';
@@ -14,7 +15,6 @@ import { usePlayerTrackSelection } from '../hooks/usePlayerTrackSelection';
 import { usePlayerTransportControls } from '../hooks/usePlayerTransportControls';
 import { useYouTubeIframeApi } from '../hooks/useYouTubeIframeApi';
 import {
-  resolvePlaybackEndAction,
   resolveYouTubePlayerLoadAction,
   resolveYouTubePlaybackState,
 } from '../lib/playerPlayback';
@@ -177,44 +177,15 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setCurrentTrack,
     setCurrentTime,
   });
-
-  const handlePlaybackEnd = useCallback((options: { resumeLoopPlayback?: boolean } = {}): 'continue' | 'stop' => {
-    const player = playerRef.current;
-    const freshQueue = queueRef.current;
-    const endAction = resolvePlaybackEndAction({
-      currentTrack: currentTrackRef.current,
-      queueLength: freshQueue.length,
-      repeatMode: repeatModeRef.current,
-    });
-
-    if (endAction.type === 'loop') {
-      const videoDuration = player?.getDuration?.() || 0;
-      const startPosition = resolveTrackStartPosition(endAction.track, videoDuration);
-      player?.seekTo(startPosition.startSeconds, true);
-      if (startPosition.timestampOutOfBounds) {
-        showTimestampWarningOnce(endAction.track);
-      }
-      if (options.resumeLoopPlayback) {
-        player?.playVideo();
-      }
-      return 'continue';
-    }
-
-    if (endAction.type === 'advance') {
-      return advanceSkippingDeleted(freshQueue, currentTrackRef.current) ? 'continue' : 'stop';
-    }
-
-    player?.pauseVideo();
-    setIsPlaying(false);
-    return 'stop';
-  }, [
-    advanceSkippingDeleted,
-    currentTrackRef,
+  const { handlePlaybackEnd } = usePlayerPlaybackEnd({
     playerRef,
     queueRef,
+    currentTrackRef,
     repeatModeRef,
+    advanceSkippingDeleted,
     showTimestampWarningOnce,
-  ]);
+    setIsPlaying,
+  });
 
   const { startTimeUpdateInterval, stopTimeUpdateInterval } = usePlayerTimePolling({
     playerRef,
