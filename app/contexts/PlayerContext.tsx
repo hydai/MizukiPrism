@@ -8,6 +8,7 @@ import { usePlayerPlaybackModes } from '../hooks/usePlayerPlaybackModes';
 import { usePlayerQueueState } from '../hooks/usePlayerQueueState';
 import { usePlayerRuntimeRefs } from '../hooks/usePlayerRuntimeRefs';
 import { usePlayerTimePolling } from '../hooks/usePlayerTimePolling';
+import { usePlayerTrackSelection } from '../hooks/usePlayerTrackSelection';
 import { usePlayerTransportControls } from '../hooks/usePlayerTransportControls';
 import { useYouTubeIframeApi } from '../hooks/useYouTubeIframeApi';
 import { resolvePreviousPlayback } from '../lib/playerControls';
@@ -80,12 +81,10 @@ export const usePlayer = () => {
 };
 
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showModal, setShowModal] = useState(false);
-  const [playHistory, setPlayHistory] = useState<Track[]>([]);
   const {
     repeatMode,
     shuffleOn,
@@ -110,6 +109,26 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     reorderQueue,
   } = usePlayerQueueState();
   const { isPlayerReady, apiLoadError } = useYouTubeIframeApi();
+  const {
+    timestampWarning,
+    clearTimestampWarning,
+    showTimestampWarningOnce,
+    resetTimestampWarningOnceState,
+    skipNotification,
+    clearSkipNotification,
+    showSkipNotification,
+  } = usePlayerNotificationState();
+  const {
+    currentTrack,
+    setCurrentTrack,
+    playHistory,
+    setPlayHistory,
+    playTrack,
+  } = usePlayerTrackSelection({
+    setCurrentTime,
+    resetTimestampWarningOnceState,
+    addToAllTracks,
+  });
 
   // Derived track-relative time values (never fall back to full VOD duration)
   const trackCurrentTime = getTrackCurrentTime(currentTrack, currentTime);
@@ -145,15 +164,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setIsPlaying,
     setCurrentTime,
   });
-  const {
-    timestampWarning,
-    clearTimestampWarning,
-    showTimestampWarningOnce,
-    resetTimestampWarningOnceState,
-    skipNotification,
-    clearSkipNotification,
-    showSkipNotification,
-  } = usePlayerNotificationState();
 
   // Advance to the next playable track, refilling from all tracks in repeat-all mode when needed.
   // Returns true when a track is selected and set as current; false when no playable track remains.
@@ -195,6 +205,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     playerRef,
     repeatModeRef,
     resetTimestampWarningOnceState,
+    setCurrentTrack,
+    setPlayHistory,
     setQueue,
     showSkipNotification,
     shuffleOnRef,
@@ -365,17 +377,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     volumeRef,
     isMutedRef,
   ]);
-
-  const playTrack = (track: Track) => {
-    // Add current track to history before switching
-    if (currentTrack && currentTrack.id !== track.id) {
-      setPlayHistory((prev) => [...prev, currentTrack]);
-    }
-    resetTimestampWarningOnceState();
-    setCurrentTrack(track);
-    setCurrentTime(track.timestamp);
-    addToAllTracks(track);
-  };
 
   const previous = () => {
     const action = resolvePreviousPlayback({
