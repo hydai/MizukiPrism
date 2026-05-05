@@ -59,6 +59,13 @@ export function usePlayerYouTubeLifecycle({
   setDuration,
   setIsPlaying,
 }: UsePlayerYouTubeLifecycleOptions): void {
+  useEffect(() => () => {
+    stopTimeUpdateInterval();
+    playerRef.current?.destroy();
+    playerRef.current = null;
+    loadedVideoIdRef.current = null;
+  }, [loadedVideoIdRef, playerRef, stopTimeUpdateInterval]);
+
   // Initialize YouTube player when ready and track is available.
   // Reuses the existing player instance to preserve autoplay permission.
   useEffect(() => {
