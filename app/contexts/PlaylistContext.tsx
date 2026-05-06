@@ -138,6 +138,10 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
 
   const reorderVersionsInPlaylist = (playlistId: string, fromIndex: number, toIndex: number) => {
     const newPlaylists = reorderPlaylistVersionsMutation(playlists, playlistId, fromIndex, toIndex);
+    if (newPlaylists === playlists) {
+      return;
+    }
+
     saveToLocalStorage(newPlaylists);
     setPlaylists(newPlaylists);
   };
