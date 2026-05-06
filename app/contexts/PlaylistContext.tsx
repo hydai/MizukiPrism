@@ -8,6 +8,7 @@ import {
   formatPlaylistExportDate,
   validatePlaylistImport,
 } from '../lib/playlistImportExport';
+import { mergeImportedPlaylists } from '../lib/playlistImportMerge';
 import {
   addVersionToPlaylistMutation,
   createPlaylistMutation,
@@ -195,32 +196,7 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const incoming = result.playlists;
-      const localMap = new Map(playlists.map(p => [p.id, p]));
-      const merged: Playlist[] = [...playlists];
-
-      for (const imported of incoming) {
-        const existing = localMap.get(imported.id);
-        if (!existing) {
-          // No conflict — add directly
-          merged.push(imported);
-        } else if (imported.updatedAt > existing.updatedAt) {
-          // Imported is newer — replace existing, keep old as renamed copy
-          const idx = merged.findIndex(p => p.id === existing.id);
-          merged[idx] = imported;
-          merged.push({
-            ...existing,
-            id: `playlist-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            name: `${existing.name}（匯入）`,
-          });
-        } else {
-          // Existing is newer or same — keep existing, add imported as renamed copy
-          merged.push({
-            ...imported,
-            id: `playlist-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            name: `${imported.name}（匯入）`,
-          });
-        }
-      }
+      const merged = mergeImportedPlaylists(playlists, incoming);
 
       const saveResult = saveToLocalStorage(merged);
       if (!saveResult.success) {
