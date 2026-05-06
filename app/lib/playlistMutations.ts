@@ -123,28 +123,30 @@ export function reorderPlaylistVersionsMutation(
   toIndex: number,
   options: PlaylistMutationOptions = {},
 ): Playlist[] {
+  const playlistIndex = playlists.findIndex(playlist => playlist.id === playlistId);
+  if (playlistIndex === -1) {
+    return playlists;
+  }
+
+  const playlist = playlists[playlistIndex];
+  if (
+    !Number.isInteger(fromIndex)
+    || !Number.isInteger(toIndex)
+    || fromIndex < 0
+    || fromIndex >= playlist.versions.length
+    || toIndex < 0
+    || toIndex >= playlist.versions.length
+    || fromIndex === toIndex
+  ) {
+    return playlists;
+  }
+
   const now = getTimestamp(options);
+  const versions = [...playlist.versions];
+  const [removed] = versions.splice(fromIndex, 1);
+  versions.splice(toIndex, 0, removed);
 
-  return playlists.map(playlist => {
-    if (playlist.id !== playlistId) {
-      return playlist;
-    }
-
-    if (
-      !Number.isInteger(fromIndex)
-      || !Number.isInteger(toIndex)
-      || fromIndex < 0
-      || fromIndex >= playlist.versions.length
-      || toIndex < 0
-      || toIndex >= playlist.versions.length
-      || fromIndex === toIndex
-    ) {
-      return playlist;
-    }
-
-    const versions = [...playlist.versions];
-    const [removed] = versions.splice(fromIndex, 1);
-    versions.splice(toIndex, 0, removed);
-    return { ...playlist, versions, updatedAt: now };
-  });
+  return playlists.map((item, index) =>
+    index === playlistIndex ? { ...playlist, versions, updatedAt: now } : item
+  );
 }

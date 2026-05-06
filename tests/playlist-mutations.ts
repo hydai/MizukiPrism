@@ -35,6 +35,7 @@ const playlist: Playlist = {
   createdAt: 1000,
   updatedAt: 2000,
 };
+const playlists = [playlist];
 
 assert.deepEqual(createPlaylistMutation([], '   '), {
   success: false,
@@ -99,14 +100,18 @@ assert.deepEqual(reorderPlaylistVersionsMutation([playlist], playlist.id, 1, 0, 
 ]);
 
 assert.deepEqual(
-  reorderPlaylistVersionsMutation([playlist], playlist.id, -1, 0, { now: 3000 }),
-  [playlist],
+  reorderPlaylistVersionsMutation(playlists, playlist.id, -1, 0, { now: 3000 }),
+  playlists,
 );
+assert.equal(reorderPlaylistVersionsMutation(playlists, playlist.id, -1, 0, { now: 3000 }), playlists);
 assert.deepEqual(
-  reorderPlaylistVersionsMutation([playlist], playlist.id, 0, 2, { now: 3000 }),
-  [playlist],
+  reorderPlaylistVersionsMutation(playlists, playlist.id, 0, 2, { now: 3000 }),
+  playlists,
 );
+assert.equal(reorderPlaylistVersionsMutation(playlists, playlist.id, 0, 2, { now: 3000 }), playlists);
 assert.deepEqual(
-  reorderPlaylistVersionsMutation([playlist], playlist.id, 1, 1, { now: 3000 }),
-  [playlist],
+  reorderPlaylistVersionsMutation(playlists, playlist.id, 1, 1, { now: 3000 }),
+  playlists,
 );
+assert.equal(reorderPlaylistVersionsMutation(playlists, playlist.id, 1, 1, { now: 3000 }), playlists);
+assert.equal(reorderPlaylistVersionsMutation(playlists, 'missing', 1, 0, { now: 3000 }), playlists);
