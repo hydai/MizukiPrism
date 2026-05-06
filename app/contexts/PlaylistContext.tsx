@@ -9,7 +9,6 @@ import {
   validatePlaylistImport,
 } from '../lib/playlistImportExport';
 import {
-  PLAYLIST_STORAGE_QUOTA_ERROR,
   PLAYLIST_STORAGE_UNSUPPORTED_ERROR,
   getPlaylistStorageWriteErrorMessage,
   readStoredPlaylists,
