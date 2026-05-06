@@ -8,6 +8,12 @@ import {
   formatPlaylistExportDate,
   validatePlaylistImport,
 } from '../lib/playlistImportExport';
+import {
+  PLAYLIST_STORAGE_QUOTA_ERROR,
+  PLAYLIST_STORAGE_UNSUPPORTED_ERROR,
+  readStoredPlaylists,
+  writeStoredPlaylists,
+} from '../lib/playlistStorage';
 import type { PlaylistContextType } from '../types/playlistContext';
 import type { Playlist, PlaylistVersion } from '../types/playlist';
 
@@ -21,10 +27,6 @@ export const usePlaylist = () => {
   return context;
 };
 
-const STORAGE_KEY = 'mizukiprism_playlists';
-const STORAGE_QUOTA_ERROR = '本機儲存空間不足';
-const STORAGE_UNSUPPORTED_ERROR = '您的瀏覽器不支援本機儲存，播放清單功能無法使用';
-
 export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [storageError, setStorageError] = useState<string | null>(null);
@@ -35,14 +37,9 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
   // Load playlists from localStorage on mount
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        const normalized = parsed.map((p: any) => ({
-          ...p,
-          updatedAt: p.updatedAt || p.createdAt || Date.now(),
-        }));
-        setPlaylists(normalized);
+      const storedPlaylists = readStoredPlaylists();
+      if (storedPlaylists) {
+        setPlaylists(storedPlaylists);
       }
     } catch (error) {
       console.error('Failed to load playlists from localStorage:', error);
@@ -51,20 +48,19 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
 
   const saveToLocalStorage = (newPlaylists: Playlist[]): boolean => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newPlaylists));
+      writeStoredPlaylists(newPlaylists);
       setStorageError(null);
       return true;
-    } catch (error: any) {
-      const isQuotaError = error?.name === 'QuotaExceededError' || error?.code === 22;
-      setStorageError(isQuotaError ? STORAGE_QUOTA_ERROR : STORAGE_QUOTA_ERROR);
+    } catch {
+      setStorageError(PLAYLIST_STORAGE_QUOTA_ERROR);
       return false;
     }
   };
 
   const createPlaylist = (name: string): { success: boolean; error?: string } => {
     if (!localStorageSupported) {
-      setStorageError(STORAGE_UNSUPPORTED_ERROR);
-      return { success: false, error: STORAGE_UNSUPPORTED_ERROR };
+      setStorageError(PLAYLIST_STORAGE_UNSUPPORTED_ERROR);
+      return { success: false, error: PLAYLIST_STORAGE_UNSUPPORTED_ERROR };
     }
 
     const trimmedName = name.trim();
@@ -88,7 +84,7 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
       setPlaylists(newPlaylists);
       return { success: true };
     }
-    return { success: false, error: STORAGE_QUOTA_ERROR };
+    return { success: false, error: PLAYLIST_STORAGE_QUOTA_ERROR };
   };
 
   const deletePlaylist = (id: string) => {
@@ -113,13 +109,13 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
       setPlaylists(newPlaylists);
       return { success: true };
     }
-    return { success: false, error: STORAGE_QUOTA_ERROR };
+    return { success: false, error: PLAYLIST_STORAGE_QUOTA_ERROR };
   };
 
   const addVersionToPlaylist = (playlistId: string, version: PlaylistVersion): { success: boolean; error?: string } => {
     if (!localStorageSupported) {
-      setStorageError(STORAGE_UNSUPPORTED_ERROR);
-      return { success: false, error: STORAGE_UNSUPPORTED_ERROR };
+      setStorageError(PLAYLIST_STORAGE_UNSUPPORTED_ERROR);
+      return { success: false, error: PLAYLIST_STORAGE_UNSUPPORTED_ERROR };
     }
 
     const playlist = playlists.find(p => p.id === playlistId);
@@ -144,7 +140,7 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
       setPlaylists(newPlaylists);
       return { success: true };
     }
-    return { success: false, error: STORAGE_QUOTA_ERROR };
+    return { success: false, error: PLAYLIST_STORAGE_QUOTA_ERROR };
   };
 
   const removeVersionFromPlaylist = (playlistId: string, performanceId: string) => {
@@ -237,7 +233,7 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
 
       const saved = saveToLocalStorage(merged);
       if (!saved) {
-        return { success: false, error: '本機儲存空間不足' };
+        return { success: false, error: PLAYLIST_STORAGE_QUOTA_ERROR };
       }
 
       setPlaylists(merged);
