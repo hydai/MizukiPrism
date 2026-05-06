@@ -97,3 +97,16 @@ assert.deepEqual(removeVersionFromPlaylistMutation([playlist], playlist.id, vers
 assert.deepEqual(reorderPlaylistVersionsMutation([playlist], playlist.id, 1, 0, { now: 3000 }), [
   { ...playlist, versions: [versionTwo, versionOne], updatedAt: 3000 },
 ]);
+
+assert.deepEqual(
+  reorderPlaylistVersionsMutation([playlist], playlist.id, -1, 0, { now: 3000 }),
+  [playlist],
+);
+assert.deepEqual(
+  reorderPlaylistVersionsMutation([playlist], playlist.id, 0, 2, { now: 3000 }),
+  [playlist],
+);
+assert.deepEqual(
+  reorderPlaylistVersionsMutation([playlist], playlist.id, 1, 1, { now: 3000 }),
+  [playlist],
+);
