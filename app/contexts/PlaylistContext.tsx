@@ -9,6 +9,14 @@ import {
   validatePlaylistImport,
 } from '../lib/playlistImportExport';
 import {
+  addVersionToPlaylistMutation,
+  createPlaylistMutation,
+  deletePlaylistMutation,
+  removeVersionFromPlaylistMutation,
+  renamePlaylistMutation,
+  reorderPlaylistVersionsMutation,
+} from '../lib/playlistMutations';
+import {
   PLAYLIST_STORAGE_UNSUPPORTED_ERROR,
   getPlaylistStorageWriteErrorMessage,
   readStoredPlaylists,
@@ -69,50 +77,35 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
       return { success: false, error: PLAYLIST_STORAGE_UNSUPPORTED_ERROR };
     }
 
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      return { success: false, error: '播放清單名稱不可為空' };
+    const mutationResult = createPlaylistMutation(playlists, name);
+    if (!mutationResult.success) {
+      return mutationResult;
     }
 
-    const now = Date.now();
-    const newPlaylist: Playlist = {
-      id: `playlist-${now}-${Math.random().toString(36).substr(2, 9)}`,
-      name: trimmedName,
-      versions: [],
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const newPlaylists = [...playlists, newPlaylist];
-    const saveResult = saveToLocalStorage(newPlaylists);
+    const saveResult = saveToLocalStorage(mutationResult.playlists);
 
     if (saveResult.success) {
-      setPlaylists(newPlaylists);
+      setPlaylists(mutationResult.playlists);
       return { success: true };
     }
     return { success: false, error: saveResult.error };
   };
 
   const deletePlaylist = (id: string) => {
-    const newPlaylists = playlists.filter(p => p.id !== id);
+    const newPlaylists = deletePlaylistMutation(playlists, id);
     saveToLocalStorage(newPlaylists);
     setPlaylists(newPlaylists);
   };
 
   const renamePlaylist = (id: string, newName: string): { success: boolean; error?: string } => {
-    const trimmedName = newName.trim();
-    if (!trimmedName) {
-      return { success: false, error: '播放清單名稱不可為空' };
+    const mutationResult = renamePlaylistMutation(playlists, id, newName);
+    if (!mutationResult.success) {
+      return mutationResult;
     }
 
-    const now = Date.now();
-    const newPlaylists = playlists.map(p =>
-      p.id === id ? { ...p, name: trimmedName, updatedAt: now } : p
-    );
-
-    const saveResult = saveToLocalStorage(newPlaylists);
+    const saveResult = saveToLocalStorage(mutationResult.playlists);
     if (saveResult.success) {
-      setPlaylists(newPlaylists);
+      setPlaylists(mutationResult.playlists);
       return { success: true };
     }
     return { success: false, error: saveResult.error };
@@ -124,53 +117,27 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
       return { success: false, error: PLAYLIST_STORAGE_UNSUPPORTED_ERROR };
     }
 
-    const playlist = playlists.find(p => p.id === playlistId);
-    if (!playlist) {
-      return { success: false, error: '播放清單不存在' };
+    const mutationResult = addVersionToPlaylistMutation(playlists, playlistId, version);
+    if (!mutationResult.success) {
+      return mutationResult;
     }
 
-    const exists = playlist.versions.some(v => v.performanceId === version.performanceId);
-    if (exists) {
-      return { success: false, error: '此版本已在播放清單中' };
-    }
-
-    const now = Date.now();
-    const newPlaylists = playlists.map(p =>
-      p.id === playlistId
-        ? { ...p, versions: [...p.versions, version], updatedAt: now }
-        : p
-    );
-
-    const saveResult = saveToLocalStorage(newPlaylists);
+    const saveResult = saveToLocalStorage(mutationResult.playlists);
     if (saveResult.success) {
-      setPlaylists(newPlaylists);
+      setPlaylists(mutationResult.playlists);
       return { success: true };
     }
     return { success: false, error: saveResult.error };
   };
 
   const removeVersionFromPlaylist = (playlistId: string, performanceId: string) => {
-    const now = Date.now();
-    const newPlaylists = playlists.map(p =>
-      p.id === playlistId
-        ? { ...p, versions: p.versions.filter(v => v.performanceId !== performanceId), updatedAt: now }
-        : p
-    );
+    const newPlaylists = removeVersionFromPlaylistMutation(playlists, playlistId, performanceId);
     saveToLocalStorage(newPlaylists);
     setPlaylists(newPlaylists);
   };
 
   const reorderVersionsInPlaylist = (playlistId: string, fromIndex: number, toIndex: number) => {
-    const now = Date.now();
-    const newPlaylists = playlists.map(p => {
-      if (p.id === playlistId) {
-        const newVersions = [...p.versions];
-        const [removed] = newVersions.splice(fromIndex, 1);
-        newVersions.splice(toIndex, 0, removed);
-        return { ...p, versions: newVersions, updatedAt: now };
-      }
-      return p;
-    });
+    const newPlaylists = reorderPlaylistVersionsMutation(playlists, playlistId, fromIndex, toIndex);
     saveToLocalStorage(newPlaylists);
     setPlaylists(newPlaylists);
   };
