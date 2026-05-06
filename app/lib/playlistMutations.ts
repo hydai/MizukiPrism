@@ -18,7 +18,7 @@ function getTimestamp(options: PlaylistMutationOptions): number {
 }
 
 function getIdSuffix(options: PlaylistMutationOptions): string {
-  return options.idSuffix ?? Math.random().toString(36).substr(2, 9);
+  return options.idSuffix ?? Math.random().toString(36).slice(2, 11);
 }
 
 function createPlaylistId(now: number, idSuffix: string): string {
@@ -127,6 +127,18 @@ export function reorderPlaylistVersionsMutation(
 
   return playlists.map(playlist => {
     if (playlist.id !== playlistId) {
+      return playlist;
+    }
+
+    if (
+      !Number.isInteger(fromIndex)
+      || !Number.isInteger(toIndex)
+      || fromIndex < 0
+      || fromIndex >= playlist.versions.length
+      || toIndex < 0
+      || toIndex >= playlist.versions.length
+      || fromIndex === toIndex
+    ) {
       return playlist;
     }
 
