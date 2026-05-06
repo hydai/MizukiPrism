@@ -11,6 +11,7 @@ import {
 import {
   PLAYLIST_STORAGE_QUOTA_ERROR,
   PLAYLIST_STORAGE_UNSUPPORTED_ERROR,
+  getPlaylistStorageWriteErrorMessage,
   readStoredPlaylists,
   writeStoredPlaylists,
 } from '../lib/playlistStorage';
@@ -18,6 +19,10 @@ import type { PlaylistContextType } from '../types/playlistContext';
 import type { Playlist, PlaylistVersion } from '../types/playlist';
 
 const PlaylistContext = createContext<PlaylistContextType | undefined>(undefined);
+
+type PlaylistStorageSaveResult =
+  | { success: true }
+  | { success: false; error: string };
 
 export const usePlaylist = () => {
   const context = useContext(PlaylistContext);
@@ -46,14 +51,16 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const saveToLocalStorage = (newPlaylists: Playlist[]): boolean => {
+  const saveToLocalStorage = (newPlaylists: Playlist[]): PlaylistStorageSaveResult => {
     try {
       writeStoredPlaylists(newPlaylists);
       setStorageError(null);
-      return true;
-    } catch {
-      setStorageError(PLAYLIST_STORAGE_QUOTA_ERROR);
-      return false;
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to save playlists to localStorage:', error);
+      const message = getPlaylistStorageWriteErrorMessage(error);
+      setStorageError(message);
+      return { success: false, error: message };
     }
   };
 
@@ -78,13 +85,13 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const newPlaylists = [...playlists, newPlaylist];
-    const saved = saveToLocalStorage(newPlaylists);
+    const saveResult = saveToLocalStorage(newPlaylists);
 
-    if (saved) {
+    if (saveResult.success) {
       setPlaylists(newPlaylists);
       return { success: true };
     }
-    return { success: false, error: PLAYLIST_STORAGE_QUOTA_ERROR };
+    return { success: false, error: saveResult.error };
   };
 
   const deletePlaylist = (id: string) => {
@@ -104,12 +111,12 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
       p.id === id ? { ...p, name: trimmedName, updatedAt: now } : p
     );
 
-    const saved = saveToLocalStorage(newPlaylists);
-    if (saved) {
+    const saveResult = saveToLocalStorage(newPlaylists);
+    if (saveResult.success) {
       setPlaylists(newPlaylists);
       return { success: true };
     }
-    return { success: false, error: PLAYLIST_STORAGE_QUOTA_ERROR };
+    return { success: false, error: saveResult.error };
   };
 
   const addVersionToPlaylist = (playlistId: string, version: PlaylistVersion): { success: boolean; error?: string } => {
@@ -135,12 +142,12 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
         : p
     );
 
-    const saved = saveToLocalStorage(newPlaylists);
-    if (saved) {
+    const saveResult = saveToLocalStorage(newPlaylists);
+    if (saveResult.success) {
       setPlaylists(newPlaylists);
       return { success: true };
     }
-    return { success: false, error: PLAYLIST_STORAGE_QUOTA_ERROR };
+    return { success: false, error: saveResult.error };
   };
 
   const removeVersionFromPlaylist = (playlistId: string, performanceId: string) => {
@@ -231,9 +238,9 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      const saved = saveToLocalStorage(merged);
-      if (!saved) {
-        return { success: false, error: PLAYLIST_STORAGE_QUOTA_ERROR };
+      const saveResult = saveToLocalStorage(merged);
+      if (!saveResult.success) {
+        return { success: false, error: saveResult.error };
       }
 
       setPlaylists(merged);

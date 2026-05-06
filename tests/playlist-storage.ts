@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import {
   PLAYLIST_STORAGE_KEY,
+  PLAYLIST_STORAGE_QUOTA_ERROR,
+  PLAYLIST_STORAGE_SAVE_ERROR,
+  PLAYLIST_STORAGE_UNSUPPORTED_ERROR,
+  getPlaylistStorageWriteErrorMessage,
   readStoredPlaylists,
   writeStoredPlaylists,
 } from '../app/lib/playlistStorage';
@@ -74,3 +78,21 @@ assert.deepEqual(
 const writableStorage = createPlaylistStorage();
 writeStoredPlaylists([playlist], writableStorage);
 assert.equal(writableStorage.values.get(PLAYLIST_STORAGE_KEY), JSON.stringify([playlist]));
+
+assert.equal(
+  getPlaylistStorageWriteErrorMessage({ name: 'QuotaExceededError' }),
+  PLAYLIST_STORAGE_QUOTA_ERROR,
+);
+assert.equal(getPlaylistStorageWriteErrorMessage({ code: 22 }), PLAYLIST_STORAGE_QUOTA_ERROR);
+assert.equal(
+  getPlaylistStorageWriteErrorMessage({ name: 'NS_ERROR_DOM_QUOTA_REACHED' }),
+  PLAYLIST_STORAGE_QUOTA_ERROR,
+);
+assert.equal(
+  getPlaylistStorageWriteErrorMessage({ name: 'SecurityError' }),
+  PLAYLIST_STORAGE_UNSUPPORTED_ERROR,
+);
+assert.equal(
+  getPlaylistStorageWriteErrorMessage(new Error('unexpected')),
+  PLAYLIST_STORAGE_SAVE_ERROR,
+);
