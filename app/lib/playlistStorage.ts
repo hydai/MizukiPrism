@@ -16,7 +16,7 @@ function parseStoredPlaylists(stored: string): Playlist[] {
 
   return parsed.map(playlist => ({
     ...playlist,
-    updatedAt: playlist.updatedAt || playlist.createdAt || Date.now(),
+    updatedAt: playlist.updatedAt ?? playlist.createdAt ?? Date.now(),
   }));
 }
 
