@@ -93,8 +93,14 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
 
   const deletePlaylist = (id: string) => {
     const newPlaylists = deletePlaylistMutation(playlists, id);
-    saveToLocalStorage(newPlaylists);
-    setPlaylists(newPlaylists);
+    if (newPlaylists === playlists) {
+      return;
+    }
+
+    const saveResult = saveToLocalStorage(newPlaylists);
+    if (saveResult.success) {
+      setPlaylists(newPlaylists);
+    }
   };
 
   const renamePlaylist = (id: string, newName: string): { success: boolean; error?: string } => {
@@ -132,8 +138,14 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
 
   const removeVersionFromPlaylist = (playlistId: string, performanceId: string) => {
     const newPlaylists = removeVersionFromPlaylistMutation(playlists, playlistId, performanceId);
-    saveToLocalStorage(newPlaylists);
-    setPlaylists(newPlaylists);
+    if (newPlaylists === playlists) {
+      return;
+    }
+
+    const saveResult = saveToLocalStorage(newPlaylists);
+    if (saveResult.success) {
+      setPlaylists(newPlaylists);
+    }
   };
 
   const reorderVersionsInPlaylist = (playlistId: string, fromIndex: number, toIndex: number) => {
@@ -142,8 +154,10 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    saveToLocalStorage(newPlaylists);
-    setPlaylists(newPlaylists);
+    const saveResult = saveToLocalStorage(newPlaylists);
+    if (saveResult.success) {
+      setPlaylists(newPlaylists);
+    }
   };
 
   const clearStorageError = () => setStorageError(null);

@@ -48,6 +48,10 @@ export function createPlaylistMutation(
 }
 
 export function deletePlaylistMutation(playlists: Playlist[], id: string): Playlist[] {
+  if (!playlists.some(playlist => playlist.id === id)) {
+    return playlists;
+  }
+
   return playlists.filter(playlist => playlist.id !== id);
 }
 
@@ -62,11 +66,16 @@ export function renamePlaylistMutation(
     return { success: false, error: PLAYLIST_NAME_EMPTY_ERROR };
   }
 
+  const playlistIndex = playlists.findIndex(playlist => playlist.id === id);
+  if (playlistIndex === -1) {
+    return { success: false, error: PLAYLIST_NOT_FOUND_ERROR };
+  }
+
   const now = getTimestamp(options);
   return {
     success: true,
-    playlists: playlists.map(playlist =>
-      playlist.id === id ? { ...playlist, name: trimmedName, updatedAt: now } : playlist
+    playlists: playlists.map((playlist, index) =>
+      index === playlistIndex ? { ...playlist, name: trimmedName, updatedAt: now } : playlist
     ),
   };
 }
@@ -104,15 +113,25 @@ export function removeVersionFromPlaylistMutation(
   performanceId: string,
   options: PlaylistMutationOptions = {},
 ): Playlist[] {
+  const playlistIndex = playlists.findIndex(playlist => playlist.id === playlistId);
+  if (playlistIndex === -1) {
+    return playlists;
+  }
+
+  const playlist = playlists[playlistIndex];
+  if (!playlist.versions.some(version => version.performanceId === performanceId)) {
+    return playlists;
+  }
+
   const now = getTimestamp(options);
-  return playlists.map(playlist =>
-    playlist.id === playlistId
+  return playlists.map((item, index) =>
+    index === playlistIndex
       ? {
-          ...playlist,
-          versions: playlist.versions.filter(version => version.performanceId !== performanceId),
+          ...item,
+          versions: item.versions.filter(version => version.performanceId !== performanceId),
           updatedAt: now,
         }
-      : playlist
+      : item
   );
 }
 

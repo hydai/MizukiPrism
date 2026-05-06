@@ -57,10 +57,15 @@ assert.deepEqual(createPlaylistMutation([playlist], '  New Playlist  ', { now: 3
 });
 
 assert.deepEqual(deletePlaylistMutation([playlist], playlist.id), []);
+assert.equal(deletePlaylistMutation(playlists, 'missing'), playlists);
 
 assert.deepEqual(renamePlaylistMutation([playlist], playlist.id, '   '), {
   success: false,
   error: PLAYLIST_NAME_EMPTY_ERROR,
+});
+assert.deepEqual(renamePlaylistMutation(playlists, 'missing', 'Renamed'), {
+  success: false,
+  error: PLAYLIST_NOT_FOUND_ERROR,
 });
 
 assert.deepEqual(renamePlaylistMutation([playlist], playlist.id, '  Renamed  ', { now: 3000 }), {
@@ -94,6 +99,14 @@ assert.deepEqual(addVersionToPlaylistMutation([playlist], playlist.id, versionTh
 assert.deepEqual(removeVersionFromPlaylistMutation([playlist], playlist.id, versionOne.performanceId, { now: 3000 }), [
   { ...playlist, versions: [versionTwo], updatedAt: 3000 },
 ]);
+assert.equal(
+  removeVersionFromPlaylistMutation(playlists, 'missing', versionOne.performanceId, { now: 3000 }),
+  playlists,
+);
+assert.equal(
+  removeVersionFromPlaylistMutation(playlists, playlist.id, 'missing', { now: 3000 }),
+  playlists,
+);
 
 assert.deepEqual(reorderPlaylistVersionsMutation([playlist], playlist.id, 1, 0, { now: 3000 }), [
   { ...playlist, versions: [versionTwo, versionOne], updatedAt: 3000 },
