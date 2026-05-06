@@ -46,6 +46,12 @@ assert.deepEqual(
           id: 'playlist-2',
           updatedAt: undefined,
         },
+        {
+          ...playlist,
+          id: 'playlist-3',
+          createdAt: 0,
+          updatedAt: 0,
+        },
       ]),
     }),
   ),
@@ -55,6 +61,12 @@ assert.deepEqual(
       ...playlist,
       id: 'playlist-2',
       updatedAt: playlist.createdAt,
+    },
+    {
+      ...playlist,
+      id: 'playlist-3',
+      createdAt: 0,
+      updatedAt: 0,
     },
   ],
 );
