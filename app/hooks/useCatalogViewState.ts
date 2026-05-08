@@ -1,15 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  readStoredCatalogViewMode,
+  writeStoredCatalogViewMode,
+  type CatalogViewMode,
+} from '../lib/catalogViewStorage';
 
-export type CatalogViewMode = 'timeline' | 'grouped';
+export type { CatalogViewMode } from '../lib/catalogViewStorage';
 export type CatalogMobileTab = 'home' | 'search' | 'library' | 'streams';
-
-const VIEW_MODE_STORAGE_KEY = 'mizukiprism-view-mode';
-
-function isCatalogViewMode(value: string | null): value is CatalogViewMode {
-  return value === 'timeline' || value === 'grouped';
-}
 
 export function useCatalogViewState() {
   const [searchInput, setSearchInput] = useState('');
@@ -19,16 +18,22 @@ export function useCatalogViewState() {
   const [selectedYears, setSelectedYears] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<CatalogViewMode>('timeline');
   const [mobileTab, setMobileTab] = useState<CatalogMobileTab>('home');
+  const hasSkippedInitialViewModeSave = useRef(false);
 
   useEffect(() => {
-    const savedView = sessionStorage.getItem(VIEW_MODE_STORAGE_KEY);
-    if (isCatalogViewMode(savedView)) {
-      setViewMode(savedView);
+    const storedViewMode = readStoredCatalogViewMode();
+    if (storedViewMode) {
+      setViewMode(storedViewMode);
     }
   }, []);
 
   useEffect(() => {
-    sessionStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
+    if (!hasSkippedInitialViewModeSave.current) {
+      hasSkippedInitialViewModeSave.current = true;
+      return;
+    }
+
+    writeStoredCatalogViewMode(viewMode);
   }, [viewMode]);
 
   useEffect(() => {
