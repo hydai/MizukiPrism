@@ -11,6 +11,7 @@ type PlaylistImportReadResult =
 type PlaylistImportFileReader = Pick<File, 'text'>;
 
 export const PLAYLIST_IMPORT_INVALID_FILE_ERROR = '無法匯入：檔案格式無效';
+const PLAYLIST_EXPORT_FILENAME_FALLBACK = 'playlist';
 
 export function formatPlaylistExportDate(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -20,8 +21,19 @@ export function buildPlaylistCollectionExportFilename(date = new Date()): string
   return `mizukiprism-playlists-${formatPlaylistExportDate(date)}.json`;
 }
 
+function sanitizePlaylistExportFilenameSegment(value: string): string {
+  const sanitized = value
+    .trim()
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/(?:\s*-+\s*)+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  return sanitized || PLAYLIST_EXPORT_FILENAME_FALLBACK;
+}
+
 export function buildSinglePlaylistExportFilename(playlistName: string, date = new Date()): string {
-  return `mizukiprism-${playlistName}-${formatPlaylistExportDate(date)}.json`;
+  return `mizukiprism-${sanitizePlaylistExportFilenameSegment(playlistName)}-${formatPlaylistExportDate(date)}.json`;
 }
 
 export function downloadPlaylistJson(data: PlaylistExportEnvelope, filename: string): void {
