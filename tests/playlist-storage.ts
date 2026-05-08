@@ -6,16 +6,27 @@ import {
   PLAYLIST_STORAGE_UNSUPPORTED_ERROR,
   getPlaylistStorageWriteErrorMessage,
   readStoredPlaylists,
+  saveStoredPlaylists,
   writeStoredPlaylists,
 } from '../app/lib/playlistStorage';
 import type { Playlist } from '../app/types/playlist';
 
-function createPlaylistStorage(initialValues: Record<string, string> = {}) {
+interface PlaylistStorageOptions {
+  setError?: unknown;
+}
+
+function createPlaylistStorage(
+  initialValues: Record<string, string> = {},
+  options: PlaylistStorageOptions = {},
+) {
   const values = new Map(Object.entries(initialValues));
 
   return {
     getItem: (key: string) => values.get(key) ?? null,
     setItem: (key: string, value: string) => {
+      if (options.setError !== undefined) {
+        throw options.setError;
+      }
       values.set(key, value);
     },
     values,
@@ -78,6 +89,17 @@ assert.deepEqual(
 const writableStorage = createPlaylistStorage();
 writeStoredPlaylists([playlist], writableStorage);
 assert.equal(writableStorage.values.get(PLAYLIST_STORAGE_KEY), JSON.stringify([playlist]));
+
+const saveStorage = createPlaylistStorage();
+assert.deepEqual(saveStoredPlaylists([playlist], saveStorage), { success: true });
+assert.equal(saveStorage.values.get(PLAYLIST_STORAGE_KEY), JSON.stringify([playlist]));
+
+const quotaError = { name: 'QuotaExceededError' };
+assert.deepEqual(saveStoredPlaylists([playlist], createPlaylistStorage({}, { setError: quotaError })), {
+  success: false,
+  error: PLAYLIST_STORAGE_QUOTA_ERROR,
+  cause: quotaError,
+});
 
 assert.equal(
   getPlaylistStorageWriteErrorMessage({ name: 'QuotaExceededError' }),

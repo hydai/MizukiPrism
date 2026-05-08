@@ -12,6 +12,10 @@ type StoredPlaylist = Omit<Playlist, 'updatedAt'> & {
 type PlaylistStorageReader = Pick<Storage, 'getItem'>;
 type PlaylistStorageWriter = Pick<Storage, 'setItem'>;
 
+export type PlaylistStorageSaveResult =
+  | { success: true }
+  | { success: false; error: string; cause: unknown };
+
 function parseStoredPlaylists(stored: string): Playlist[] {
   const parsed = JSON.parse(stored) as StoredPlaylist[];
 
@@ -33,6 +37,22 @@ export function writeStoredPlaylists(
   storage: PlaylistStorageWriter = localStorage,
 ): void {
   storage.setItem(PLAYLIST_STORAGE_KEY, JSON.stringify(playlists));
+}
+
+export function saveStoredPlaylists(
+  playlists: Playlist[],
+  storage: PlaylistStorageWriter = localStorage,
+): PlaylistStorageSaveResult {
+  try {
+    writeStoredPlaylists(playlists, storage);
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: getPlaylistStorageWriteErrorMessage(error),
+      cause: error,
+    };
+  }
 }
 
 export function getPlaylistStorageWriteErrorMessage(error: unknown): string {
