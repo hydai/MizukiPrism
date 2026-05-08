@@ -8,13 +8,25 @@ function createDefaultImportedPlaylistId(): string {
   return `playlist-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
+function createUniqueImportedPlaylistId(
+  createImportedPlaylistId: () => string,
+  usedPlaylistIds: Set<string>,
+): string {
+  let id = createImportedPlaylistId();
+  while (usedPlaylistIds.has(id)) {
+    id = createImportedPlaylistId();
+  }
+  return id;
+}
+
 function createImportedPlaylistCopy(
   playlist: Playlist,
   createImportedPlaylistId: () => string,
+  usedPlaylistIds: Set<string>,
 ): Playlist {
   return {
     ...playlist,
-    id: createImportedPlaylistId(),
+    id: createUniqueImportedPlaylistId(createImportedPlaylistId, usedPlaylistIds),
     name: `${playlist.name}（匯入）`,
   };
 }
@@ -25,26 +37,37 @@ export function mergeImportedPlaylists(
   options: PlaylistImportMergeOptions = {},
 ): Playlist[] {
   const createImportedPlaylistId = options.createImportedPlaylistId ?? createDefaultImportedPlaylistId;
-  const localMap = new Map(localPlaylists.map(playlist => [playlist.id, playlist]));
+  const usedPlaylistIds = new Set(localPlaylists.map(playlist => playlist.id));
+  const mergedPlaylistIndexesById = new Map<string, number>();
   const merged: Playlist[] = [...localPlaylists];
 
+  for (const [index, playlist] of merged.entries()) {
+    if (!mergedPlaylistIndexesById.has(playlist.id)) {
+      mergedPlaylistIndexesById.set(playlist.id, index);
+    }
+  }
+
+  const appendPlaylist = (playlist: Playlist) => {
+    mergedPlaylistIndexesById.set(playlist.id, merged.length);
+    usedPlaylistIds.add(playlist.id);
+    merged.push(playlist);
+  };
+
   for (const imported of importedPlaylists) {
-    const existing = localMap.get(imported.id);
-    if (!existing) {
-      merged.push(imported);
+    const existingIndex = mergedPlaylistIndexesById.get(imported.id);
+    if (existingIndex == null) {
+      appendPlaylist(imported);
       continue;
     }
 
+    const existing = merged[existingIndex];
     if (imported.updatedAt > existing.updatedAt) {
-      const index = merged.findIndex(playlist => playlist.id === existing.id);
-      if (index !== -1) {
-        merged[index] = imported;
-      }
-      merged.push(createImportedPlaylistCopy(existing, createImportedPlaylistId));
+      merged[existingIndex] = imported;
+      appendPlaylist(createImportedPlaylistCopy(existing, createImportedPlaylistId, usedPlaylistIds));
       continue;
     }
 
-    merged.push(createImportedPlaylistCopy(imported, createImportedPlaylistId));
+    appendPlaylist(createImportedPlaylistCopy(imported, createImportedPlaylistId, usedPlaylistIds));
   }
 
   return merged;
