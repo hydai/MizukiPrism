@@ -42,6 +42,14 @@ assert.equal(
   buildSinglePlaylistExportFilename('My Playlist', new Date(2026, 4, 5, 12, 34, 56)),
   'mizukiprism-My Playlist-2026-05-05.json',
 );
+assert.equal(
+  buildSinglePlaylistExportFilename('  Bad/Name: *?\n  ', new Date(2026, 4, 5, 12, 34, 56)),
+  'mizukiprism-Bad-Name-2026-05-05.json',
+);
+assert.equal(
+  buildSinglePlaylistExportFilename(' /:*?\n ', new Date(2026, 4, 5, 12, 34, 56)),
+  'mizukiprism-playlist-2026-05-05.json',
+);
 
 assert.deepEqual(
   buildPlaylistExportEnvelope([playlist], '2026-05-05T12:34:56.000Z'),
