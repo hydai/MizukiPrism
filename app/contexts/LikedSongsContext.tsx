@@ -2,22 +2,15 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { isLocalStorageAvailable } from '../lib/browserStorage';
+import { isLikedSong, toggleLikedSongMutation } from '../lib/likedSongs';
+import type { LikeableVersion, LikedVersion } from '../types/likedSongs';
 
-export interface LikedVersion {
-  performanceId: string;
-  songTitle: string;
-  originalArtist: string;
-  videoId: string;
-  timestamp: number;
-  endTimestamp?: number;
-  albumArtUrl?: string;
-  likedAt: number;
-}
+export type { LikedVersion } from '../types/likedSongs';
 
 interface LikedSongsContextType {
   likedSongs: LikedVersion[];
   isLiked: (performanceId: string) => boolean;
-  toggleLike: (version: Omit<LikedVersion, 'likedAt'>) => void;
+  toggleLike: (version: LikeableVersion) => void;
   likedCount: number;
 }
 
@@ -61,21 +54,13 @@ export const LikedSongsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const isLiked = (performanceId: string): boolean => {
-    return likedSongs.some(s => s.performanceId === performanceId);
+    return isLikedSong(likedSongs, performanceId);
   };
 
-  const toggleLike = (version: Omit<LikedVersion, 'likedAt'>) => {
+  const toggleLike = (version: LikeableVersion) => {
     if (!localStorageSupported) return;
 
-    const exists = likedSongs.some(s => s.performanceId === version.performanceId);
-    let newSongs: LikedVersion[];
-
-    if (exists) {
-      newSongs = likedSongs.filter(s => s.performanceId !== version.performanceId);
-    } else {
-      newSongs = [{ ...version, likedAt: Date.now() }, ...likedSongs];
-    }
-
+    const newSongs = toggleLikedSongMutation(likedSongs, version);
     const saved = saveToLocalStorage(newSongs);
     if (saved) {
       setLikedSongs(newSongs);
