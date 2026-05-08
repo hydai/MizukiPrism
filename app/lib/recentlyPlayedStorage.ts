@@ -1,4 +1,5 @@
 import type { RecentPlay } from '../types/recentlyPlayed';
+import { getLocalStorage } from './browserStorage';
 
 export const RECENTLY_PLAYED_STORAGE_KEY = 'mizukiprism_recently_played';
 
@@ -6,9 +7,12 @@ type RecentlyPlayedStorageReader = Pick<Storage, 'getItem'>;
 type RecentlyPlayedStorageWriter = Pick<Storage, 'setItem'>;
 
 export function readStoredRecentPlays(
-  storage: RecentlyPlayedStorageReader = localStorage,
+  storage?: RecentlyPlayedStorageReader,
 ): RecentPlay[] | null {
-  const stored = storage.getItem(RECENTLY_PLAYED_STORAGE_KEY);
+  const resolvedStorage = storage ?? getLocalStorage();
+  if (!resolvedStorage) return null;
+
+  const stored = resolvedStorage.getItem(RECENTLY_PLAYED_STORAGE_KEY);
   if (!stored) return null;
 
   return JSON.parse(stored) as RecentPlay[];
@@ -16,14 +20,19 @@ export function readStoredRecentPlays(
 
 export function writeStoredRecentPlays(
   recentPlays: RecentPlay[],
-  storage: RecentlyPlayedStorageWriter = localStorage,
+  storage?: RecentlyPlayedStorageWriter,
 ): void {
-  storage.setItem(RECENTLY_PLAYED_STORAGE_KEY, JSON.stringify(recentPlays));
+  const resolvedStorage = storage ?? getLocalStorage();
+  if (!resolvedStorage) {
+    throw new Error('localStorage is unavailable');
+  }
+
+  resolvedStorage.setItem(RECENTLY_PLAYED_STORAGE_KEY, JSON.stringify(recentPlays));
 }
 
 export function saveStoredRecentPlays(
   recentPlays: RecentPlay[],
-  storage: RecentlyPlayedStorageWriter = localStorage,
+  storage?: RecentlyPlayedStorageWriter,
 ): boolean {
   try {
     writeStoredRecentPlays(recentPlays, storage);

@@ -33,6 +33,17 @@ function createPlaylistStorage(
   };
 }
 
+const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+
+function restoreLocalStorage(): void {
+  if (originalLocalStorageDescriptor) {
+    Object.defineProperty(globalThis, 'localStorage', originalLocalStorageDescriptor);
+    return;
+  }
+
+  Reflect.deleteProperty(globalThis, 'localStorage');
+}
+
 const playlist: Playlist = {
   id: 'playlist-1',
   name: 'My Playlist',
@@ -49,6 +60,7 @@ const playlist: Playlist = {
   updatedAt: 2000,
 };
 
+assert.equal(readStoredPlaylists(), null);
 assert.equal(readStoredPlaylists(createPlaylistStorage()), null);
 
 assert.deepEqual(
@@ -94,6 +106,12 @@ const saveStorage = createPlaylistStorage();
 assert.deepEqual(saveStoredPlaylists([playlist], saveStorage), { success: true });
 assert.equal(saveStorage.values.get(PLAYLIST_STORAGE_KEY), JSON.stringify([playlist]));
 
+const unavailableSaveResult = saveStoredPlaylists([playlist]);
+assert.equal(unavailableSaveResult.success, false);
+if (!unavailableSaveResult.success) {
+  assert.equal(unavailableSaveResult.error, PLAYLIST_STORAGE_SAVE_ERROR);
+}
+
 const quotaError = { name: 'QuotaExceededError' };
 assert.deepEqual(saveStoredPlaylists([playlist], createPlaylistStorage({}, { setError: quotaError })), {
   success: false,
@@ -118,3 +136,21 @@ assert.equal(
   getPlaylistStorageWriteErrorMessage(new Error('unexpected')),
   PLAYLIST_STORAGE_SAVE_ERROR,
 );
+
+try {
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    get: () => {
+      throw new Error('localStorage unavailable');
+    },
+  });
+
+  assert.equal(readStoredPlaylists(), null);
+  const saveResult = saveStoredPlaylists([playlist]);
+  assert.equal(saveResult.success, false);
+  if (!saveResult.success) {
+    assert.equal(saveResult.error, PLAYLIST_STORAGE_SAVE_ERROR);
+  }
+} finally {
+  restoreLocalStorage();
+}

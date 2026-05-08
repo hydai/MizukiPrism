@@ -50,6 +50,17 @@ function createRecentlyPlayedStorage(
   };
 }
 
+const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+
+function restoreLocalStorage(): void {
+  if (originalLocalStorageDescriptor) {
+    Object.defineProperty(globalThis, 'localStorage', originalLocalStorageDescriptor);
+    return;
+  }
+
+  Reflect.deleteProperty(globalThis, 'localStorage');
+}
+
 assert.deepEqual(addRecentPlayMutation([], recentPlayable, { now: 2000 }), [
   {
     ...recentPlayable,
@@ -94,6 +105,7 @@ assert.equal(
   `performance-${RECENT_PLAYS_MAX_ENTRIES}`,
 );
 
+assert.equal(readStoredRecentPlays(), null);
 assert.equal(readStoredRecentPlays(createRecentlyPlayedStorage()), null);
 assert.deepEqual(
   readStoredRecentPlays(createRecentlyPlayedStorage({
@@ -110,4 +122,19 @@ const saveStorage = createRecentlyPlayedStorage();
 assert.equal(saveStoredRecentPlays([existingPlay], saveStorage), true);
 assert.equal(saveStorage.values.get(RECENTLY_PLAYED_STORAGE_KEY), JSON.stringify([existingPlay]));
 
+assert.equal(saveStoredRecentPlays([existingPlay]), false);
 assert.equal(saveStoredRecentPlays([existingPlay], createRecentlyPlayedStorage({}, { failSet: true })), false);
+
+try {
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    get: () => {
+      throw new Error('localStorage unavailable');
+    },
+  });
+
+  assert.equal(readStoredRecentPlays(), null);
+  assert.equal(saveStoredRecentPlays([existingPlay]), false);
+} finally {
+  restoreLocalStorage();
+}

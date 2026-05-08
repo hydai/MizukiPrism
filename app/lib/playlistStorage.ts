@@ -1,4 +1,5 @@
 import type { Playlist } from '../types/playlist';
+import { getLocalStorage } from './browserStorage';
 
 export const PLAYLIST_STORAGE_KEY = 'mizukiprism_playlists';
 export const PLAYLIST_STORAGE_QUOTA_ERROR = '本機儲存空間不足';
@@ -25,8 +26,11 @@ function parseStoredPlaylists(stored: string): Playlist[] {
   }));
 }
 
-export function readStoredPlaylists(storage: PlaylistStorageReader = localStorage): Playlist[] | null {
-  const stored = storage.getItem(PLAYLIST_STORAGE_KEY);
+export function readStoredPlaylists(storage?: PlaylistStorageReader): Playlist[] | null {
+  const resolvedStorage = storage ?? getLocalStorage();
+  if (!resolvedStorage) return null;
+
+  const stored = resolvedStorage.getItem(PLAYLIST_STORAGE_KEY);
   if (!stored) return null;
 
   return parseStoredPlaylists(stored);
@@ -34,14 +38,19 @@ export function readStoredPlaylists(storage: PlaylistStorageReader = localStorag
 
 export function writeStoredPlaylists(
   playlists: Playlist[],
-  storage: PlaylistStorageWriter = localStorage,
+  storage?: PlaylistStorageWriter,
 ): void {
-  storage.setItem(PLAYLIST_STORAGE_KEY, JSON.stringify(playlists));
+  const resolvedStorage = storage ?? getLocalStorage();
+  if (!resolvedStorage) {
+    throw new Error('localStorage is unavailable');
+  }
+
+  resolvedStorage.setItem(PLAYLIST_STORAGE_KEY, JSON.stringify(playlists));
 }
 
 export function saveStoredPlaylists(
   playlists: Playlist[],
-  storage: PlaylistStorageWriter = localStorage,
+  storage?: PlaylistStorageWriter,
 ): PlaylistStorageSaveResult {
   try {
     writeStoredPlaylists(playlists, storage);
