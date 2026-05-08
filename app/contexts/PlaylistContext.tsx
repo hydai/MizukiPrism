@@ -6,7 +6,7 @@ import {
   buildPlaylistExportEnvelope,
   downloadPlaylistJson,
   formatPlaylistExportDate,
-  validatePlaylistImport,
+  readPlaylistImportFile,
 } from '../lib/playlistImportExport';
 import { mergeImportedPlaylists } from '../lib/playlistImportMerge';
 import {
@@ -181,33 +181,21 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const importPlaylists = async (file: File): Promise<{ success: boolean; count?: number; error?: string }> => {
-    try {
-      const text = await file.text();
-      let data: unknown;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        return { success: false, error: '無法匯入：檔案格式無效' };
-      }
-
-      const result = validatePlaylistImport(data);
-      if (!result.valid) {
-        return { success: false, error: `無法匯入：${result.error}` };
-      }
-
-      const incoming = result.playlists;
-      const merged = mergeImportedPlaylists(playlists, incoming);
-
-      const saveResult = saveToLocalStorage(merged);
-      if (!saveResult.success) {
-        return { success: false, error: saveResult.error };
-      }
-
-      setPlaylists(merged);
-      return { success: true, count: incoming.length };
-    } catch {
-      return { success: false, error: '無法匯入：檔案格式無效' };
+    const result = await readPlaylistImportFile(file);
+    if (!result.success) {
+      return result;
     }
+
+    const incoming = result.playlists;
+    const merged = mergeImportedPlaylists(playlists, incoming);
+
+    const saveResult = saveToLocalStorage(merged);
+    if (!saveResult.success) {
+      return { success: false, error: saveResult.error };
+    }
+
+    setPlaylists(merged);
+    return { success: true, count: incoming.length };
   };
 
   return (
