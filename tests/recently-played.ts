@@ -1,5 +1,11 @@
 import assert from 'node:assert/strict';
 import { RECENT_PLAYS_MAX_ENTRIES, addRecentPlayMutation } from '../app/lib/recentlyPlayed';
+import {
+  RECENTLY_PLAYED_STORAGE_KEY,
+  readStoredRecentPlays,
+  saveStoredRecentPlays,
+  writeStoredRecentPlays,
+} from '../app/lib/recentlyPlayedStorage';
 import type { RecentPlay, RecentPlayable } from '../app/types/recentlyPlayed';
 
 const recentPlayable: RecentPlayable = {
@@ -25,6 +31,24 @@ const otherPlay: RecentPlay = {
   timestamp: 60,
   playedAt: 900,
 };
+
+function createRecentlyPlayedStorage(
+  initialValues: Record<string, string> = {},
+  options: { failSet?: boolean } = {},
+) {
+  const values = new Map(Object.entries(initialValues));
+
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      if (options.failSet) {
+        throw new Error('setItem failed');
+      }
+      values.set(key, value);
+    },
+    values,
+  };
+}
 
 assert.deepEqual(addRecentPlayMutation([], recentPlayable, { now: 2000 }), [
   {
@@ -69,3 +93,21 @@ assert.equal(
   cappedRecentPlays[cappedRecentPlays.length - 1]?.performanceId,
   `performance-${RECENT_PLAYS_MAX_ENTRIES}`,
 );
+
+assert.equal(readStoredRecentPlays(createRecentlyPlayedStorage()), null);
+assert.deepEqual(
+  readStoredRecentPlays(createRecentlyPlayedStorage({
+    [RECENTLY_PLAYED_STORAGE_KEY]: JSON.stringify([existingPlay]),
+  })),
+  [existingPlay],
+);
+
+const writableStorage = createRecentlyPlayedStorage();
+writeStoredRecentPlays([existingPlay], writableStorage);
+assert.equal(writableStorage.values.get(RECENTLY_PLAYED_STORAGE_KEY), JSON.stringify([existingPlay]));
+
+const saveStorage = createRecentlyPlayedStorage();
+assert.equal(saveStoredRecentPlays([existingPlay], saveStorage), true);
+assert.equal(saveStorage.values.get(RECENTLY_PLAYED_STORAGE_KEY), JSON.stringify([existingPlay]));
+
+assert.equal(saveStoredRecentPlays([existingPlay], createRecentlyPlayedStorage({}, { failSet: true })), false);
