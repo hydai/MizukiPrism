@@ -16,6 +16,14 @@ export function formatPlaylistExportDate(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+export function buildPlaylistCollectionExportFilename(date = new Date()): string {
+  return `mizukiprism-playlists-${formatPlaylistExportDate(date)}.json`;
+}
+
+export function buildSinglePlaylistExportFilename(playlistName: string, date = new Date()): string {
+  return `mizukiprism-${playlistName}-${formatPlaylistExportDate(date)}.json`;
+}
+
 export function downloadPlaylistJson(data: PlaylistExportEnvelope, filename: string): void {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
