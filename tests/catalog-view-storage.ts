@@ -29,11 +29,23 @@ function createCatalogViewStorage(
   };
 }
 
+const originalSessionStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'sessionStorage');
+
+function restoreSessionStorage(): void {
+  if (originalSessionStorageDescriptor) {
+    Object.defineProperty(globalThis, 'sessionStorage', originalSessionStorageDescriptor);
+    return;
+  }
+
+  Reflect.deleteProperty(globalThis, 'sessionStorage');
+}
+
 assert.equal(isCatalogViewMode('timeline'), true);
 assert.equal(isCatalogViewMode('grouped'), true);
 assert.equal(isCatalogViewMode('grid'), false);
 assert.equal(isCatalogViewMode(null), false);
 
+assert.equal(readStoredCatalogViewMode(), null);
 assert.equal(readStoredCatalogViewMode(createCatalogViewStorage()), null);
 assert.equal(
   readStoredCatalogViewMode(createCatalogViewStorage({
@@ -59,4 +71,19 @@ const writableStorage = createCatalogViewStorage();
 assert.equal(writeStoredCatalogViewMode('grouped', writableStorage), true);
 assert.equal(writableStorage.values.get(CATALOG_VIEW_MODE_STORAGE_KEY), 'grouped');
 
+assert.equal(writeStoredCatalogViewMode('timeline'), false);
 assert.equal(writeStoredCatalogViewMode('timeline', createCatalogViewStorage({}, { failSet: true })), false);
+
+try {
+  Object.defineProperty(globalThis, 'sessionStorage', {
+    configurable: true,
+    get: () => {
+      throw new Error('sessionStorage unavailable');
+    },
+  });
+
+  assert.equal(readStoredCatalogViewMode(), null);
+  assert.equal(writeStoredCatalogViewMode('timeline'), false);
+} finally {
+  restoreSessionStorage();
+}
