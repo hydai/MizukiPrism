@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint app lib shared tests/browser-storage.ts tests/catalog-data.ts tests/contracts.ts tests/liked-songs.ts tests/player-controls.ts tests/player-errors.ts tests/player-playback.ts tests/player-queue.ts tests/player-time.ts tests/player-time-polling.ts tests/player-volume.ts tests/player-warnings.ts tests/playlist-import-export.ts tests/playlist-import-merge.ts tests/playlist-mutations.ts tests/playlist-storage.ts tests/songs-api.ts tests/timestamps.ts next.config.ts tailwind.config.ts playwright.config.ts",
+    "lint": "eslint app lib shared tests/browser-storage.ts tests/catalog-data.ts tests/contracts.ts tests/liked-songs.ts tests/player-controls.ts tests/player-errors.ts tests/player-playback.ts tests/player-queue.ts tests/player-time.ts tests/player-time-polling.ts tests/player-volume.ts tests/player-warnings.ts tests/recently-played.ts tests/playlist-import-export.ts tests/playlist-import-merge.ts tests/playlist-mutations.ts tests/playlist-storage.ts tests/songs-api.ts tests/timestamps.ts next.config.ts tailwind.config.ts playwright.config.ts",
     "install:admin": "npm install --prefix admin",
     "install:admin-ui": "npm install --prefix admin/ui",
     "install:python": "cd tools/mizukilens && python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'",
@@ -24,6 +24,7 @@
     "test:player-time-polling": "tsx tests/player-time-polling.ts",
     "test:player-volume": "tsx tests/player-volume.ts",
     "test:player-warnings": "tsx tests/player-warnings.ts",
+    "test:recently-played": "tsx tests/recently-played.ts",
     "test:playlist-import-export": "tsx tests/playlist-import-export.ts",
     "test:playlist-import-merge": "tsx tests/playlist-import-merge.ts",
     "test:playlist-mutations": "tsx tests/playlist-mutations.ts",
@@ -34,7 +35,7 @@
     "build:admin-ui": "npm run build --prefix admin/ui",
     "test:python": "cd tools/mizukilens && .venv/bin/python3 -m pytest tests -q",
     "test:e2e": "playwright test",
-    "check": "npm run lint && npm run test:browser-storage && npm run test:catalog && npm run test:contracts && npm run test:liked-songs && npm run test:player-controls && npm run test:player-errors && npm run test:player-playback && npm run test:player-queue && npm run test:player-time && npm run test:player-time-polling && npm run test:player-volume && npm run test:player-warnings && npm run test:playlist-import-export && npm run test:playlist-import-merge && npm run test:playlist-mutations && npm run test:playlist-storage && npm run test:songs-api && npm run test:timestamps && npm run build && npm run typecheck:admin && npm run build:admin-ui && npm run test:python"
+    "check": "npm run lint && npm run test:browser-storage && npm run test:catalog && npm run test:contracts && npm run test:liked-songs && npm run test:player-controls && npm run test:player-errors && npm run test:player-playback && npm run test:player-queue && npm run test:player-time && npm run test:player-time-polling && npm run test:player-volume && npm run test:player-warnings && npm run test:recently-played && npm run test:playlist-import-export && npm run test:playlist-import-merge && npm run test:playlist-mutations && npm run test:playlist-storage && npm run test:songs-api && npm run test:timestamps && npm run build && npm run typecheck:admin && npm run build:admin-ui && npm run test:python"
   },
   "keywords": [],
   "author": "",

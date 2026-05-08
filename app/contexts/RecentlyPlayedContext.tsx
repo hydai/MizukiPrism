@@ -2,21 +2,14 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { isLocalStorageAvailable } from '../lib/browserStorage';
+import { addRecentPlayMutation } from '../lib/recentlyPlayed';
+import type { RecentPlay, RecentPlayable } from '../types/recentlyPlayed';
 
-export interface RecentPlay {
-  performanceId: string;
-  songTitle: string;
-  originalArtist: string;
-  videoId: string;
-  timestamp: number;
-  endTimestamp?: number;
-  albumArtUrl?: string;
-  playedAt: number;
-}
+export type { RecentPlay } from '../types/recentlyPlayed';
 
 interface RecentlyPlayedContextType {
   recentPlays: RecentPlay[];
-  addRecentPlay: (play: Omit<RecentPlay, 'playedAt'>) => void;
+  addRecentPlay: (play: RecentPlayable) => void;
   clearHistory: () => void;
   recentCount: number;
 }
@@ -32,7 +25,6 @@ export const useRecentlyPlayed = () => {
 };
 
 const STORAGE_KEY = 'mizukiprism_recently_played';
-const MAX_ENTRIES = 50;
 
 export const RecentlyPlayedProvider = ({ children }: { children: ReactNode }) => {
   const [recentPlays, setRecentPlays] = useState<RecentPlay[]>([]);
@@ -61,13 +53,10 @@ export const RecentlyPlayedProvider = ({ children }: { children: ReactNode }) =>
     }
   };
 
-  const addRecentPlay = (play: Omit<RecentPlay, 'playedAt'>) => {
+  const addRecentPlay = (play: RecentPlayable) => {
     if (!localStorageSupported) return;
 
-    // Dedup: remove old entry for same performanceId, prepend new
-    const filtered = recentPlays.filter(r => r.performanceId !== play.performanceId);
-    const newPlays = [{ ...play, playedAt: Date.now() }, ...filtered].slice(0, MAX_ENTRIES);
-
+    const newPlays = addRecentPlayMutation(recentPlays, play);
     const saved = saveToLocalStorage(newPlays);
     if (saved) {
       setRecentPlays(newPlays);
