@@ -68,9 +68,13 @@ export const RecentlyPlayedProvider = ({ children }: { children: ReactNode }) =>
   };
 
   const clearHistory = () => {
-    saveToLocalStorage([]);
-    recentPlaysRef.current = [];
-    setRecentPlays([]);
+    if (!localStorageSupported) return;
+
+    const saved = saveToLocalStorage([]);
+    if (saved) {
+      recentPlaysRef.current = [];
+      setRecentPlays([]);
+    }
   };
 
   return (
