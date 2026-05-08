@@ -56,11 +56,11 @@ export const RecentlyPlayedProvider = ({ children }: { children: ReactNode }) =>
   const addRecentPlay = (play: RecentPlayable) => {
     if (!localStorageSupported) return;
 
-    const newPlays = addRecentPlayMutation(recentPlays, play);
-    const saved = saveToLocalStorage(newPlays);
-    if (saved) {
-      setRecentPlays(newPlays);
-    }
+    const playedAt = Date.now();
+    setRecentPlays(currentRecentPlays => {
+      const newPlays = addRecentPlayMutation(currentRecentPlays, play, { now: playedAt });
+      return saveToLocalStorage(newPlays) ? newPlays : currentRecentPlays;
+    });
   };
 
   const clearHistory = () => {
