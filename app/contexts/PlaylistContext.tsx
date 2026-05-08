@@ -68,6 +68,14 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
     return result;
   };
 
+  const persistPlaylists = (newPlaylists: Playlist[]): PlaylistStorageSaveResult => {
+    const saveResult = saveToLocalStorage(newPlaylists);
+    if (saveResult.success) {
+      setPlaylists(newPlaylists);
+    }
+    return saveResult;
+  };
+
   const createPlaylist = (name: string): { success: boolean; error?: string } => {
     if (!localStorageSupported) {
       setStorageError(PLAYLIST_STORAGE_UNSUPPORTED_ERROR);
@@ -79,10 +87,8 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
       return mutationResult;
     }
 
-    const saveResult = saveToLocalStorage(mutationResult.playlists);
-
+    const saveResult = persistPlaylists(mutationResult.playlists);
     if (saveResult.success) {
-      setPlaylists(mutationResult.playlists);
       return { success: true };
     }
     return { success: false, error: saveResult.error };
@@ -94,10 +100,7 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const saveResult = saveToLocalStorage(newPlaylists);
-    if (saveResult.success) {
-      setPlaylists(newPlaylists);
-    }
+    persistPlaylists(newPlaylists);
   };
 
   const renamePlaylist = (id: string, newName: string): { success: boolean; error?: string } => {
@@ -106,9 +109,8 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
       return mutationResult;
     }
 
-    const saveResult = saveToLocalStorage(mutationResult.playlists);
+    const saveResult = persistPlaylists(mutationResult.playlists);
     if (saveResult.success) {
-      setPlaylists(mutationResult.playlists);
       return { success: true };
     }
     return { success: false, error: saveResult.error };
@@ -125,9 +127,8 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
       return mutationResult;
     }
 
-    const saveResult = saveToLocalStorage(mutationResult.playlists);
+    const saveResult = persistPlaylists(mutationResult.playlists);
     if (saveResult.success) {
-      setPlaylists(mutationResult.playlists);
       return { success: true };
     }
     return { success: false, error: saveResult.error };
@@ -139,10 +140,7 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const saveResult = saveToLocalStorage(newPlaylists);
-    if (saveResult.success) {
-      setPlaylists(newPlaylists);
-    }
+    persistPlaylists(newPlaylists);
   };
 
   const reorderVersionsInPlaylist = (playlistId: string, fromIndex: number, toIndex: number) => {
@@ -151,10 +149,7 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const saveResult = saveToLocalStorage(newPlaylists);
-    if (saveResult.success) {
-      setPlaylists(newPlaylists);
-    }
+    persistPlaylists(newPlaylists);
   };
 
   const clearStorageError = () => setStorageError(null);
@@ -185,12 +180,11 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
     const incoming = result.playlists;
     const merged = mergeImportedPlaylists(playlists, incoming);
 
-    const saveResult = saveToLocalStorage(merged);
+    const saveResult = persistPlaylists(merged);
     if (!saveResult.success) {
       return { success: false, error: saveResult.error };
     }
 
-    setPlaylists(merged);
     return { success: true, count: incoming.length };
   };
 
