@@ -4,7 +4,7 @@ export const PLAYLIST_NAME_EMPTY_ERROR = '播放清單名稱不可為空';
 export const PLAYLIST_NOT_FOUND_ERROR = '播放清單不存在';
 export const PLAYLIST_VERSION_EXISTS_ERROR = '此版本已在播放清單中';
 
-type PlaylistMutationResult =
+export type PlaylistMutationResult =
   | { success: true; playlists: Playlist[] }
   | { success: false; error: string };
 
