@@ -17,6 +17,7 @@ import {
   removeVersionFromPlaylistMutation,
   renamePlaylistMutation,
   reorderPlaylistVersionsMutation,
+  type PlaylistMutationResult,
 } from '../lib/playlistMutations';
 import {
   PLAYLIST_STORAGE_UNSUPPORTED_ERROR,
@@ -76,13 +77,7 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
     return saveResult;
   };
 
-  const createPlaylist = (name: string): { success: boolean; error?: string } => {
-    if (!localStorageSupported) {
-      setStorageError(PLAYLIST_STORAGE_UNSUPPORTED_ERROR);
-      return { success: false, error: PLAYLIST_STORAGE_UNSUPPORTED_ERROR };
-    }
-
-    const mutationResult = createPlaylistMutation(playlists, name);
+  const persistPlaylistMutation = (mutationResult: PlaylistMutationResult): { success: boolean; error?: string } => {
     if (!mutationResult.success) {
       return mutationResult;
     }
@@ -91,7 +86,17 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
     if (saveResult.success) {
       return { success: true };
     }
+
     return { success: false, error: saveResult.error };
+  };
+
+  const createPlaylist = (name: string): { success: boolean; error?: string } => {
+    if (!localStorageSupported) {
+      setStorageError(PLAYLIST_STORAGE_UNSUPPORTED_ERROR);
+      return { success: false, error: PLAYLIST_STORAGE_UNSUPPORTED_ERROR };
+    }
+
+    return persistPlaylistMutation(createPlaylistMutation(playlists, name));
   };
 
   const deletePlaylist = (id: string) => {
@@ -104,16 +109,7 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const renamePlaylist = (id: string, newName: string): { success: boolean; error?: string } => {
-    const mutationResult = renamePlaylistMutation(playlists, id, newName);
-    if (!mutationResult.success) {
-      return mutationResult;
-    }
-
-    const saveResult = persistPlaylists(mutationResult.playlists);
-    if (saveResult.success) {
-      return { success: true };
-    }
-    return { success: false, error: saveResult.error };
+    return persistPlaylistMutation(renamePlaylistMutation(playlists, id, newName));
   };
 
   const addVersionToPlaylist = (playlistId: string, version: PlaylistVersion): { success: boolean; error?: string } => {
@@ -122,16 +118,7 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
       return { success: false, error: PLAYLIST_STORAGE_UNSUPPORTED_ERROR };
     }
 
-    const mutationResult = addVersionToPlaylistMutation(playlists, playlistId, version);
-    if (!mutationResult.success) {
-      return mutationResult;
-    }
-
-    const saveResult = persistPlaylists(mutationResult.playlists);
-    if (saveResult.success) {
-      return { success: true };
-    }
-    return { success: false, error: saveResult.error };
+    return persistPlaylistMutation(addVersionToPlaylistMutation(playlists, playlistId, version));
   };
 
   const removeVersionFromPlaylist = (playlistId: string, performanceId: string) => {
