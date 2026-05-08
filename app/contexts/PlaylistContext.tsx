@@ -3,9 +3,10 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { isLocalStorageAvailable } from '../lib/browserStorage';
 import {
+  buildPlaylistCollectionExportFilename,
   buildPlaylistExportEnvelope,
+  buildSinglePlaylistExportFilename,
   downloadPlaylistJson,
-  formatPlaylistExportDate,
   readPlaylistImportFile,
 } from '../lib/playlistImportExport';
 import { mergeImportedPlaylists } from '../lib/playlistImportMerge';
@@ -162,7 +163,7 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
     if (playlists.length === 0) return;
     downloadPlaylistJson(
       buildPlaylistExportEnvelope(playlists),
-      `mizukiprism-playlists-${formatPlaylistExportDate()}.json`,
+      buildPlaylistCollectionExportFilename(),
     );
   };
 
@@ -171,7 +172,7 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
     if (!playlist) return;
     downloadPlaylistJson(
       buildPlaylistExportEnvelope([playlist]),
-      `mizukiprism-${playlist.name}-${formatPlaylistExportDate()}.json`,
+      buildSinglePlaylistExportFilename(playlist.name),
     );
   };
 

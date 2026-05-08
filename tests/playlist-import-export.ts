@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import {
   PLAYLIST_IMPORT_INVALID_FILE_ERROR,
+  buildPlaylistCollectionExportFilename,
   buildPlaylistExportEnvelope,
+  buildSinglePlaylistExportFilename,
   formatPlaylistExportDate,
   parsePlaylistImportText,
   readPlaylistImportFile,
@@ -32,6 +34,14 @@ function createPlaylistImportFile(text: string): Pick<File, 'text'> {
 }
 
 assert.equal(formatPlaylistExportDate(new Date(2026, 4, 5, 12, 34, 56)), '2026-05-05');
+assert.equal(
+  buildPlaylistCollectionExportFilename(new Date(2026, 4, 5, 12, 34, 56)),
+  'mizukiprism-playlists-2026-05-05.json',
+);
+assert.equal(
+  buildSinglePlaylistExportFilename('My Playlist', new Date(2026, 4, 5, 12, 34, 56)),
+  'mizukiprism-My Playlist-2026-05-05.json',
+);
 
 assert.deepEqual(
   buildPlaylistExportEnvelope([playlist], '2026-05-05T12:34:56.000Z'),
