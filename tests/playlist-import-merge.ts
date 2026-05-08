@@ -134,10 +134,49 @@ assert.deepEqual(
   ],
 );
 
+const importedNewerDuplicatePlaylist: Playlist = {
+  ...importedNewPlaylist,
+  name: 'Imported newer duplicate playlist',
+  updatedAt: 2300,
+};
+
+assert.deepEqual(
+  mergeImportedPlaylists(
+    [localPlaylist],
+    [importedNewPlaylist, importedNewerDuplicatePlaylist],
+    {
+      createImportedPlaylistId: createIdGenerator(['playlist-copy-6']),
+    },
+  ),
+  [
+    localPlaylist,
+    importedNewerDuplicatePlaylist,
+    {
+      ...importedNewPlaylist,
+      id: 'playlist-copy-6',
+      name: 'Imported playlist（匯入）',
+    },
+  ],
+);
+
+assert.deepEqual(
+  mergeImportedPlaylists([localPlaylist], [importedOlderPlaylist], {
+    createImportedPlaylistId: createIdGenerator(['playlist-1', 'playlist-copy-7']),
+  }),
+  [
+    localPlaylist,
+    {
+      ...importedOlderPlaylist,
+      id: 'playlist-copy-7',
+      name: 'Imported older playlist（匯入）',
+    },
+  ],
+);
+
 const localPlaylists = [localPlaylist];
 const importedPlaylists = [importedOlderPlaylist];
 mergeImportedPlaylists(localPlaylists, importedPlaylists, {
-  createImportedPlaylistId: createIdGenerator(['playlist-copy-6']),
+  createImportedPlaylistId: createIdGenerator(['playlist-copy-8']),
 });
 assert.deepEqual(localPlaylists, [localPlaylist]);
 assert.deepEqual(importedPlaylists, [importedOlderPlaylist]);
