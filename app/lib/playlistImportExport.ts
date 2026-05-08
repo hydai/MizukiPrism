@@ -4,6 +4,14 @@ type PlaylistImportValidationResult =
   | { valid: true; playlists: Playlist[] }
   | { valid: false; error: string };
 
+type PlaylistImportReadResult =
+  | { success: true; playlists: Playlist[] }
+  | { success: false; error: string };
+
+type PlaylistImportFileReader = Pick<File, 'text'>;
+
+export const PLAYLIST_IMPORT_INVALID_FILE_ERROR = '無法匯入：檔案格式無效';
+
 export function formatPlaylistExportDate(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
@@ -90,4 +98,30 @@ export function validatePlaylistImport(data: unknown): PlaylistImportValidationR
   }
 
   return { valid: true, playlists: validPlaylists };
+}
+
+export function parsePlaylistImportText(text: string): PlaylistImportReadResult {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return { success: false, error: PLAYLIST_IMPORT_INVALID_FILE_ERROR };
+  }
+
+  const result = validatePlaylistImport(data);
+  if (!result.valid) {
+    return { success: false, error: `無法匯入：${result.error}` };
+  }
+
+  return { success: true, playlists: result.playlists };
+}
+
+export async function readPlaylistImportFile(
+  file: PlaylistImportFileReader,
+): Promise<PlaylistImportReadResult> {
+  try {
+    return parsePlaylistImportText(await file.text());
+  } catch {
+    return { success: false, error: PLAYLIST_IMPORT_INVALID_FILE_ERROR };
+  }
 }

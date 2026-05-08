@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import {
+  PLAYLIST_IMPORT_INVALID_FILE_ERROR,
   buildPlaylistExportEnvelope,
   formatPlaylistExportDate,
+  parsePlaylistImportText,
+  readPlaylistImportFile,
   validatePlaylistImport,
 } from '../app/lib/playlistImportExport';
 import type { Playlist } from '../app/types/playlist';
@@ -21,6 +24,12 @@ const playlist: Playlist = {
   createdAt: 1000,
   updatedAt: 2000,
 };
+
+function createPlaylistImportFile(text: string): Pick<File, 'text'> {
+  return {
+    text: async () => text,
+  };
+}
 
 assert.equal(formatPlaylistExportDate(new Date(2026, 4, 5, 12, 34, 56)), '2026-05-05');
 
@@ -55,6 +64,31 @@ assert.deepEqual(
   {
     valid: false,
     error: '檔案不含有效的播放清單',
+  },
+);
+
+assert.deepEqual(
+  parsePlaylistImportText(JSON.stringify({
+    version: 1,
+    source: 'MizukiPrism',
+    playlists: [playlist],
+  })),
+  {
+    success: true,
+    playlists: [playlist],
+  },
+);
+
+assert.deepEqual(parsePlaylistImportText('{'), {
+  success: false,
+  error: PLAYLIST_IMPORT_INVALID_FILE_ERROR,
+});
+
+assert.deepEqual(
+  parsePlaylistImportText(JSON.stringify({ version: 2, source: 'MizukiPrism', playlists: [playlist] })),
+  {
+    success: false,
+    error: '無法匯入：檔案版本不支援',
   },
 );
 
@@ -140,3 +174,36 @@ assert.deepEqual(
     error: '檔案不含有效的播放清單',
   },
 );
+
+async function main(): Promise<void> {
+  assert.deepEqual(
+    await readPlaylistImportFile(createPlaylistImportFile(JSON.stringify({
+      version: 1,
+      source: 'MizukiPrism',
+      playlists: [playlist],
+    }))),
+    {
+      success: true,
+      playlists: [playlist],
+    },
+  );
+
+  assert.deepEqual(await readPlaylistImportFile(createPlaylistImportFile('not json')), {
+    success: false,
+    error: PLAYLIST_IMPORT_INVALID_FILE_ERROR,
+  });
+
+  assert.deepEqual(
+    await readPlaylistImportFile({
+      text: async () => {
+        throw new Error('file read failed');
+      },
+    }),
+    {
+      success: false,
+      error: PLAYLIST_IMPORT_INVALID_FILE_ERROR,
+    },
+  );
+}
+
+void main();
