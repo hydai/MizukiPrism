@@ -50,6 +50,17 @@ function createLikedSongsStorage(
   };
 }
 
+const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+
+function restoreLocalStorage(): void {
+  if (originalLocalStorageDescriptor) {
+    Object.defineProperty(globalThis, 'localStorage', originalLocalStorageDescriptor);
+    return;
+  }
+
+  Reflect.deleteProperty(globalThis, 'localStorage');
+}
+
 assert.equal(isLikedSong([likedVersion], likedVersion.performanceId), true);
 assert.equal(isLikedSong([likedVersion], 'missing'), false);
 
@@ -75,6 +86,7 @@ assert.deepEqual(toggleLikedSongMutation([likedVersion, otherLikedVersion], like
   otherLikedVersion,
 ]);
 
+assert.equal(readStoredLikedSongs(), null);
 assert.equal(readStoredLikedSongs(createLikedSongsStorage()), null);
 assert.deepEqual(
   readStoredLikedSongs(createLikedSongsStorage({
@@ -91,4 +103,19 @@ const saveStorage = createLikedSongsStorage();
 assert.equal(saveStoredLikedSongs([likedVersion], saveStorage), true);
 assert.equal(saveStorage.values.get(LIKED_SONGS_STORAGE_KEY), JSON.stringify([likedVersion]));
 
+assert.equal(saveStoredLikedSongs([likedVersion]), false);
 assert.equal(saveStoredLikedSongs([likedVersion], createLikedSongsStorage({}, { failSet: true })), false);
+
+try {
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    get: () => {
+      throw new Error('localStorage unavailable');
+    },
+  });
+
+  assert.equal(readStoredLikedSongs(), null);
+  assert.equal(saveStoredLikedSongs([likedVersion]), false);
+} finally {
+  restoreLocalStorage();
+}

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { isLocalStorageAvailable } from '../app/lib/browserStorage';
+import { getLocalStorage, isLocalStorageAvailable } from '../app/lib/browserStorage';
 
 interface FakeLocalStorageOptions {
   failSet?: boolean;
@@ -69,6 +69,7 @@ try {
   });
 
   installLocalStorage(availableStorage);
+  assert.equal(getLocalStorage(), availableStorage as unknown as Storage);
   assert.equal(isLocalStorageAvailable(), true);
   assert.equal(availableStorage.getItem('__mizukiprism_ls_test__'), existingProbeValue);
   assert.deepEqual(availableStorage.entries(), {
@@ -88,6 +89,19 @@ try {
   assert.equal(isLocalStorageAvailable(), false);
   assert.equal(cleanupFailingStorage.removeCalls.length, 1);
   assert.match(cleanupFailingStorage.removeCalls[0], /^__mizukiprism_ls_test__-/);
+
+  restoreLocalStorage();
+  assert.equal(getLocalStorage(), null);
+  assert.equal(isLocalStorageAvailable(), false);
+
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    get: () => {
+      throw new Error('localStorage unavailable');
+    },
+  });
+  assert.equal(getLocalStorage(), null);
+  assert.equal(isLocalStorageAvailable(), false);
 } finally {
   restoreLocalStorage();
 }
