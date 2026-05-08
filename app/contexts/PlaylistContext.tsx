@@ -19,18 +19,14 @@ import {
 } from '../lib/playlistMutations';
 import {
   PLAYLIST_STORAGE_UNSUPPORTED_ERROR,
-  getPlaylistStorageWriteErrorMessage,
+  type PlaylistStorageSaveResult,
   readStoredPlaylists,
-  writeStoredPlaylists,
+  saveStoredPlaylists,
 } from '../lib/playlistStorage';
 import type { PlaylistContextType } from '../types/playlistContext';
 import type { Playlist, PlaylistVersion } from '../types/playlist';
 
 const PlaylistContext = createContext<PlaylistContextType | undefined>(undefined);
-
-type PlaylistStorageSaveResult =
-  | { success: true }
-  | { success: false; error: string };
 
 export const usePlaylist = () => {
   const context = useContext(PlaylistContext);
@@ -60,16 +56,15 @@ export const PlaylistProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const saveToLocalStorage = (newPlaylists: Playlist[]): PlaylistStorageSaveResult => {
-    try {
-      writeStoredPlaylists(newPlaylists);
+    const result = saveStoredPlaylists(newPlaylists);
+    if (result.success) {
       setStorageError(null);
-      return { success: true };
-    } catch (error) {
-      console.error('Failed to save playlists to localStorage:', error);
-      const message = getPlaylistStorageWriteErrorMessage(error);
-      setStorageError(message);
-      return { success: false, error: message };
+      return result;
     }
+
+    console.error('Failed to save playlists to localStorage:', result.cause);
+    setStorageError(result.error);
+    return result;
   };
 
   const createPlaylist = (name: string): { success: boolean; error?: string } => {
