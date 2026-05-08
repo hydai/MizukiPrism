@@ -1,5 +1,11 @@
 import assert from 'node:assert/strict';
 import { isLikedSong, toggleLikedSongMutation } from '../app/lib/likedSongs';
+import {
+  LIKED_SONGS_STORAGE_KEY,
+  readStoredLikedSongs,
+  saveStoredLikedSongs,
+  writeStoredLikedSongs,
+} from '../app/lib/likedSongsStorage';
 import type { LikeableVersion, LikedVersion } from '../app/types/likedSongs';
 
 const likeableVersion: LikeableVersion = {
@@ -26,6 +32,24 @@ const otherLikedVersion: LikedVersion = {
   likedAt: 900,
 };
 
+function createLikedSongsStorage(
+  initialValues: Record<string, string> = {},
+  options: { failSet?: boolean } = {},
+) {
+  const values = new Map(Object.entries(initialValues));
+
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      if (options.failSet) {
+        throw new Error('setItem failed');
+      }
+      values.set(key, value);
+    },
+    values,
+  };
+}
+
 assert.equal(isLikedSong([likedVersion], likedVersion.performanceId), true);
 assert.equal(isLikedSong([likedVersion], 'missing'), false);
 
@@ -50,3 +74,21 @@ assert.deepEqual(
 assert.deepEqual(toggleLikedSongMutation([likedVersion, otherLikedVersion], likeableVersion), [
   otherLikedVersion,
 ]);
+
+assert.equal(readStoredLikedSongs(createLikedSongsStorage()), null);
+assert.deepEqual(
+  readStoredLikedSongs(createLikedSongsStorage({
+    [LIKED_SONGS_STORAGE_KEY]: JSON.stringify([likedVersion]),
+  })),
+  [likedVersion],
+);
+
+const writableStorage = createLikedSongsStorage();
+writeStoredLikedSongs([likedVersion], writableStorage);
+assert.equal(writableStorage.values.get(LIKED_SONGS_STORAGE_KEY), JSON.stringify([likedVersion]));
+
+const saveStorage = createLikedSongsStorage();
+assert.equal(saveStoredLikedSongs([likedVersion], saveStorage), true);
+assert.equal(saveStorage.values.get(LIKED_SONGS_STORAGE_KEY), JSON.stringify([likedVersion]));
+
+assert.equal(saveStoredLikedSongs([likedVersion], createLikedSongsStorage({}, { failSet: true })), false);

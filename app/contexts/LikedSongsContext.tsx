@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { isLocalStorageAvailable } from '../lib/browserStorage';
 import { isLikedSong, toggleLikedSongMutation } from '../lib/likedSongs';
+import { readStoredLikedSongs, saveStoredLikedSongs } from '../lib/likedSongsStorage';
 import type { LikeableVersion, LikedVersion } from '../types/likedSongs';
 
 export type { LikedVersion } from '../types/likedSongs';
@@ -24,8 +25,6 @@ export const useLikedSongs = () => {
   return context;
 };
 
-const STORAGE_KEY = 'mizukiprism_liked_songs';
-
 export const LikedSongsProvider = ({ children }: { children: ReactNode }) => {
   const [likedSongs, setLikedSongs] = useState<LikedVersion[]>([]);
   const [localStorageSupported] = useState(() =>
@@ -35,23 +34,14 @@ export const LikedSongsProvider = ({ children }: { children: ReactNode }) => {
   // Load from localStorage on mount
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setLikedSongs(JSON.parse(stored));
+      const storedLikedSongs = readStoredLikedSongs();
+      if (storedLikedSongs) {
+        setLikedSongs(storedLikedSongs);
       }
     } catch (error) {
       console.error('Failed to load liked songs from localStorage:', error);
     }
   }, []);
-
-  const saveToLocalStorage = (songs: LikedVersion[]): boolean => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(songs));
-      return true;
-    } catch {
-      return false;
-    }
-  };
 
   const isLiked = (performanceId: string): boolean => {
     return isLikedSong(likedSongs, performanceId);
@@ -61,7 +51,7 @@ export const LikedSongsProvider = ({ children }: { children: ReactNode }) => {
     if (!localStorageSupported) return;
 
     const newSongs = toggleLikedSongMutation(likedSongs, version);
-    const saved = saveToLocalStorage(newSongs);
+    const saved = saveStoredLikedSongs(newSongs);
     if (saved) {
       setLikedSongs(newSongs);
     }
