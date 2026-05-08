@@ -1,5 +1,5 @@
 import type { Playlist } from '../types/playlist';
-import { getLocalStorage } from './browserStorage';
+import { getLocalStorage, getLocalStorageOrThrow } from './browserStorage';
 
 export const PLAYLIST_STORAGE_KEY = 'mizukiprism_playlists';
 export const PLAYLIST_STORAGE_QUOTA_ERROR = '本機儲存空間不足';
@@ -40,11 +40,7 @@ export function writeStoredPlaylists(
   playlists: Playlist[],
   storage?: PlaylistStorageWriter,
 ): void {
-  const resolvedStorage = storage ?? getLocalStorage();
-  if (!resolvedStorage) {
-    throw new Error('localStorage is unavailable');
-  }
-
+  const resolvedStorage = storage ?? getLocalStorageOrThrow();
   resolvedStorage.setItem(PLAYLIST_STORAGE_KEY, JSON.stringify(playlists));
 }
 

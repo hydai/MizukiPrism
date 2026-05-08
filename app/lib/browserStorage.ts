@@ -2,10 +2,19 @@ const LOCAL_STORAGE_TEST_KEY_PREFIX = '__mizukiprism_ls_test__';
 
 export function getLocalStorage(): Storage | null {
   try {
-    return globalThis.localStorage ?? null;
+    return getLocalStorageOrThrow();
   } catch {
     return null;
   }
+}
+
+export function getLocalStorageOrThrow(): Storage {
+  const storage = globalThis.localStorage;
+  if (!storage) {
+    throw new Error('localStorage is unavailable');
+  }
+
+  return storage;
 }
 
 export function isLocalStorageAvailable(): boolean {

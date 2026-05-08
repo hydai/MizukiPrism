@@ -10,6 +10,7 @@ import {
   writeStoredPlaylists,
 } from '../app/lib/playlistStorage';
 import type { Playlist } from '../app/types/playlist';
+import { captureGlobalStorage, setThrowingStorageGetter } from './storage-test-utils';
 
 interface PlaylistStorageOptions {
   setError?: unknown;
@@ -33,16 +34,7 @@ function createPlaylistStorage(
   };
 }
 
-const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
-
-function restoreLocalStorage(): void {
-  if (originalLocalStorageDescriptor) {
-    Object.defineProperty(globalThis, 'localStorage', originalLocalStorageDescriptor);
-    return;
-  }
-
-  Reflect.deleteProperty(globalThis, 'localStorage');
-}
+const restoreLocalStorage = captureGlobalStorage('localStorage');
 
 const playlist: Playlist = {
   id: 'playlist-1',
@@ -138,18 +130,15 @@ assert.equal(
 );
 
 try {
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    get: () => {
-      throw new Error('localStorage unavailable');
-    },
-  });
+  const securityError = { name: 'SecurityError' };
+  setThrowingStorageGetter('localStorage', securityError);
 
   assert.equal(readStoredPlaylists(), null);
   const saveResult = saveStoredPlaylists([playlist]);
   assert.equal(saveResult.success, false);
   if (!saveResult.success) {
-    assert.equal(saveResult.error, PLAYLIST_STORAGE_SAVE_ERROR);
+    assert.equal(saveResult.error, PLAYLIST_STORAGE_UNSUPPORTED_ERROR);
+    assert.equal(saveResult.cause, securityError);
   }
 } finally {
   restoreLocalStorage();

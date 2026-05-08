@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint app lib shared tests/browser-storage.ts tests/catalog-data.ts tests/catalog-view-storage.ts tests/contracts.ts tests/liked-songs.ts tests/player-controls.ts tests/player-errors.ts tests/player-playback.ts tests/player-queue.ts tests/player-time.ts tests/player-time-polling.ts tests/player-volume.ts tests/player-warnings.ts tests/recently-played.ts tests/playlist-import-export.ts tests/playlist-import-merge.ts tests/playlist-mutations.ts tests/playlist-storage.ts tests/songs-api.ts tests/timestamps.ts next.config.ts tailwind.config.ts playwright.config.ts",
+    "lint": "eslint app lib shared tests/browser-storage.ts tests/catalog-data.ts tests/catalog-view-storage.ts tests/contracts.ts tests/liked-songs.ts tests/player-controls.ts tests/player-errors.ts tests/player-playback.ts tests/player-queue.ts tests/player-time.ts tests/player-time-polling.ts tests/player-volume.ts tests/player-warnings.ts tests/recently-played.ts tests/playlist-import-export.ts tests/playlist-import-merge.ts tests/playlist-mutations.ts tests/playlist-storage.ts tests/songs-api.ts tests/storage-test-utils.ts tests/timestamps.ts next.config.ts tailwind.config.ts playwright.config.ts",
     "install:admin": "npm install --prefix admin",
     "install:admin-ui": "npm install --prefix admin/ui",
     "install:python": "cd tools/mizukilens && python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'",
