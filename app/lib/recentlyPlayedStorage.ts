@@ -1,5 +1,5 @@
 import type { RecentPlay } from '../types/recentlyPlayed';
-import { getLocalStorage } from './browserStorage';
+import { getLocalStorage, getLocalStorageOrThrow } from './browserStorage';
 
 export const RECENTLY_PLAYED_STORAGE_KEY = 'mizukiprism_recently_played';
 
@@ -22,11 +22,7 @@ export function writeStoredRecentPlays(
   recentPlays: RecentPlay[],
   storage?: RecentlyPlayedStorageWriter,
 ): void {
-  const resolvedStorage = storage ?? getLocalStorage();
-  if (!resolvedStorage) {
-    throw new Error('localStorage is unavailable');
-  }
-
+  const resolvedStorage = storage ?? getLocalStorageOrThrow();
   resolvedStorage.setItem(RECENTLY_PLAYED_STORAGE_KEY, JSON.stringify(recentPlays));
 }
 

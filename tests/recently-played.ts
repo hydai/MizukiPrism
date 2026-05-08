@@ -7,6 +7,7 @@ import {
   writeStoredRecentPlays,
 } from '../app/lib/recentlyPlayedStorage';
 import type { RecentPlay, RecentPlayable } from '../app/types/recentlyPlayed';
+import { captureGlobalStorage, setThrowingStorageGetter } from './storage-test-utils';
 
 const recentPlayable: RecentPlayable = {
   performanceId: 'performance-1',
@@ -50,16 +51,7 @@ function createRecentlyPlayedStorage(
   };
 }
 
-const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
-
-function restoreLocalStorage(): void {
-  if (originalLocalStorageDescriptor) {
-    Object.defineProperty(globalThis, 'localStorage', originalLocalStorageDescriptor);
-    return;
-  }
-
-  Reflect.deleteProperty(globalThis, 'localStorage');
-}
+const restoreLocalStorage = captureGlobalStorage('localStorage');
 
 assert.deepEqual(addRecentPlayMutation([], recentPlayable, { now: 2000 }), [
   {
@@ -126,12 +118,7 @@ assert.equal(saveStoredRecentPlays([existingPlay]), false);
 assert.equal(saveStoredRecentPlays([existingPlay], createRecentlyPlayedStorage({}, { failSet: true })), false);
 
 try {
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    get: () => {
-      throw new Error('localStorage unavailable');
-    },
-  });
+  setThrowingStorageGetter('localStorage', new Error('localStorage unavailable'));
 
   assert.equal(readStoredRecentPlays(), null);
   assert.equal(saveStoredRecentPlays([existingPlay]), false);

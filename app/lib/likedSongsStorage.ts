@@ -1,5 +1,5 @@
 import type { LikedVersion } from '../types/likedSongs';
-import { getLocalStorage } from './browserStorage';
+import { getLocalStorage, getLocalStorageOrThrow } from './browserStorage';
 
 export const LIKED_SONGS_STORAGE_KEY = 'mizukiprism_liked_songs';
 
@@ -22,11 +22,7 @@ export function writeStoredLikedSongs(
   likedSongs: LikedVersion[],
   storage?: LikedSongsStorageWriter,
 ): void {
-  const resolvedStorage = storage ?? getLocalStorage();
-  if (!resolvedStorage) {
-    throw new Error('localStorage is unavailable');
-  }
-
+  const resolvedStorage = storage ?? getLocalStorageOrThrow();
   resolvedStorage.setItem(LIKED_SONGS_STORAGE_KEY, JSON.stringify(likedSongs));
 }
 

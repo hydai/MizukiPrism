@@ -7,6 +7,7 @@ import {
   writeStoredLikedSongs,
 } from '../app/lib/likedSongsStorage';
 import type { LikeableVersion, LikedVersion } from '../app/types/likedSongs';
+import { captureGlobalStorage, setThrowingStorageGetter } from './storage-test-utils';
 
 const likeableVersion: LikeableVersion = {
   performanceId: 'performance-1',
@@ -50,16 +51,7 @@ function createLikedSongsStorage(
   };
 }
 
-const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
-
-function restoreLocalStorage(): void {
-  if (originalLocalStorageDescriptor) {
-    Object.defineProperty(globalThis, 'localStorage', originalLocalStorageDescriptor);
-    return;
-  }
-
-  Reflect.deleteProperty(globalThis, 'localStorage');
-}
+const restoreLocalStorage = captureGlobalStorage('localStorage');
 
 assert.equal(isLikedSong([likedVersion], likedVersion.performanceId), true);
 assert.equal(isLikedSong([likedVersion], 'missing'), false);
@@ -107,12 +99,7 @@ assert.equal(saveStoredLikedSongs([likedVersion]), false);
 assert.equal(saveStoredLikedSongs([likedVersion], createLikedSongsStorage({}, { failSet: true })), false);
 
 try {
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    get: () => {
-      throw new Error('localStorage unavailable');
-    },
-  });
+  setThrowingStorageGetter('localStorage', new Error('localStorage unavailable'));
 
   assert.equal(readStoredLikedSongs(), null);
   assert.equal(saveStoredLikedSongs([likedVersion]), false);

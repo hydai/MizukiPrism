@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
 import { getLocalStorage, isLocalStorageAvailable } from '../app/lib/browserStorage';
+import {
+  captureGlobalStorage,
+  setGlobalStorage,
+  setThrowingStorageGetter,
+} from './storage-test-utils';
 
 interface FakeLocalStorageOptions {
   failSet?: boolean;
@@ -44,22 +49,10 @@ class FakeLocalStorage {
   }
 }
 
-const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+const restoreLocalStorage = captureGlobalStorage('localStorage');
 
 function installLocalStorage(storage: FakeLocalStorage): void {
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    value: storage as unknown as Storage,
-  });
-}
-
-function restoreLocalStorage(): void {
-  if (originalLocalStorageDescriptor) {
-    Object.defineProperty(globalThis, 'localStorage', originalLocalStorageDescriptor);
-    return;
-  }
-
-  Reflect.deleteProperty(globalThis, 'localStorage');
+  setGlobalStorage('localStorage', storage);
 }
 
 try {
@@ -94,12 +87,7 @@ try {
   assert.equal(getLocalStorage(), null);
   assert.equal(isLocalStorageAvailable(), false);
 
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    get: () => {
-      throw new Error('localStorage unavailable');
-    },
-  });
+  setThrowingStorageGetter('localStorage', new Error('localStorage unavailable'));
   assert.equal(getLocalStorage(), null);
   assert.equal(isLocalStorageAvailable(), false);
 } finally {
