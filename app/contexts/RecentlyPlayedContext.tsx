@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { isLocalStorageAvailable } from '../lib/browserStorage';
 import { addRecentPlayMutation } from '../lib/recentlyPlayed';
+import { readStoredRecentPlays, saveStoredRecentPlays } from '../lib/recentlyPlayedStorage';
 import type { RecentPlay, RecentPlayable } from '../types/recentlyPlayed';
 
 export type { RecentPlay } from '../types/recentlyPlayed';
@@ -24,8 +25,6 @@ export const useRecentlyPlayed = () => {
   return context;
 };
 
-const STORAGE_KEY = 'mizukiprism_recently_played';
-
 export const RecentlyPlayedProvider = ({ children }: { children: ReactNode }) => {
   const [recentPlays, setRecentPlays] = useState<RecentPlay[]>([]);
   const recentPlaysRef = useRef<RecentPlay[]>([]);
@@ -36,9 +35,8 @@ export const RecentlyPlayedProvider = ({ children }: { children: ReactNode }) =>
   // Load from localStorage on mount
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const storedRecentPlays = JSON.parse(stored) as RecentPlay[];
+      const storedRecentPlays = readStoredRecentPlays();
+      if (storedRecentPlays) {
         recentPlaysRef.current = storedRecentPlays;
         setRecentPlays(storedRecentPlays);
       }
@@ -47,20 +45,11 @@ export const RecentlyPlayedProvider = ({ children }: { children: ReactNode }) =>
     }
   }, []);
 
-  const saveToLocalStorage = (plays: RecentPlay[]): boolean => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(plays));
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
   const addRecentPlay = (play: RecentPlayable) => {
     if (!localStorageSupported) return;
 
     const newPlays = addRecentPlayMutation(recentPlaysRef.current, play);
-    const saved = saveToLocalStorage(newPlays);
+    const saved = saveStoredRecentPlays(newPlays);
     if (saved) {
       recentPlaysRef.current = newPlays;
       setRecentPlays(newPlays);
@@ -70,7 +59,7 @@ export const RecentlyPlayedProvider = ({ children }: { children: ReactNode }) =>
   const clearHistory = () => {
     if (!localStorageSupported) return;
 
-    const saved = saveToLocalStorage([]);
+    const saved = saveStoredRecentPlays([]);
     if (saved) {
       recentPlaysRef.current = [];
       setRecentPlays([]);
