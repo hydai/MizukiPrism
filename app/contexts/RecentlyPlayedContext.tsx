@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { isLocalStorageAvailable } from '../lib/browserStorage';
 import { addRecentPlayMutation } from '../lib/recentlyPlayed';
 import type { RecentPlay, RecentPlayable } from '../types/recentlyPlayed';
@@ -28,6 +28,7 @@ const STORAGE_KEY = 'mizukiprism_recently_played';
 
 export const RecentlyPlayedProvider = ({ children }: { children: ReactNode }) => {
   const [recentPlays, setRecentPlays] = useState<RecentPlay[]>([]);
+  const recentPlaysRef = useRef<RecentPlay[]>([]);
   const [localStorageSupported] = useState(() =>
     typeof window !== 'undefined' ? isLocalStorageAvailable() : true
   );
@@ -37,7 +38,9 @@ export const RecentlyPlayedProvider = ({ children }: { children: ReactNode }) =>
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        setRecentPlays(JSON.parse(stored));
+        const storedRecentPlays = JSON.parse(stored) as RecentPlay[];
+        recentPlaysRef.current = storedRecentPlays;
+        setRecentPlays(storedRecentPlays);
       }
     } catch (error) {
       console.error('Failed to load recently played from localStorage:', error);
@@ -56,15 +59,17 @@ export const RecentlyPlayedProvider = ({ children }: { children: ReactNode }) =>
   const addRecentPlay = (play: RecentPlayable) => {
     if (!localStorageSupported) return;
 
-    const playedAt = Date.now();
-    setRecentPlays(currentRecentPlays => {
-      const newPlays = addRecentPlayMutation(currentRecentPlays, play, { now: playedAt });
-      return saveToLocalStorage(newPlays) ? newPlays : currentRecentPlays;
-    });
+    const newPlays = addRecentPlayMutation(recentPlaysRef.current, play);
+    const saved = saveToLocalStorage(newPlays);
+    if (saved) {
+      recentPlaysRef.current = newPlays;
+      setRecentPlays(newPlays);
+    }
   };
 
   const clearHistory = () => {
     saveToLocalStorage([]);
+    recentPlaysRef.current = [];
     setRecentPlays([]);
   };
 
