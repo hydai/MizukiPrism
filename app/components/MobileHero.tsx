@@ -120,7 +120,7 @@ export default function MobileHero({ name, description, avatarUrl, songCount }: 
           margin: 0,
         }}
       >
-        21.8萬位訂閱者
+        22萬位訂閱者
         {' '}
         <span style={{ color: 'var(--text-tertiary)' }}>·</span>
         {' '}

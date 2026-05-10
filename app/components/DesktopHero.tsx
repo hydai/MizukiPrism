@@ -145,7 +145,7 @@ export default function DesktopHero({
             <span
               style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 'var(--font-size-xl)' }}
             >
-              21.8萬
+              22萬
             </span>
             <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}>
               訂閱者
