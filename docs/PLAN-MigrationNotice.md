@@ -33,7 +33,7 @@
 - Create: `app/lib/migrationNoticeStorage.ts`
 - Modify: `package.json`
 
-- [ ] **Step 1.1: 寫失敗的單元測試**
+- [x] **Step 1.1: 寫失敗的單元測試**
 
 建立 `tests/migration-notice-storage.ts`:
 
@@ -126,12 +126,12 @@ try {
 }
 ```
 
-- [ ] **Step 1.2: 跑測試確認失敗**
+- [x] **Step 1.2: 跑測試確認失敗**
 
 Run: `npx tsx tests/migration-notice-storage.ts`
 Expected: FAIL — `Cannot find module '../app/lib/migrationNoticeStorage'`
 
-- [ ] **Step 1.3: 實作 storage module**
+- [x] **Step 1.3: 實作 storage module**
 
 建立 `app/lib/migrationNoticeStorage.ts`:
 
@@ -171,12 +171,12 @@ export function writeMigrationNoticeDismissed(
 }
 ```
 
-- [ ] **Step 1.4: 跑測試確認通過**
+- [x] **Step 1.4: 跑測試確認通過**
 
 Run: `npx tsx tests/migration-notice-storage.ts`
 Expected: PASS(無輸出,exit code 0)
 
-- [ ] **Step 1.5: 掛進 package.json**
+- [x] **Step 1.5: 掛進 package.json**
 
 `package.json` 兩處修改:
 
@@ -192,12 +192,12 @@ Expected: PASS(無輸出,exit code 0)
 "test:migration-notice-storage": "tsx tests/migration-notice-storage.ts",
 ```
 
-- [ ] **Step 1.6: 跑 lint 與測試**
+- [x] **Step 1.6: 跑 lint 與測試**
 
 Run: `npm run lint && npm run test:migration-notice-storage`
 Expected: lint 無錯誤、測試 exit 0
 
-- [ ] **Step 1.7: Commit**
+- [x] **Step 1.7: Commit**
 
 ```bash
 git status
@@ -215,7 +215,7 @@ git commit -m "feat: add migration notice storage helpers"
 - Modify: `app/layout.tsx`
 - Modify: `playwright.config.ts`
 
-- [ ] **Step 2.1: 寫失敗的 E2E 測試**
+- [x] **Step 2.1: 寫失敗的 E2E 測試**
 
 建立 `tests/migration-notice.spec.ts`:
 
@@ -285,12 +285,12 @@ test.describe('Migration notice popup', () => {
 });
 ```
 
-- [ ] **Step 2.2: 跑新 E2E 確認失敗**
+- [x] **Step 2.2: 跑新 E2E 確認失敗**
 
 Run: `npx playwright test tests/migration-notice.spec.ts`
 Expected: FAIL — `migration-notice-dialog` testid 不存在(timeout)
 
-- [ ] **Step 2.3: 實作 Modal 元件**
+- [x] **Step 2.3: 實作 Modal 元件**
 
 建立 `app/components/MigrationNoticeModal.tsx`:
 
@@ -374,7 +374,7 @@ export default function MigrationNoticeModal() {
 }
 ```
 
-- [ ] **Step 2.4: 掛載到 layout**
+- [x] **Step 2.4: 掛載到 layout**
 
 修改 `app/layout.tsx`:
 
@@ -394,7 +394,7 @@ body 內:
       </body>
 ```
 
-- [ ] **Step 2.5: Playwright config 預填 dismissed flag**
+- [x] **Step 2.5: Playwright config 預填 dismissed flag**
 
 修改 `playwright.config.ts` 的 `use` 區塊:
 
@@ -417,22 +417,22 @@ body 內:
   },
 ```
 
-- [ ] **Step 2.6: 跑新 E2E 確認通過**
+- [x] **Step 2.6: 跑新 E2E 確認通過**
 
 Run: `npx playwright test tests/migration-notice.spec.ts`
 Expected: 4 passed
 
-- [ ] **Step 2.7: 跑完整 E2E 確認無回歸**
+- [x] **Step 2.7: 跑完整 E2E 確認無回歸**
 
 Run: `npx playwright test`
 Expected: 全部通過(既有 spec 受 storageState 保護)
 
-- [ ] **Step 2.8: lint + build 驗證**
+- [x] **Step 2.8: lint + build 驗證**
 
 Run: `npm run lint && npm run build`
 Expected: 無錯誤
 
-- [ ] **Step 2.9: Commit**
+- [x] **Step 2.9: Commit**
 
 ```bash
 git status
@@ -444,8 +444,8 @@ git commit -m "feat: show one-time domain migration notice popup"
 
 ## Verification Checklist(完成後逐項確認)
 
-- [ ] `npm run test:migration-notice-storage` 通過
-- [ ] `npx playwright test` 全綠
-- [ ] `npm run lint` 無錯誤
-- [ ] `npm run build` 成功
+- [x] `npm run test:migration-notice-storage` 通過
+- [x] `npx playwright test` 全綠
+- [x] `npm run lint` 無錯誤
+- [x] `npm run build` 成功
 - [ ] 手動驗證:無痕視窗開 localhost:3000 → popup 顯示 → 點「知道了」→ 重新整理不再顯示
