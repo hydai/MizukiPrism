@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import PlayerWrapper from "./components/PlayerWrapper";
+import MigrationNoticeModal from "./components/MigrationNoticeModal";
 
 export const metadata: Metadata = {
   title: "MizukiPrism - Official Song Archive",
@@ -27,6 +28,7 @@ export default function RootLayout({
       </head>
       <body className="font-sans">
         <PlayerWrapper>{children}</PlayerWrapper>
+        <MigrationNoticeModal />
       </body>
     </html>
   );

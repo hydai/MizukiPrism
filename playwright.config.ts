@@ -11,6 +11,18 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
+    // 預填遷移公告已讀 flag,避免 popup backdrop 攔截既有測試的點擊
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: 'http://localhost:3000',
+          localStorage: [
+            { name: 'mizukiprism_migration_notice_dismissed', value: 'true' },
+          ],
+        },
+      ],
+    },
   },
 
   projects: [
