@@ -6,8 +6,7 @@ import {
   readMigrationNoticeDismissed,
   writeMigrationNoticeDismissed,
 } from '../lib/migrationNoticeStorage';
-
-const NEW_SITE_URL = 'https://prism.oshi.tw/mizuki';
+import { NEW_SITE_URL, resolveMigrationNoticeAction } from '../lib/migrationNotice';
 
 export default function MigrationNoticeModal() {
   const [mounted, setMounted] = useState(false);
@@ -15,20 +14,29 @@ export default function MigrationNoticeModal() {
 
   useEffect(() => {
     setMounted(true);
-    setShow(!readMigrationNoticeDismissed());
+    const action = resolveMigrationNoticeAction({
+      hostname: window.location.hostname,
+      dismissed: readMigrationNoticeDismissed(),
+    });
+    if (action === 'redirect') {
+      // 已確認過 → 直接導向新站,不顯示公告(SPEC-MigrationNotice §3.1)
+      window.location.replace(NEW_SITE_URL);
+      return;
+    }
+    setShow(action === 'show');
   }, []);
 
   if (!mounted || !show) return null;
 
   const handleAcknowledge = () => {
-    // 寫入失敗也照樣關閉:下次造訪自然再顯示(SPEC-MigrationNotice §3.2)
+    // 記錄已確認;即使寫入失敗仍照常導向(導向才是主要目的,SPEC-MigrationNotice §3.2)
     writeMigrationNoticeDismissed();
-    setShow(false);
+    window.location.replace(NEW_SITE_URL);
   };
 
   return createPortal(
     <>
-      {/* Backdrop:無 onClick,重要公告需明確按「知道了」確認 */}
+      {/* Backdrop:無 onClick,重要公告需明確按「前往新站」確認 */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150]"
         data-testid="migration-notice-backdrop"
@@ -47,10 +55,7 @@ export default function MigrationNoticeModal() {
         </h2>
 
         <p className="text-white/90 leading-relaxed mb-2">
-          本網站 (prism.mizuki.tw) 即將合併回 prism.oshi.tw/mizuki 以便於進行管理。
-        </p>
-        <p className="text-white/90 leading-relaxed mb-6">
-          預計將於 7/1 開始進行自動重導向到{' '}
+          本網站 (prism.mizuki.tw) 即將合併回{' '}
           <a
             href={NEW_SITE_URL}
             target="_blank"
@@ -58,9 +63,12 @@ export default function MigrationNoticeModal() {
             className="text-pink-400 hover:text-pink-300 underline break-all"
             data-testid="migration-notice-link"
           >
-            {NEW_SITE_URL}
-          </a>
-          。
+            prism.oshi.tw/mizuki
+          </a>{' '}
+          以便於進行管理。
+        </p>
+        <p className="text-white/90 leading-relaxed mb-6">
+          點擊下方「前往新站」即可前往;之後再次造訪本站將自動為您重導向。
         </p>
 
         <button
@@ -68,7 +76,7 @@ export default function MigrationNoticeModal() {
           className="w-full py-3 bg-gradient-to-r from-pink-500 to-blue-500 hover:from-pink-600 hover:to-blue-600 text-white rounded-lg font-medium"
           data-testid="migration-notice-acknowledge"
         >
-          知道了
+          前往新站
         </button>
       </div>
     </>,

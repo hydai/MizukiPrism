@@ -11,18 +11,8 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
-    // 預填遷移公告已讀 flag,避免 popup backdrop 攔截既有測試的點擊
-    storageState: {
-      cookies: [],
-      origins: [
-        {
-          origin: 'http://localhost:3000',
-          localStorage: [
-            { name: 'mizukiprism_migration_notice_dismissed', value: 'true' },
-          ],
-        },
-      ],
-    },
+    // 遷移公告導向僅在正式網域 prism.mizuki.tw 生效;localhost 一律 inactive,
+    // 故無需預填 dismissed flag 即可保護既有測試(SPEC-MigrationNotice §5.3)
   },
 
   projects: [
